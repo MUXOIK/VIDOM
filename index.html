@@ -163,6 +163,7 @@ h4{font-size:14px}
 .logo-mark img{width:100%;height:100%;object-fit:contain;display:block}
 .logo-word{font-size:17px;font-weight:600;letter-spacing:-.005em;color:var(--sage-dark)}
 .logo-word .o{color:var(--terracotta)}
+.logo-lockup{display:flex;flex-direction:column;align-items:center;gap:4px}
 .sb-home{
   margin:0 12px 14px;padding:12px 13px;border-radius:11px;background:var(--sage-wash);
   border:1px solid var(--sage-pale);cursor:pointer;transition:.15s;
@@ -1586,8 +1587,10 @@ function render(){
 function sidebar(){
   return `<aside class="sidebar ${S.drawer?'open':''}">
     <div class="sb-brand">
-      <div class="logo-mark"><img src="${LOGO_ICON}" alt="VIDOM"></div>
-      <div class="logo-word">vid<span class="o">o</span>m</div>
+      <div class="logo-lockup">
+        <div class="logo-mark"><img src="${LOGO_ICON}" alt="VIDOM"></div>
+        <div class="logo-word">vid<span class="o">o</span>m</div>
+      </div>
       <button class="icon-btn sb-close" style="margin-left:auto" data-act="closeDrawer" aria-label="Fermer">${I.close}</button>
     </div>
     <button class="sb-home" data-act="go" data-v="identite">
@@ -4029,7 +4032,7 @@ function viewSite(){
   return `<div class="site">
     <div class="site-nav">
       <div class="container row-between">
-        <div class="row gap-11" style="gap:11px">
+        <div class="logo-lockup">
           <div class="logo-mark"><img src="${LOGO_ICON}" alt="VIDOM"></div>
           <div class="logo-word">vid<span class="o">o</span>m</div>
         </div>
@@ -4212,12 +4215,10 @@ function viewSite(){
 
     <div class="site-foot">
       <div class="container row-between wrap gap-16">
-        <div class="row gap-11" style="gap:11px">
-          <div class="logo-mark"><img src="${LOGO_ICON}" alt="VIDOM"></div>
-          <div>
-            <div class="logo-word" style="font-size:14px">vid<span class="o">o</span>m</div>
-            <div class="xsmall">La mémoire vivante de votre logement.</div>
-          </div>
+        <div class="logo-lockup" style="align-items:flex-start">
+          <div class="logo-mark" style="width:26px;height:26px"><img src="${LOGO_ICON}" alt="VIDOM"></div>
+          <div class="logo-word" style="font-size:14px">vid<span class="o">o</span>m</div>
+          <div class="xsmall">La mémoire vivante de votre logement.</div>
         </div>
         <div class="xsmall">Maquette de démonstration · Données entièrement fictives</div>
       </div>
@@ -4240,7 +4241,7 @@ function viewOnboarding(){
   const st = S.ob.step;
   return `<div class="ob">
     <div class="ob-top">
-      <div class="row gap-11" style="gap:11px">
+      <div class="logo-lockup">
         <div class="logo-mark"><img src="${LOGO_ICON}" alt="VIDOM"></div>
         <div class="logo-word">vid<span class="o">o</span>m</div>
       </div>
