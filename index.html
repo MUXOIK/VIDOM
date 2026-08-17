@@ -3,7 +3,7 @@
 {
   "name": "Vidom Maquette",
   "schemaVersion": 1,
-  "description": "Maquette interactive VIDOM : vitrine publique, onboarding de création du logement et application complète (15 domaines métier) avec des données fictives — maison de 1978 à Nantes, rénovée depuis 2019. Responsive desktop et mobile.",
+  "description": "Maquette interactive VIDOM : vitrine publique, onboarding de création du logement et application complète (15 domaines métier + boîte d'arrivée, professionnels actionnables, dossiers consolidés payants et transmission/déménagement) avec des données fictives — maison de 1978 à Nantes, rénovée depuis 2019. Responsive desktop et mobile.",
   "mcpTools": [],
   "mcpServerNames": []
 }
@@ -798,6 +798,9 @@ I.flame     = _svg('<path d="M12 3c3 3.3 5 6 5 8.9a5 5 0 0 1-10 0c0-2.4 1.5-4.3 
 I.storm     = _svg('<path d="M6.6 15.5a4 4 0 0 1 .6-8 5.5 5.5 0 0 1 10.4 1.3 3.6 3.6 0 0 1-.2 6.7"/><path d="m12.6 12-2.6 4h3l-2 5"/>');
 I.qrcode    = _svg('<rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="1"/><path d="M14 14h3v3h-3zM20.5 14v3M14 20.5h6.5"/>');
 I.heart     = _svg('<path d="M12 20.2S3.8 15.4 3.8 9.6A4.4 4.4 0 0 1 12 7.2a4.4 4.4 0 0 1 8.2 2.4c0 5.8-8.2 10.6-8.2 10.6z"/>');
+I.inbox     = _svg('<path d="M3.5 12.5h5l1.6 2.6h3.8l1.6-2.6h5"/><path d="M5 5.5h14l2 7v6a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5v-6z"/>');
+I.copy      = _svg('<rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a1.5 1.5 0 0 0-1.5-1.5H5.5A1.5 1.5 0 0 0 4 5.5V14a1.5 1.5 0 0 0 1.5 1.5H8.5"/>');
+I.phone     = _svg('<path d="M6.5 3.5h3l1.4 4-2 1.4a11 11 0 0 0 5.2 5.2l1.4-2 4 1.4v3a1.5 1.5 0 0 1-1.6 1.5A16 16 0 0 1 5 6.1a1.5 1.5 0 0 1 1.5-1.6z"/>');
 
 /* ---------- Utilitaires de format ---------- */
 const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -852,7 +855,10 @@ const LOGEMENT = {
   chauffage:"Pompe à chaleur air/eau",
   photo:"maison",
   achat:{ date:"2019-03-22", prix:268000, frais:21430 },
-  estimation:{ valeur:392000, date:"2026-05-02", source:"estimation indicative" }
+  estimation:{ valeur:392000, date:"2026-05-02", source:"estimation indicative" },
+  /* ---------- Identité numérique du logement — VIDOM-063 ---------- */
+  adresseDepot:"maison-des-tilleuls-b3k@depot.vidom.fr",
+  aliasGardien:"gardien-c7f2a9@transfert.vidom.fr"
 };
 
 const PROPRIETAIRES = [
@@ -881,31 +887,31 @@ const PIECES = [
 const ARTISANS = [
   { id:'a1', nom:"Thermic Ouest", metier:"Chauffage et pompes à chaleur", ville:"Saint-Herblain (44)",
     tel:"02 40 XX XX 12", mail:"contact@thermic-ouest.fr", siren:"812 447 903", note:"Ponctuels, expliquent bien. Interlocuteur : M. Ferrand.",
-    interventions:['i9','i18','i22','i26'], depuis:"2022-02-12" },
+    interventions:['i9','i18','i22','i26'], depuis:"2022-02-12", actif:true },
   { id:'a2', nom:"Menuiseries de l'Erdre", metier:"Menuiserie et fermetures", ville:"Carquefou (44)",
     tel:"02 40 XX XX 47", mail:"devis@menuiseries-erdre.fr", siren:"493 220 118", note:"Pose soignée. Léger retard de trois semaines sur le chantier.",
-    interventions:['i5'], depuis:"2020-10-05" },
+    interventions:['i5'], depuis:"2020-10-05", actif:false },
   { id:'a3', nom:"Couverture Bretonne", metier:"Couverture et zinguerie", ville:"Vertou (44)",
     tel:"02 51 XX XX 08", mail:"contact@couverture-bretonne.fr", siren:"751 908 442", note:"Chantier propre. Ont repéré une infiltration naissante non facturée.",
-    interventions:['i20'], depuis:"2023-05-02" },
+    interventions:['i20'], depuis:"2023-05-02", actif:false },
   { id:'a4', nom:"Solaire Atlantique", metier:"Photovoltaïque", ville:"Rezé (44)",
     tel:"02 28 XX XX 63", mail:"projets@solaire-atlantique.fr", siren:"889 331 720", note:"Étude de production sérieuse. Suivi de production fourni.",
-    interventions:['i23'], depuis:"2024-03-18" },
+    interventions:['i23'], depuis:"2024-03-18", actif:false },
   { id:'a5', nom:"Iso Confort 44", metier:"Isolation", ville:"Nantes (44)",
     tel:"02 40 XX XX 91", siren:"532 118 604", note:"Intervention rapide, une demi-journée.",
-    interventions:['i3'], depuis:"2020-04-08" },
+    interventions:['i3'], depuis:"2020-04-08", actif:false },
   { id:'a6', nom:"Rocher Plomberie", metier:"Plomberie et sanitaire", ville:"Nantes (44)",
     tel:"06 XX XX XX 55", mail:"rocher.plomberie@mail.fr", siren:"401 776 235", note:"Dépannage d'urgence très réactif — à rappeler en priorité.",
-    interventions:['i6','i7','i25'], depuis:"2021-03-14" },
+    interventions:['i6','i7','i25'], depuis:"2021-03-14", actif:true },
   { id:'a7', nom:"Élec 44", metier:"Électricité", ville:"Orvault (44)",
     tel:"02 40 XX XX 30", siren:"622 015 887", note:"Mise aux normes du tableau après le diagnostic de 2019.",
-    interventions:['i2','i12','i33'], depuis:"2019-06-11" },
+    interventions:['i2','i12','i33'], depuis:"2019-06-11", actif:false },
   { id:'a8', nom:"Schmidt Nantes Sud", metier:"Cuisine équipée", ville:"Rezé (44)",
     tel:"02 51 XX XX 74", siren:"338 902 551", note:"Conception en magasin, pose par un sous-traitant.",
-    interventions:['i11'], depuis:"2022-09-16" },
+    interventions:['i11'], depuis:"2022-09-16", actif:false },
   { id:'a9', nom:"Jardins de Loire", metier:"Paysagiste", ville:"Bouguenais (44)",
     tel:"06 XX XX XX 19", siren:"804 552 190", note:"Entretien annuel des haies et de la terrasse.",
-    interventions:['i24','i27'], depuis:"2024-06-05" }
+    interventions:['i24','i27'], depuis:"2024-06-05", actif:true }
 ];
 
 const EQUIPEMENTS = [
@@ -1243,7 +1249,17 @@ const DOCUMENTS = [
     depot:{ par:'tiers', canal:"Code fin de travaux", artisan:'a1', envoye:"2026-07-22", expire:"2026-08-21", statut:'a_valider' } },
   { id:'d52', nom:"Photos du raccord réparé", cat:"Photo", date:"2026-07-22", ext:"JPG", taille:"3,1 Mo", source:"Thermic Ouest",
     lie:{ equipement:'e1' }, extrait:{ "Clichés":"2" }, confiance:100,
-    depot:{ par:'tiers', canal:"Code fin de travaux", artisan:'a1', envoye:"2026-07-22", expire:"2026-08-21", statut:'a_valider' } }
+    depot:{ par:'tiers', canal:"Code fin de travaux", artisan:'a1', envoye:"2026-07-22", expire:"2026-08-21", statut:'a_valider' } },
+
+  /* ---------- Dépôts reçus via l'adresse de dépôt du logement (courriel) — VIDOM-063 ---------- */
+  { id:'d53', nom:"Pièce jointe reçue — non analysée", cat:"Facture", date:"2026-07-27", ext:"PDF", taille:"—", source:"Élec 44",
+    lie:{}, extrait:{}, confiance:null,
+    depot:{ par:'tiers', canal:"Adresse de dépôt du logement", artisan:'a7', envoye:"2026-07-27", expire:null, statut:'recu', securite:'ok' } },
+  { id:'d54', nom:"Facture — remplacement d'un disjoncteur", cat:"Facture", date:"2026-07-25", ext:"PDF", taille:"140 Ko", source:"Élec 44",
+    lie:{}, extrait:{ "Montant":"95 €", "Nature":"Remplacement d'un disjoncteur différentiel" }, confiance:89,
+    depot:{ par:'tiers', canal:"Adresse de dépôt du logement", artisan:'a7', envoye:"2026-07-25", expire:null, statut:'a_valider', securite:'ok',
+      doublon:"Un document très proche (même artisan, montant proche) a été reçu il y a quelques jours. Vérifiez qu'il ne s'agit pas d'un double envoi avant de valider.",
+      suggestion:{ type:'intervention', id:'i2', label:"Mise aux normes du tableau électrique" } } }
 ];
 
 const RAPPELS = [
@@ -1310,6 +1326,7 @@ const PARTAGES = [
 ];
 
 const JOURNAL = [
+  { date:"2026-07-27 08:14", acte:"Dépôt par courriel", qui:"Élec 44", detail:"1 document reçu à l'adresse de dépôt — analyse en cours" },
   { date:"2026-07-26 18:42", acte:"Connexion", qui:"Claire Lefèvre", detail:"Navigateur Firefox, Nantes" },
   { date:"2026-07-24 09:15", acte:"Ajout de document", qui:"Claire Lefèvre", detail:"Relevé de production photovoltaïque 2025" },
   { date:"2026-07-22 17:10", acte:"Dépôt via code", qui:"Thermic Ouest", detail:"2 documents déposés — en attente de votre validation" },
@@ -1418,21 +1435,34 @@ const DESTINATAIRES = [
 /* ---------- Les livres du logement ---------- */
 const LIVRES = [
   { id:'logement', titre:"Le Livre du logement", sous:"Toute l'histoire, mise en page comme un livre de famille.",
-    pour:"Pour vous, pour vos enfants, pour la vente", pages:96, ton:'sage', mention:"Édition 2026",
+    pour:"Pour vous, pour vos enfants, pour la vente", pages:96, ton:'sage', mention:"Édition 2026", prix:null,
     som:["Identité et fiche du logement","Chronologie, année par année","Les travaux et leurs artisans","Les équipements et leurs garanties","Plans et photographies","La transmission"] },
   { id:'entretien', titre:"Carnet d'entretien", sous:"Ce qu'il faut faire, et quand. Comme pour une voiture.",
-    pour:"À garder sous la main toute l'année", pages:32, ton:'wood', mention:"Mis à jour en continu",
+    pour:"À garder sous la main toute l'année", pages:32, ton:'wood', mention:"Mis à jour en continu", prix:null,
     som:["Les équipements et leur âge","Les entretiens déjà réalisés","Le calendrier des contrôles obligatoires","Les contrats en cours","Les coordonnées des artisans"] },
   { id:'assurance', titre:"Dossier assurance", sous:"Tout ce qu'un expert demandera, réuni à l'avance.",
-    pour:"Au moment d'un sinistre", pages:24, ton:'terracotta', mention:"Dossier 2021 archivé",
+    pour:"Au moment d'un sinistre", pages:24, ton:'terracotta', mention:"Dossier 2021 archivé", prix:19,
     som:["Inventaire de la pièce touchée","Factures des biens concernés","Preuves d'entretien","Photographies avant et après","Chronologie de l'incident"] },
   { id:'vente', titre:"Dossier de vente", sous:"Ce qui rassure un acquéreur, sans rien dévoiler de privé.",
-    pour:"Au moment de vendre", pages:48, ton:'sage', mention:"Prêt à 84 %",
+    pour:"Au moment de vendre", pages:48, ton:'sage', mention:"Prêt à 84 %", prix:19,
     som:["Diagnostics à jour","Travaux réalisés depuis l'achat","Garanties encore actives","Performance énergétique","Photographies du bien"] },
   { id:'succession', titre:"Livre de succession", sous:"Le passage de relais, expliqué à ceux qui continuent.",
-    pour:"Pour le notaire et les héritiers", pages:64, ton:'stone', mention:"À composer",
+    pour:"Pour le notaire et les héritiers", pages:64, ton:'stone', mention:"À composer", prix:19,
     som:["Propriétaires successifs","Documents juridiques","Valeur des travaux engagés","Garanties transmissibles","Ce qu'il faut savoir pour continuer"] }
 ];
+
+/* ---------- Ce que VIDOM garde gratuit, et ce qu'il facture à l'usage — D-060 ---------- */
+const MODELE_LIVRES = "La mémoire du logement — création, documents, équipements, chronologie — reste gratuite, sans abonnement. VIDOM se rémunère seulement quand cette mémoire se transforme en un dossier prêt à l'emploi pour un moment précis : vente, sinistre ou succession.";
+
+/* ---------- Je quitte ce logement — tri de la mémoire au départ, sans vente — VIDOM-063 ---------- */
+const DEMENAGEMENT = {
+  logement: { t:"Reste avec le logement", ic:'home',
+    items:["Historique des équipements et leurs garanties","Diagnostics et documents techniques","Historique des artisans intervenus","Chronologie des travaux et entretiens","Photographies rattachées aux pièces"] },
+  avecmoi: { t:"Part avec vous", ic:'archive',
+    items:["Vos notes personnelles sur les artisans","Vos documents financiers (contrats, factures d'énergie)","L'historique de vos connexions","Votre export personnel, à conserver où vous voulez"] },
+  prive: { t:"Reste privé, jamais transmis", ic:'lock',
+    items:["Vos identifiants et votre clé d'accès","Vos brouillons et idées non finalisées","Vos recherches et échanges avec le support"] }
+};
 
 /* ---------- Types de sinistre ---------- */
 const SINISTRES = [
@@ -1461,6 +1491,19 @@ const CATS_DOC = ["Facture","Devis","Garantie","Notice","Diagnostic","Contrat","
 const ICONE_CAT = { Facture:'euro', Devis:'file', Garantie:'shield', Notice:'book', Diagnostic:'gauge',
   Contrat:'doc', Assurance:'shield', Certificat:'tag', Acte:'key', Plan:'rooms', Photo:'photo', Permis:'building', Courrier:'mail' };
 
+/* ---------- Pourquoi cet artisan est présent — verbe par type d'intervention — VIDOM-063 ---------- */
+const VERBE_TYPE = {
+  Installation:"a installé", Entretien:"a entretenu", Réparation:"a réparé", Remplacement:"a remplacé",
+  Rénovation:"a rénové", Contrôle:"a contrôlé", Extension:"a agrandi", Construction:"a construit", Sinistre:"est intervenu pour un sinistre"
+};
+
+/* ---------- Trouver un professionnel — toujours prioriser celui déjà connu du logement — VIDOM-063 ---------- */
+const CAT_METIER = {
+  "Chauffage":'a1', "Eau chaude":'a1', "Ventilation":'a7', "Enveloppe":'a3', "Menuiseries":'a2',
+  "Fermetures":'a2', "Aménagement":'a8', "Électroménager":'a8', "Production d'énergie":'a4',
+  "Traitement de l'eau":'a6', "Extérieur":'a9', "Sanitaire":'a6', "Sécurité":null
+};
+
 /* ---------- Calculs ---------- */
 const eqActifs = () => EQUIPEMENTS.filter(e => !e.archive);
 const garActives = () => GARANTIES.filter(g => d(g.fin) >= TODAY);
@@ -1482,6 +1525,9 @@ const rappelsTries = () => [...RAPPELS].sort((a,b) => d(a.date) - d(b.date));
 const interventionsTriees = () => [...INTERVENTIONS].sort((a,b) => d(b.date) - d(a.date));
 /* ---------- Dépôts par un tiers (code de fin de travaux) — VIDOM-024 ---------- */
 const depotsAValider = () => DOCUMENTS.filter(x => x.depot && x.depot.statut === 'a_valider');
+const depotsRecus = () => DOCUMENTS.filter(x => x.depot && x.depot.statut === 'recu');
+const depotsTraites = () => DOCUMENTS.filter(x => x.depot && (x.depot.statut === 'valide' || x.depot.statut === 'refuse'));
+const boiteArrivee = () => DOCUMENTS.filter(x => x.depot).sort((a,b) => d(b.depot.envoye) - d(a.depot.envoye));
 const isoToday = () => `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`;
 const nbPhotos = () => PIECES.reduce((s,p) => s + (p.photos||0), 0);
 const anneesDocumentees = () => {
@@ -1511,7 +1557,10 @@ const S = {
   souv:{ step:0, kind:null },
   dest:null,                // destinataire du partage en cours
   livre:null,               // livre en cours de composition
-  sin:{ step:0, type:null } // déclaration de sinistre
+  sin:{ step:0, type:null }, // déclaration de sinistre
+  pro:{ cat:null, eq:null }, // recherche « trouver un professionnel »
+  regen:false, // confirmation de régénération de l'adresse de dépôt affichée ?
+  panneEq:null // équipement concerné par « J'ai un problème »
 };
 
 function go(view){ S.view = view; S.panel = null; S.drawer = false; window.scrollTo(0,0); render(); }
@@ -1527,27 +1576,36 @@ function openModal(m){
 }
 function closeModal(){ if(S.add.timer) clearTimeout(S.add.timer); S.modal = null; S.dest = null; S.livre = null; render(); }
 
+/* Navigation — refondue le 17 août 2026 (D-063/D-064) pour suivre l'ordre
+   Accueil — Mémoire — Équipements — Travaux — Documents — Professionnels — À faire — Transmission.
+   Les identifiants d'écran (id) sont inchangés : rien d'existant n'est cassé, seuls l'ordre et le
+   regroupement changent. */
 const NAV = [
-  { g:"Le logement", items:[
-    { id:'accueil', label:"Vue d'ensemble", ic:'home' },
+  { g:"", items:[
+    { id:'accueil', label:"Accueil", ic:'home' }
+  ]},
+  { g:"Mémoire", items:[
     { id:'memoire', label:"Mémoire", ic:'heart' },
     { id:'chronologie', label:"Chronologie", ic:'clock' },
     { id:'identite', label:"Fiche du logement", ic:'pin' },
-    { id:'pieces', label:"Pièces et espaces", ic:'rooms' }
+    { id:'pieces', label:"Pièces et espaces", ic:'rooms' },
+    { id:'boite', label:"Boîte d'arrivée", ic:'inbox' }
   ]},
-  { g:"La mémoire", items:[
-    { id:'documents', label:"Documents", ic:'docs', tag:String(DOCUMENTS.length), quiet:true },
+  { g:"", items:[
     { id:'equipements', label:"Équipements", ic:'boiler', tag:String(eqActifs().length), quiet:true },
     { id:'travaux', label:"Travaux", ic:'tools' },
-    { id:'entretiens', label:"Entretiens et rappels", ic:'bell', tag:String(rappelsProches()) },
+    { id:'documents', label:"Documents", ic:'docs', tag:String(DOCUMENTS.length), quiet:true },
+    { id:'artisans', label:"Professionnels", ic:'hardhat' }
+  ]},
+  { g:"À faire", items:[
+    { id:'entretiens', label:"À faire", ic:'bell', tag:String(rappelsProches()) },
     { id:'garanties', label:"Garanties", ic:'shield' },
-    { id:'artisans', label:"Artisans", ic:'hardhat' },
     { id:'finances', label:"Finances", ic:'euro' }
   ]},
-  { g:"Continuité", items:[
+  { g:"Transmission", items:[
     { id:'proprietaires', label:"Propriétaires", ic:'users' },
     { id:'echanges', label:"Échanges", ic:'share' },
-    { id:'livres', label:"Livres du logement", ic:'book' },
+    { id:'livres', label:"Dossiers et livres", ic:'book' },
     { id:'transmission', label:"Transmission", ic:'key' }
   ]}
 ];
@@ -1556,8 +1614,8 @@ const MOBILE_NAV = [
   { id:'accueil', label:"Accueil", ic:'home' },
   { id:'memoire', label:"Mémoire", ic:'heart' },
   { id:'__add', label:"", ic:'plus' },
-  { id:'chronologie', label:"Histoire", ic:'clock' },
-  { id:'__menu', label:"Plus", ic:'menu' }
+  { id:'entretiens', label:"À faire", ic:'bell' },
+  { id:'__menu', label:"Profil", ic:'menu' }
 ];
 
 /* ============================================================
@@ -1604,9 +1662,11 @@ function sidebar(){
     <nav class="sb-nav">
       ${NAV.map(g => `
         <div class="sb-group">
-          <div class="sb-group-label">${g.g}</div>
+          ${g.g?`<div class="sb-group-label">${g.g}</div>`:''}
           ${g.items.map(it => {
-            const tag = it.id==='echanges' ? (depotsAValider().length || null) : it.tag;
+            const tag = it.id==='echanges' ? (depotsAValider().length || null)
+                      : it.id==='boite' ? ((depotsAValider().length + depotsRecus().length) || null)
+                      : it.tag;
             return `<button class="sb-item ${S.view===it.id?'active':''}" data-act="go" data-v="${it.id}">
               ${I[it.ic]}<span>${it.label}</span>
               ${tag ? `<span class="tag ${it.quiet?'quiet':''}">${tag}</span>` : ''}
@@ -1615,6 +1675,7 @@ function sidebar(){
         </div>`).join('')}
       <div class="sb-group">
         <button class="sb-item" data-act="modal" data-m="souvenir">${I.plus}<span>Ajouter un souvenir</span></button>
+        <button class="sb-item" data-act="go" data-v="boite">${I.inbox}<span>Recevoir un document</span></button>
       </div>
     </nav>
     <div class="sb-foot">
@@ -1622,7 +1683,7 @@ function sidebar(){
         <div class="avatar">CL</div>
         <div class="grow">
           <div class="small strong">Claire Lefèvre</div>
-          <div class="xsmall muted">Offre Premium</div>
+          <div class="xsmall muted">Mémoire gratuite</div>
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block mt-12" data-act="site">Revenir à la présentation</button>
@@ -1646,7 +1707,8 @@ function topbar(){
     </div>
     <div style="margin-left:auto" class="row gap-8">
       <button class="btn btn-ghost btn-sm" data-act="go" data-v="entretiens">${I.bell} ${rappelsProches()} rappel${rappelsProches()>1?'s':''}</button>
-      <button class="btn btn-primary btn-sm" data-act="modal" data-m="souvenir">${I.plus} Ajouter un souvenir</button>
+      <button class="btn btn-ghost btn-sm" data-act="go" data-v="boite">${I.inbox} Recevoir un document</button>
+      <button class="btn btn-primary btn-sm" data-act="modal" data-m="souvenir">${I.plus} Ajouter</button>
     </div>
   </div>`;
 }
@@ -1655,7 +1717,7 @@ function mobileNav(){
   return `<nav class="mobile-nav">
     ${MOBILE_NAV.map(it => {
       if (it.id === '__add') return `<button class="mn-item add" data-act="modal" data-m="souvenir" aria-label="Ajouter un souvenir"><span class="mnb">${I.plus}</span></button>`;
-      if (it.id === '__menu') return `<button class="mn-item" data-act="openDrawer">${I.menu}<span>Plus</span></button>`;
+      if (it.id === '__menu') return `<button class="mn-item" data-act="openDrawer">${I.menu}<span>${it.label}</span></button>`;
       return `<button class="mn-item ${S.view===it.id?'active':''}" data-act="go" data-v="${it.id}">${I[it.ic]}<span>${it.label}</span></button>`;
     }).join('')}
   </nav>`;
@@ -1669,6 +1731,7 @@ function viewApp(){
     case 'chronologie':   return vChronologie();
     case 'identite':      return vIdentite();
     case 'pieces':        return vPieces();
+    case 'boite':         return vBoite();
     case 'documents':     return vDocuments();
     case 'equipements':   return vEquipements();
     case 'travaux':       return vTravaux();
@@ -1842,6 +1905,7 @@ function stat(label, value, unit, foot, ic){
 
 function docTile(x){
   const enAttente = x.depot && x.depot.statut === 'a_valider';
+  const enCours = x.depot && x.depot.statut === 'recu';
   return `<button class="doc-tile" data-act="panel" data-t="document" data-id="${x.id}">
     <div class="doc-thumb">
       <span class="ext">${x.ext}</span>
@@ -1852,6 +1916,7 @@ function docTile(x){
       <div class="n">${x.nom}</div>
       <div class="m">${x.cat} · ${fdateC(x.date)}</div>
       ${enAttente?`<div class="mt-8"><span class="badge badge-wood">${I.info} À valider</span></div>`:''}
+      ${enCours?`<div class="mt-8"><span class="badge badge-wood">${I.inbox} Analyse en cours</span></div>`:''}
     </div>
   </button>`;
 }
@@ -2077,6 +2142,33 @@ function vIdentite(){
       </div>
 
       <div class="card">
+        <div class="card-head"><h3>Identité numérique du logement</h3><span class="badge badge-outline">Adresse de dépôt</span></div>
+        <div class="card-body">
+          <p class="small muted mb-12">Comme une adresse postale, ce logement possède désormais sa propre adresse de dépôt VIDOM, publique et permanente. Un professionnel la met en copie du courriel qu'il envoie déjà — le document arrive ici, sans qu'il ait rien d'autre à faire.</p>
+          <div class="row-between wrap gap-12" style="padding:12px 14px;background:var(--ivory-deep);border-radius:10px">
+            <span class="mono-num strong small">${LOGEMENT.adresseDepot}</span>
+            <button class="btn btn-ghost btn-sm" data-act="copy" data-val="${LOGEMENT.adresseDepot}">${I.copy} Copier</button>
+          </div>
+          <div class="row gap-8 wrap mt-12">
+            <button class="btn btn-ghost btn-sm" data-act="modal" data-m="partageradresse">${I.share} Partager à un artisan</button>
+            <button class="btn btn-ghost btn-sm" data-act="go" data-v="boite">${I.inbox} Voir les derniers documents reçus</button>
+            <button class="btn btn-quiet btn-sm" data-act="regen-toggle">${I.copy} Régénérer l'adresse publique</button>
+          </div>
+          ${S.regen?`<div class="note wood mt-12">${I.info}<div class="small">L'ancienne adresse restera valable quelques jours, le temps de prévenir vos artisans. <b>Confirmer ?</b>
+            <div class="row gap-8 wrap mt-8"><button class="btn btn-primary btn-sm" data-act="regen-confirm">${I.check} Oui, régénérer</button><button class="btn btn-ghost btn-sm" data-act="regen-toggle">Annuler</button></div></div></div>`:''}
+
+          <div class="mt-16" style="padding-top:14px;border-top:1px solid var(--line-soft)">
+            <div class="row-between mb-4"><span class="small strong">Alias technique de transfert</span><span class="badge badge-outline">Privé</span></div>
+            <p class="xsmall muted mb-8">Sert uniquement à changer de gardien du logement — déménagement, vente, succession. Il n'est jamais communiqué à un artisan, jamais affiché publiquement.</p>
+            <div class="row-between wrap gap-12" style="padding:10px 14px;background:var(--ivory-deep);border-radius:10px">
+              <span class="mono-num small muted">${LOGEMENT.aliasGardien}</span>
+              <button class="btn btn-ghost btn-sm" data-act="copy" data-val="${LOGEMENT.aliasGardien}">${I.copy} Copier</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-head"><h3>Diagnostics</h3><span class="badge">${DIAGNOSTICS.length}</span></div>
         <div class="tbl-wrap">
           <table class="tbl">
@@ -2184,6 +2276,96 @@ function vPieces(){
           `<div class="row gap-6 mt-12"><span class="badge badge-wood">Aucun document rattaché</span></div>`}
       </button>`;
     }).join('')}
+  </div>`;
+}
+
+/* ============================================================
+   VUE — BOÎTE D'ARRIVÉE
+   L'adresse de dépôt du logement, et ce qu'elle a reçu — VIDOM-063
+   ============================================================ */
+function vBoite(){
+  const recus = depotsRecus();
+  const proposes = depotsAValider();
+  const traites = depotsTraites().sort((a,b)=>d(b.depot.envoye)-d(a.depot.envoye)).slice(0,6);
+  const tous = boiteArrivee();
+
+  const ligne = (x) => {
+    const a = x.depot.artisan ? ART[x.depot.artisan] : null;
+    const st = x.depot.statut==='recu'    ? `<span class="badge badge-wood"><span class="dot"></span>Reçu — analyse en cours</span>`
+             : x.depot.statut==='a_valider' ? `<span class="badge badge-wood"><span class="dot"></span>Proposé — à valider</span>`
+             : x.depot.statut==='valide'  ? `<span class="badge badge-ok"><span class="dot"></span>Validé</span>`
+             : `<span class="badge">Refusé</span>`;
+    return `<button class="list-row" data-act="panel" data-t="document" data-id="${x.id}">
+      <div class="ic ${x.depot.statut==='recu'||x.depot.statut==='a_valider'?'wood':''}">${I[ICONE_CAT[x.cat]||'file']}</div>
+      <div class="grow">
+        <div class="t">${x.nom}</div>
+        <div class="s">${a?a.nom:'Tiers'} · ${x.depot.canal} · reçu le ${fdateC(x.depot.envoye)}</div>
+      </div>
+      ${st}
+    </button>`;
+  };
+
+  return `
+  <div class="page-head">
+    <h1>Boîte d'arrivée</h1>
+    <p class="sub">Chaque logement possède sa propre adresse de dépôt. Un professionnel la met simplement en copie d'un courriel qu'il envoyait déjà — le document arrive ici, déjà rattaché à cette maison, sans qu'il ait rien à identifier.</p>
+  </div>
+
+  <div class="card mb-24">
+    <div class="card-head"><h3>Votre adresse de dépôt</h3><span class="badge badge-outline">Une adresse, propre à ce logement</span></div>
+    <div class="card-body">
+      <div class="row-between wrap gap-16">
+        <div class="grow" style="min-width:240px">
+          <div class="mono-num strong" style="font-size:18px;letter-spacing:-.01em">${LOGEMENT.adresseDepot}</div>
+          <p class="small muted mt-8">Donnez cette adresse une fois pour toutes à vos artisans, à votre assureur ou à votre notaire. Chaque courriel envoyé avec cette adresse en copie dépose automatiquement ses pièces jointes ici — rien à installer, rien à identifier de leur côté.</p>
+        </div>
+        <div class="row gap-8" style="flex:none">
+          <button class="btn btn-ghost btn-sm" data-act="copy" data-val="${LOGEMENT.adresseDepot}">${I.copy} Copier l'adresse</button>
+          <button class="btn btn-ghost btn-sm" data-act="modal" data-m="qr">${I.qrcode} Code de fin de travaux</button>
+        </div>
+      </div>
+      <div class="note mt-16">${I.lock}<div class="small">Cette adresse ne permet que de déposer — jamais de consulter. Elle peut être régénérée à tout moment si vous préférez la renouveler.</div></div>
+    </div>
+  </div>
+
+  <div class="grid g4 mb-24">
+    ${stat("Reçus, analyse en cours", recus.length, "", "arrivés, pas encore lus", 'inbox')}
+    ${stat("Proposés — à valider", proposes.length, "", "prêts, en attente de votre geste", 'upload')}
+    ${stat("Validés récemment", DOCUMENTS.filter(x=>x.depot&&x.depot.statut==='valide').length, "", "intégrés à la mémoire", 'check')}
+    ${stat("Canaux actifs", 2, "", "adresse de dépôt et code de fin de travaux", 'share')}
+  </div>
+
+  ${recus.length ? `<div class="card mb-24">
+    <div class="card-head"><h3>Reçus, pas encore analysés</h3><span class="badge badge-wood">${recus.length}</span></div>
+    <div class="list">${recus.map(ligne).join('')}</div>
+    <div class="card-foot xsmall faint">VIDOM lit chaque pièce jointe automatiquement. Dans quelques instants, ce document passera à l'étape « proposé », avec ce que VIDOM en a compris.</div>
+  </div>` : ''}
+
+  ${proposes.length ? `<div class="card mb-24">
+    <div class="card-head"><h3>Proposés — en attente de votre validation</h3><span class="badge badge-wood">${proposes.length}</span></div>
+    <div class="list">${proposes.map(ligne).join('')}</div>
+    <div class="card-foot xsmall faint">Rien ne rejoint la mémoire du logement sans votre accord. Ouvrez un document pour le valider ou le refuser.</div>
+  </div>` : ''}
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-head"><h3>Historique des dépôts</h3></div>
+      <div class="list">${tous.length ? tous.map(ligne).join('') : `<div class="empty">${I.inbox}<div>Aucun dépôt reçu pour l'instant</div></div>`}</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Ce que la boîte d'arrivée change</h3></div>
+      <div class="card-body">
+        <div class="stack gap-12">
+          ${[["Le professionnel n'a <b>rien à créer, ni à installer</b> : il envoie un courriel comme il en envoie déjà."],
+             ["Le document arrive <b>déjà rattaché à ce logement</b> — jamais à un utilisateur, jamais à trier vous-même."],
+             ["Chaque dépôt passe un contrôle automatique, puis vous attend : <b>reçu → proposé → validé</b>, jamais d'intégration silencieuse."]].map(([t])=>`
+            <div class="row" style="gap:11px;align-items:flex-start">
+              <span style="width:17px;height:17px;flex:none;color:var(--sage);margin-top:2px">${I.check}</span>
+              <span class="small">${t}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -2473,11 +2655,20 @@ function vGaranties(){
    VUE — ARTISANS
    ============================================================ */
 function vArtisans(){
+  const actifs = ARTISANS.filter(a=>a.actif);
   return `
   <div class="page-head">
-    <h1>Artisans et entreprises</h1>
-    <p class="sub">${ARTISANS.length} professionnels sont intervenus sur le logement. Leur historique reste attaché à la maison — y compris pour un futur propriétaire.</p>
+    <h1>Professionnels</h1>
+    <p class="sub">${ARTISANS.length} professionnels sont intervenus sur le logement. Leur historique reste attaché à la maison — y compris pour un futur propriétaire. Vous pouvez recontacter n'importe lequel d'entre eux en un geste.</p>
   </div>
+
+  <div class="grid g4 mb-24">
+    ${stat("Professionnels connus", ARTISANS.length, "", "toutes interventions confondues", 'hardhat')}
+    ${stat("Profils actifs", actifs.length, "", "coordonnées à jour, recontact facilité", 'check')}
+    ${stat("Interventions", INTERVENTIONS.filter(i=>i.artisan).length, "", "depuis 2019", 'tools')}
+    ${stat("Montant total", fnum(ARTISANS.reduce((s,a)=>s+a.interventions.map(i=>INT[i]).filter(Boolean).reduce((t,i)=>t+Math.max(0,i.cout),0),0)), " €", "toutes entreprises confondues", 'euro')}
+  </div>
+
   <div class="grid g-auto-lg">
     ${ARTISANS.sort((a,b)=>b.interventions.length-a.interventions.length).map(a=>{
       const cout = a.interventions.map(i=>INT[i]).filter(Boolean).reduce((s,i)=>s+Math.max(0,i.cout),0);
@@ -2485,7 +2676,10 @@ function vArtisans(){
         <div class="eq-top">
           <div class="eq-ic">${I.hardhat}</div>
           <div class="grow">
-            <div class="eq-name">${a.nom}</div>
+            <div class="row-between" style="gap:8px">
+              <div class="eq-name">${a.nom}</div>
+              ${a.actif?`<span class="badge badge-ok" style="flex:none"><span class="dot"></span>Actif</span>`:`<span class="badge badge-outline" style="flex:none">Historique</span>`}
+            </div>
             <div class="eq-brand">${a.metier}</div>
           </div>
         </div>
@@ -2677,14 +2871,18 @@ function vEchanges(){
         <h1>Échanges</h1>
         <p class="sub">Le logement est au centre. Autour de lui, chacun ne voit qu'une partie — jamais tout. Chaque partage est volontaire, limité dans le temps et révocable à tout moment.</p>
       </div>
-      <button class="btn btn-primary" data-act="dest" data-d="notaire">${I.share} Partager</button>
+      <div class="row gap-8">
+        <button class="btn btn-ghost" data-act="go" data-v="boite">${I.inbox} Boîte d'arrivée</button>
+        <button class="btn btn-ghost" data-act="modal" data-m="niveauxacces">${I.shield} Ce que voit chaque tiers</button>
+        <button class="btn btn-primary" data-act="dest" data-d="notaire">${I.share} Partager</button>
+      </div>
     </div>
   </div>
 
   <div class="grid g4 mb-24">
     ${stat("Accès actifs", actifs.length, "", "dont 2 membres du foyer", 'users')}
     ${stat("Accès terminés", PARTAGES.filter(p=>p.statut!=='actif').length, "", "historique conservé", 'lock')}
-    ${stat("Dépôts à valider", attente.length, "", attente.length?"reçus via un code de fin de travaux":"aucun en attente", 'upload')}
+    ${stat("Dépôts à valider", attente.length, "", attente.length?"détail dans la Boîte d'arrivée":"aucun en attente", 'upload')}
     ${stat("Dernière consultation", "19 juil.", "", "Thermic Ouest — fiche pompe à chaleur", 'eye')}
   </div>
 
@@ -2795,7 +2993,7 @@ function vEchanges(){
       <div class="list">
         ${JOURNAL.map(j=>`
           <div class="list-row" style="cursor:default">
-            <div class="ic">${I[j.acte==='Connexion'?'lock':j.acte==='Export'?'download':j.acte==='Ajout de document'?'upload':j.acte==='Partage créé'?'share':'eye']}</div>
+            <div class="ic">${I[j.acte==='Connexion'?'lock':j.acte==='Export'?'download':j.acte==='Ajout de document'?'upload':j.acte==='Partage créé'?'share':j.acte==='Dépôt via code'||j.acte==='Dépôt par courriel'?'inbox':'eye']}</div>
             <div class="grow"><div class="t">${j.acte}</div><div class="s">${j.qui} · ${j.detail}</div></div>
             <span class="xsmall faint" style="white-space:nowrap">${j.date.slice(8,10)}/${j.date.slice(5,7)}</span>
           </div>`).join('')}
@@ -2841,8 +3039,8 @@ function couverture(l){
 function vLivres(){
   return `
   <div class="page-head">
-    <h1>Les livres du logement</h1>
-    <p class="sub">Chaque destinataire reçoit un document fait pour lui, mis en page et relié — pas un empilement de fichiers. Vous choisissez, VIDOM compose.</p>
+    <h1>Dossiers et livres du logement</h1>
+    <p class="sub">Chaque destinataire reçoit un document fait pour lui, mis en page et relié — pas un empilement de fichiers. Vous choisissez, VIDOM compose. ${MODELE_LIVRES}</p>
   </div>
 
   <div class="grid g-auto-lg mb-24">
@@ -2850,7 +3048,10 @@ function vLivres(){
       <button class="livre" data-act="livre" data-l="${l.id}">
         ${couverture(l)}
         <div class="livre-body">
-          <div class="lt">${l.titre}</div>
+          <div class="row-between" style="gap:8px;align-items:flex-start">
+            <div class="lt">${l.titre}</div>
+            <span class="badge ${l.prix?'badge-wood':'badge-ok'}" style="flex:none">${l.prix?feur(l.prix):'Inclus'}</span>
+          </div>
           <div class="ls">${l.sous}</div>
           <div class="lf">${l.pages} pages · ${l.mention}</div>
         </div>
@@ -2948,6 +3149,21 @@ function vTransmission(){
       </div>
 
       <div class="card">
+        <div class="card-head"><h3>Je quitte ce logement</h3><span class="badge badge-outline">Sans vente</span></div>
+        <div class="card-body">
+          <p class="small muted mb-16">Un déménagement n'est pas toujours une vente — location, colocation, départ chez un proche. VIDOM trie automatiquement ce qui reste attaché à la maison et ce qui vous suit, sans que vous ayez à y penser vous-même.</p>
+          <div class="grid g3 gap-10">
+            <div class="note">${I[DEMENAGEMENT.logement.ic]}<div><b class="small">${DEMENAGEMENT.logement.t}</b><div class="xsmall muted mt-4">${DEMENAGEMENT.logement.items.length} éléments identifiés</div></div></div>
+            <div class="note wood">${I[DEMENAGEMENT.avecmoi.ic]}<div><b class="small">${DEMENAGEMENT.avecmoi.t}</b><div class="xsmall muted mt-4">${DEMENAGEMENT.avecmoi.items.length} éléments identifiés</div></div></div>
+            <div class="note" style="background:transparent">${I[DEMENAGEMENT.prive.ic]}<div><b class="small">${DEMENAGEMENT.prive.t}</b><div class="xsmall muted mt-4">${DEMENAGEMENT.prive.items.length} éléments identifiés</div></div></div>
+          </div>
+        </div>
+        <div class="card-foot">
+          <button class="btn btn-primary" data-act="modal" data-m="demenagement">${I.archive} Trier ma mémoire avant de partir</button>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-head"><h3>Ce que reçoit le futur propriétaire</h3></div>
         <div class="card-body">
           <p class="small muted mb-16">La mémoire reste attachée au logement. Les droits d'accès, eux, changent de mains : vos données personnelles, vos échanges privés et vos notes ne sont pas transmis.</p>
@@ -2974,6 +3190,7 @@ function vTransmission(){
           <button class="list-row" data-act="modal" data-m="succession"><div class="ic">${I.users}</div><div class="grow"><div class="t">Préparer une succession</div><div class="s">Changer de gardien, sans interrompre l'histoire</div></div>${I.chevron}</button>
           <button class="list-row" data-act="livre" data-l="vente"><div class="ic">${I.book}</div><div class="grow"><div class="t">Composer le dossier de vente</div><div class="s">Un livre, pas un dossier compressé</div></div>${I.chevron}</button>
           <button class="list-row" data-act="modal" data-m="succession"><div class="ic">${I.key}</div><div class="grow"><div class="t">Donation</div><div class="s">Transférer la mémoire sans vente</div></div>${I.chevron}</button>
+          <button class="list-row" data-act="modal" data-m="demenagement"><div class="ic">${I.archive}</div><div class="grow"><div class="t">Je quitte ce logement</div><div class="s">Déménagement sans vente — trier la mémoire</div></div>${I.chevron}</button>
           <button class="list-row"><div class="ic">${I.download}</div><div class="grow"><div class="t">Export intégral</div><div class="s">Récupérer toutes vos données, sans condition</div></div>${I.chevron}</button>
         </div>
       </div>
@@ -3046,6 +3263,15 @@ function pEquipement(e){
   const head = pTitle(e.cat, e.nom, `${e.marque}${e.marque!=='—'?' · ':''}${e.modele}`);
 
   const body = `
+    <div class="mb-8 xsmall strong muted" style="text-transform:uppercase;letter-spacing:.06em">Que souhaitez-vous faire ?</div>
+    <div class="row gap-8 wrap mb-16">
+      <button class="btn btn-primary btn-sm" data-act="panne" data-eq="${e.id}">${I.alert} J'ai un problème</button>
+      ${g?`<button class="btn btn-ghost btn-sm" data-act="panel" data-t="garantie" data-id="${g.id}">${I.shield} Voir la garantie</button>`:''}
+      ${e.marque&&e.marque!=='—'?`<a class="btn btn-ghost btn-sm" href="mailto:sav@${e.marque.toLowerCase().replace(/[^a-z0-9]/g,'')}.fr?subject=${encodeURIComponent('SAV — '+e.nom)}">${I.mail} Contacter le SAV ${e.marque}</a>`:''}
+      ${e.installateur?`<button class="btn btn-ghost btn-sm" data-act="panel" data-t="artisan" data-id="${e.installateur}">${I.hardhat} Recontacter ${ART[e.installateur].nom}</button>`:''}
+      <button class="btn btn-ghost btn-sm" data-act="trouverpro" data-cat="${e.cat}" data-eq="${e.id}">${I.search} Trouver un professionnel</button>
+    </div>
+
     ${e.archive?`<div class="note wood mb-16">${I.archive}<div><b>Équipement déposé le ${fdateC(e.depose)}.</b> Sa mémoire est conservée${e.remplacePar?` et reliée à l'équipement qui l'a remplacé.`:'.'}</div></div>`:''}
     ${gA?`<div class="note mb-16">${I.shield}<div>Sous garantie <b>${g.type.toLowerCase()}</b> jusqu'au <b>${fdate(g.fin)}</b>, soit ${ecart(g.fin).txt}.</div></div>`:''}
 
@@ -3124,6 +3350,7 @@ function pDocument(x){
 
   const head = pTitle(x.cat, x.nom, `${fdate(x.date)} · ${x.ext} · ${x.taille}`);
   const enAttente = x.depot && x.depot.statut === 'a_valider';
+  const enCours = x.depot && x.depot.statut === 'recu';
   const artisanDepot = x.depot && x.depot.artisan ? ART[x.depot.artisan] : null;
 
   const body = `
@@ -3145,18 +3372,24 @@ function pDocument(x){
 
     ${x.depot ? `<div class="card mb-16">
       <div class="card-head"><h3>Provenance</h3>
-        ${enAttente?`<span class="badge badge-wood"><span class="dot"></span>À valider</span>`
+        ${enCours?`<span class="badge badge-wood"><span class="dot"></span>Reçu — analyse en cours</span>`
+          :enAttente?`<span class="badge badge-wood"><span class="dot"></span>Proposé — à valider</span>`
           :x.depot.statut==='valide'?`<span class="badge badge-ok"><span class="dot"></span>Validé</span>`
           :`<span class="badge">Refusé</span>`}</div>
       <div class="card-body">
         <dl class="kv">
           <dt>Déposé par</dt><dd>${artisanDepot?artisanDepot.nom:'Un tiers'} (${x.depot.canal})</dd>
           <dt>Reçu le</dt><dd>${fdateC(x.depot.envoye)}</dd>
-          <dt>Code valable jusqu'au</dt><dd>${fdateC(x.depot.expire)}</dd>
+          ${x.depot.expire?`<dt>Code valable jusqu'au</dt><dd>${fdateC(x.depot.expire)}</dd>`:''}
           ${x.depot.statut==='valide'&&x.depot.valideLe?`<dt>Validé le</dt><dd>${fdateC(x.depot.valideLe)}</dd>`:''}
+          ${x.depot.securite?`<dt>Contrôle de sécurité</dt><dd><span class="badge badge-ok"><span class="dot"></span>Aucune menace détectée</span></dd>`:''}
         </dl>
+        ${x.depot.doublon?`<div class="note alert mt-16">${I.alert}<div class="small">${x.depot.doublon}</div></div>`:''}
+        ${enCours?`<div class="note wood mt-16">${I.info}<div class="small">
+          Ce document vient d'arriver. VIDOM l'analyse automatiquement — il passera à l'étape « proposé » dans un instant, avec ce qu'il en a compris.</div></div>`:''}
         ${enAttente?`<div class="note wood mt-16">${I.info}<div class="small">
-          Ce document a été déposé par un tiers via un code à usage unique. Il n'a pas encore rejoint la mémoire du logement : vérifiez-le, puis validez-le ou refusez-le.</div></div>
+          Ce document a été déposé par un tiers. Il n'a pas encore rejoint la mémoire du logement : vérifiez-le, puis validez-le ou refusez-le.</div></div>
+        ${x.depot.suggestion?`<div class="note mt-16">${I.link}<div class="small">VIDOM propose de le rattacher à : <b>${x.depot.suggestion.label}</b>. <button class="btn btn-quiet btn-sm mt-8" data-act="panel" data-t="${x.depot.suggestion.type}" data-id="${x.depot.suggestion.id}">Voir</button></div></div>`:''}
         <div class="row gap-8 wrap mt-16">
           <button class="btn btn-primary btn-sm" data-act="validerdoc" data-id="${x.id}">${I.check} Valider et intégrer</button>
           <button class="btn btn-ghost btn-sm" data-act="refuserdoc" data-id="${x.id}">${I.close} Refuser</button>
@@ -3166,6 +3399,7 @@ function pDocument(x){
 
     ${x.alerte?`<div class="note alert mb-16">${I.alert}<div>${x.alerte}</div></div>`:''}
 
+    ${enCours ? `<div class="note wood mb-16">${I.info}<div class="small">L'analyse automatique n'a pas encore livré de résultat pour ce document. Revenez dans un instant, ou consultez la <b>Boîte d'arrivée</b>.</div></div>` : `
     <div class="card mb-16">
       <div class="card-head"><h3>Informations retenues</h3>
         <span class="badge ${x.confiance>=90?'badge-ok':x.confiance>=70?'badge-wood':'badge-alert'}">Fiabilité ${x.confiance} %</span></div>
@@ -3176,7 +3410,7 @@ function pDocument(x){
         </dl>
         ${x.confiance<80?`<div class="note wood mt-16">${I.info}<div class="small">Ces informations ont été lues automatiquement sur un document de qualité moyenne. Vérifiez-les avant de vous y fier.</div></div>`:''}
       </div>
-    </div>
+    </div>`}
 
     ${liens.length?`<div class="card">
       <div class="card-head"><h3>Ce document enrichit</h3></div>
@@ -3188,7 +3422,7 @@ function pDocument(x){
             ${I.chevron}
           </button>`).join('')}
       </div>
-    </div>`:`<div class="note wood">${I.info}<div>Ce document n'est rattaché à aucun équipement ni à aucun événement. Vous pouvez le relier manuellement.</div></div>`}`;
+    </div>`:!enCours?`<div class="note wood">${I.info}<div>Ce document n'est rattaché à aucun équipement ni à aucun événement. Vous pouvez le relier manuellement.</div></div>`:''}`;
 
   return [head, body];
 }
@@ -3265,6 +3499,15 @@ function pArtisan(a){
   const head = pTitle(a.metier, a.nom, a.ville);
 
   const body = `
+    <div class="row gap-8 wrap mb-16">
+      <span class="badge ${a.actif?'badge-ok':'badge-outline'}"><span class="dot"></span>${a.actif?'Profil actif':'Historique uniquement'}</span>
+      <a class="btn btn-primary btn-sm" href="tel:${a.tel.replace(/[^\d+]/g,'')}">${I.phone} Recontacter</a>
+      ${a.mail?`<a class="btn btn-ghost btn-sm" href="mailto:${a.mail}">${I.mail} Écrire un courriel</a>`:''}
+    </div>
+    <div class="note ${a.actif?'':'wood'} mb-16">${I.info}<div class="small">${a.actif
+      ? "Cette entreprise a activé un profil actif : ses coordonnées sont tenues à jour par elle-même, et vos demandes lui parviennent directement."
+      : "Présence historique, gratuite et permanente : elle ne disparaîtra jamais, quoi qu'il arrive. Un « profil actif » permettrait à cette entreprise de tenir ses coordonnées à jour et de recevoir vos demandes directement — elle ne l'a pas activé."}</div></div>
+
     <div class="card mb-16"><div class="card-body">
       <dl class="kv">
         <dt>Téléphone</dt><dd>${a.tel}</dd>
@@ -3280,11 +3523,11 @@ function pArtisan(a){
       <div class="card-body"><p style="font-style:italic;line-height:1.6">« ${a.note} »</p>
       <div class="xsmall faint mt-8">Cette note vous est personnelle. Elle n'est jamais partagée, ni transmise avec le logement.</div></div></div>`:''}
 
-    <div class="card mb-16"><div class="card-head"><h3>Interventions</h3></div>
+    <div class="card mb-16"><div class="card-head"><h3>Pourquoi cette entreprise est présente</h3></div>
       <div class="list">${inters.map(i=>`
         <button class="list-row" data-act="panel" data-t="intervention" data-id="${i.id}">
           <div class="ic">${I.tools}</div>
-          <div class="grow"><div class="t">${i.titre}</div><div class="s">${fdateC(i.date)}</div></div>
+          <div class="grow"><div class="t">${VERBE_TYPE[i.type]||'Est intervenu'} — ${i.titre}</div><div class="s">${fdateC(i.date)}</div></div>
           ${i.cout>0?`<span class="small strong mono-num">${feur(i.cout)}</span>`:''}
         </button>`).join('')}</div></div>
 
@@ -3464,6 +3707,11 @@ function modalHTML(){
   if (S.modal === 'livre')      return livreHTML();
   if (S.modal === 'qr')         return qrHTML();
   if (S.modal === 'succession') return successionHTML();
+  if (S.modal === 'trouverpro') return trouverProHTML();
+  if (S.modal === 'demenagement') return demenagementHTML();
+  if (S.modal === 'partageradresse') return partageradresseHTML();
+  if (S.modal === 'niveauxacces') return niveauxaccesHTML();
+  if (S.modal === 'panne') return panneHTML();
   return '';
 }
 
@@ -3902,6 +4150,7 @@ function livreHTML(){
         <div class="row gap-6 wrap mt-12">
           <span class="badge badge-outline">${l.pages} pages</span>
           <span class="badge badge-outline">${l.pour}</span>
+          <span class="badge ${l.prix?'badge-wood':'badge-ok'}">${l.prix?`${feur(l.prix)} — dossier consolidé`:'Inclus dans la mémoire gratuite'}</span>
         </div>
       </div>
     </div>
@@ -3913,9 +4162,10 @@ function livreHTML(){
       </div>`).join('')}
     </div></div>
     <div class="note mb-20">${I.book}<div class="small">
-      Ce n'est pas un dossier compressé. C'est un document mis en page, lisible sans VIDOM, que l'on peut imprimer ou remettre en main propre.</div></div>
+      Ce n'est pas un dossier compressé. C'est un document mis en page, lisible sans VIDOM, que l'on peut imprimer ou remettre en main propre.
+      ${l.prix?` Vous ne payez que ce dossier, une fois composé — la mémoire du logement, elle, reste gratuite.`:''}</div></div>
     <div class="row gap-8 wrap">
-      <button class="btn btn-primary" data-act="closeModal">${I.download} Composer le livre</button>
+      <button class="btn btn-primary" data-act="closeModal">${l.prix?I.euro:I.download} ${l.prix?`Composer et payer — ${feur(l.prix)}`:'Composer le livre'}</button>
       <button class="btn btn-ghost" data-act="closeModal">Annuler</button>
     </div>`);
 }
@@ -3968,6 +4218,8 @@ function qrHTML(){
       L'entreprise ne voit rien d'autre : ni vos documents, ni les autres pièces, ni les autres artisans. Elle dépose, elle ne consulte pas.</div></div>
     <div class="note wood mb-20">${I.info}<div class="small">
       Le code expire tout seul à la fin du chantier. Vous pouvez aussi le révoquer d'un geste depuis <b>Échanges</b>.</div></div>
+    <div class="note mb-20">${I.mail}<div class="small">
+      Pour un artisan que vous recontactez régulièrement, l'<b>adresse de dépôt du logement</b> (${LOGEMENT.adresseDepot}) évite de régénérer un code à chaque fois — voir la <b>Boîte d'arrivée</b>.</div></div>
     <div class="row gap-8 wrap">
       <button class="btn btn-primary" data-act="closeModal">${I.share} Envoyer le code à l'entreprise</button>
       <button class="btn btn-ghost" data-act="closeModal">Fermer</button>
@@ -4024,6 +4276,167 @@ function successionHTML(){
     </div>`);
 }
 
+/* ------------------------------------------------------------
+   TROUVER UN PROFESSIONNEL — priorité à celui déjà connu du logement — VIDOM-063
+   ------------------------------------------------------------ */
+function trouverProHTML(){
+  const eq = S.pro.eq ? EQ[S.pro.eq] : null;
+  const cat = S.pro.cat || (eq ? eq.cat : null);
+  const connuId = cat ? CAT_METIER[cat] : null;
+  const connu = connuId ? ART[connuId] : null;
+  const autres = ARTISANS.filter(a=>a.id!==connuId).sort((a,b)=>b.interventions.length-a.interventions.length).slice(0,4);
+
+  return modale("Trouver un professionnel", eq ? eq.nom : (cat||"Un professionnel"), `
+    <p class="muted mb-20">VIDOM ne propose jamais un professionnel au hasard. Il commence toujours par celui que ce logement connaît déjà.</p>
+
+    ${connu ? `
+    <div class="section-title mb-8">Déjà connu de ce logement</div>
+    <button class="dest mb-20" style="width:100%" data-act="panel" data-t="artisan" data-id="${connu.id}">
+      <div class="dh">
+        <div class="di">${I.hardhat}</div>
+        <div class="grow"><div class="small strong">${connu.nom}</div><div class="xsmall faint">${connu.metier} · ${connu.ville}</div></div>
+        ${connu.actif?`<span class="badge badge-ok" style="flex:none"><span class="dot"></span>Actif</span>`:''}
+      </div>
+      <div class="xsmall muted mt-12">${connu.interventions.length} intervention${connu.interventions.length>1?'s':''} sur ce logement depuis ${fdateC(connu.depuis)}</div>
+    </button>
+    <div class="row gap-8 wrap mb-20">
+      <a class="btn btn-primary btn-sm" href="tel:${connu.tel.replace(/[^\d+]/g,'')}">${I.phone} Recontacter ${connu.nom}</a>
+      ${connu.mail?`<a class="btn btn-ghost btn-sm" href="mailto:${connu.mail}">${I.mail} Écrire un courriel</a>`:''}
+    </div>` : `
+    <div class="note wood mb-20">${I.info}<div class="small">Aucun professionnel connu de ce logement n'est rattaché à cette catégorie pour l'instant. Dès qu'une entreprise interviendra, elle apparaîtra ici en priorité la prochaine fois.</div></div>`}
+
+    <div class="section-title mb-8">Autres professionnels déjà intervenus sur ce logement</div>
+    <div class="card"><div class="list">
+      ${autres.map(a=>`
+        <button class="list-row" data-act="panel" data-t="artisan" data-id="${a.id}">
+          <div class="ic">${I.hardhat}</div>
+          <div class="grow"><div class="t">${a.nom}</div><div class="s">${a.metier}</div></div>
+          ${a.actif?`<span class="badge badge-ok">Actif</span>`:''}
+        </button>`).join('')}
+    </div></div>
+    <div class="note mt-20">${I.info}<div class="small">VIDOM ne propose pas d'annuaire de professionnels inconnus du logement. C'est la mémoire de la maison qui parle en premier — pas une mise en concurrence.</div></div>
+    <div class="row gap-8 wrap mt-20">
+      <button class="btn btn-ghost" data-act="closeModal">Fermer</button>
+    </div>`);
+}
+
+/* ------------------------------------------------------------
+   JE QUITTE CE LOGEMENT — déménagement sans vente, tri de la mémoire — VIDOM-063
+   ------------------------------------------------------------ */
+function demenagementHTML(){
+  const groupe = (k) => {
+    const g = DEMENAGEMENT[k];
+    return `<div class="card">
+      <div class="card-head" style="padding:13px 16px"><h3 style="font-size:13.5px;display:flex;align-items:center;gap:8px"><span style="width:16px;height:16px;flex:none;display:inline-flex;color:var(--sage)">${I[g.ic]}</span>${g.t}</h3></div>
+      <div class="card-body" style="padding:12px 16px 16px">
+        <div class="stack gap-9" style="gap:9px">
+          ${g.items.map(v=>`<div class="row gap-8" style="gap:8px;align-items:flex-start">
+            <span style="width:16px;height:16px;flex:none;color:var(--sage);margin-top:1px">${I.check}</span>
+            <span class="small">${v}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  };
+  return modale("Transmission", "Je quitte ce logement", `
+    <p class="muted mb-20">Un déménagement n'est pas toujours une vente. Que vous partiez en location, chez un proche ou vers un nouveau logement, la mémoire de <b>celui-ci</b> reste ici — et vous emportez ce qui vous appartient en propre.</p>
+
+    <div class="grid g3 gap-10 mb-20">
+      ${groupe('logement')}
+      ${groupe('avecmoi')}
+      ${groupe('prive')}
+    </div>
+
+    <div class="note mb-16">${I.info}<div class="small">Ce tri est proposé automatiquement par VIDOM à partir de la nature de chaque élément. Vous pouvez déplacer n'importe quel élément d'une catégorie à l'autre avant de confirmer — rien n'est fait sans votre validation.</div></div>
+
+    <div class="note wood mb-20">${I.key}<div class="small"><b>Une fois le tri confirmé :</b> le logement change de gardien — la personne qui succède à votre rôle reprend la main sur ce qui reste avec lui. L'adresse de dépôt publique (${LOGEMENT.adresseDepot}) est conservée : les artisans qui la connaissent déjà continuent d'y déposer, sans rien changer de leur côté. Votre alias technique de transfert, lui, est révoqué : il ne vous donnera plus accès à ce logement.</div></div>
+
+    <div class="row gap-8 wrap">
+      <button class="btn btn-primary" data-act="closeModal">${I.check} Confirmer le tri</button>
+      <button class="btn btn-ghost" data-act="closeModal">${I.download} Récupérer mon export personnel</button>
+      <button class="btn btn-quiet" data-act="closeModal">Plus tard</button>
+    </div>`);
+}
+
+/* ------------------------------------------------------------
+   PARTAGER L'ADRESSE DE DÉPÔT À UN ARTISAN — VIDOM-063
+   ------------------------------------------------------------ */
+function partageradresseHTML(){
+  const msg = `Bonjour, pour vos prochains documents (facture, garantie…) concernant mon logement, vous pouvez les envoyer directement à ${LOGEMENT.adresseDepot} — ils arriveront dans ma mémoire VIDOM sans que j'aie rien à reclasser.`;
+  return modale("Fiche du logement", "Partager l'adresse à un artisan", `
+    <p class="muted mb-16">Transmettez cette adresse à un professionnel pour qu'il l'ajoute à sa fiche client. Tout ce qu'il enverra à cette adresse arrivera directement dans votre boîte d'arrivée, en attente de votre validation.</p>
+    <div class="row-between wrap gap-12 mb-16" style="padding:12px 14px;background:var(--ivory-deep);border-radius:10px">
+      <span class="mono-num strong small">${LOGEMENT.adresseDepot}</span>
+      <button class="btn btn-ghost btn-sm" data-act="copy" data-val="${LOGEMENT.adresseDepot}">${I.copy} Copier</button>
+    </div>
+    <div class="small strong mb-8">Message prêt à envoyer</div>
+    <div class="note mb-16"><div class="small">${msg}</div></div>
+    <div class="row gap-8 wrap">
+      <a class="btn btn-primary" href="mailto:?subject=${encodeURIComponent('Adresse VIDOM de mon logement')}&body=${encodeURIComponent(msg)}">${I.mail} Envoyer par courriel</a>
+      <button class="btn btn-ghost" data-act="copy" data-val="${msg}">${I.copy} Copier le message</button>
+      <button class="btn btn-quiet" data-act="closeModal">Fermer</button>
+    </div>`);
+}
+
+/* ------------------------------------------------------------
+   « J'AI UN PROBLÈME » SUR UN ÉQUIPEMENT — mémoire actionnable, VIDOM-063
+   ------------------------------------------------------------ */
+function panneHTML(){
+  const e = EQ[S.panneEq];
+  if (!e) return modale("Équipement", "J'ai un problème", `<p class="muted">Équipement introuvable.</p>`);
+  const g = e.garantie ? GAR[e.garantie] : null;
+  const gA = g && d(g.fin) >= TODAY;
+  const docs = (e.docs||[]).map(x=>DOC[x]).filter(Boolean).slice(0,4);
+  const inst = e.installateur ? ART[e.installateur] : null;
+
+  return modale("Équipement — " + e.nom, "J'ai un problème", `
+    <p class="muted mb-16">Avant de vous déplacer ou d'appeler, voici ce que la mémoire du logement sait déjà sur <b>${e.nom}</b>.</p>
+
+    ${gA?`<div class="note mb-12">${I.shield}<div class="small">Sous garantie ${g.type.toLowerCase()} jusqu'au ${fdate(g.fin)} — l'intervention peut être couverte. <button class="btn btn-quiet btn-sm mt-8" data-act="panel" data-t="garantie" data-id="${g.id}">${I.shield} Voir la garantie</button></div></div>`
+      :`<div class="note wood mb-12">${I.info}<div class="small">Aucune garantie active sur cet équipement — l'intervention sera probablement à votre charge.</div></div>`}
+
+    <div class="stack gap-8 mb-16">
+      ${inst?`<button class="list-row" style="padding-left:0;padding-right:0" data-act="panel" data-t="artisan" data-id="${inst.id}">
+        <div class="ic">${I.hardhat}</div><div class="grow"><div class="t">Recontacter ${inst.nom}</div><div class="s">A installé cet équipement — le connaît déjà</div></div>${I.chevron}
+      </button>`:''}
+      ${docs.length?`<button class="list-row" style="padding-left:0;padding-right:0" data-act="closeModal">
+        <div class="ic">${I.doc}</div><div class="grow"><div class="t">Préparer les documents pour une intervention</div><div class="s">${docs.length} document${docs.length>1?'s':''} prêt${docs.length>1?'s':''} à transmettre (facture, notice, garantie)</div></div>${I.chevron}
+      </button>`:''}
+      <button class="list-row" style="padding-left:0;padding-right:0" data-act="trouverpro" data-cat="${e.cat}" data-eq="${e.id}">
+        <div class="ic">${I.search}</div><div class="grow"><div class="t">Trouver un autre professionnel</div><div class="s">Priorité à celui déjà connu de ce logement, sinon recherche autour de vous</div></div>${I.chevron}
+      </button>
+    </div>
+
+    <div class="row gap-8 wrap"><button class="btn btn-quiet" data-act="closeModal">Fermer</button></div>`);
+}
+
+/* ------------------------------------------------------------
+   NIVEAUX D'ACCÈS PAR TYPE DE TIERS — VIDOM-063, chantier 8
+   ------------------------------------------------------------ */
+const NIVEAUX_ACCES = [
+  { role:"Artisan", ic:'hardhat', recoit:["Les équipements sur lesquels il est déjà intervenu","Les documents qu'il a lui-même déposés","Le moyen de vous recontacter"], jamais:["Les documents financiers","Les autres artisans intervenus","Les informations sur les propriétaires"] },
+  { role:"Assureur", ic:'shield', recoit:["Le dossier lié au sinistre déclaré","Les diagnostics et garanties concernés","La chronologie des travaux liés au sinistre"], jamais:["Les documents sans lien avec le sinistre","L'historique financier complet du logement"] },
+  { role:"Diagnostiqueur", ic:'doc', recoit:["Les caractéristiques du logement","Les diagnostics précédents","Les équipements liés à la performance énergétique"], jamais:["Les factures et montants payés","Les échanges avec les autres tiers"] },
+  { role:"Notaire", ic:'key', recoit:["Le dossier de transmission complet","L'historique des propriétaires","Les diagnostics en cours de validité"], jamais:["Les souvenirs et photos personnelles","Les documents marqués « reste privé »"] },
+  { role:"Acquéreur", ic:'home', recoit:["Le dossier de vente composé et validé par le vendeur","Les équipements, garanties et diagnostics inclus"], jamais:["Tout ce que le vendeur n'a pas explicitement inclus dans le dossier"] }
+];
+function niveauxaccesHTML(){
+  return modale("Confiance", "Ce que voit chaque tiers", `
+    <p class="muted mb-20">Un tiers ne reçoit jamais « l'accès à VIDOM ». Chaque partage est préparé pour son destinataire : il ne voit que ce qui le concerne, jamais l'ensemble de la mémoire du logement.</p>
+    <div class="stack gap-12">
+      ${NIVEAUX_ACCES.map(n=>`<div class="card">
+        <div class="card-head" style="padding:12px 16px"><h3 style="font-size:13.5px;display:flex;align-items:center;gap:8px"><span style="width:16px;height:16px;flex:none;display:inline-flex;color:var(--sage)">${I[n.ic]}</span>${n.role}</h3></div>
+        <div class="card-body" style="padding:10px 16px 14px">
+          <div class="xsmall strong" style="color:var(--sage-dark)">Reçoit</div>
+          <div class="stack gap-4 mt-4 mb-10">${n.recoit.map(v=>`<div class="row gap-8" style="align-items:flex-start"><span style="width:14px;height:14px;flex:none;color:var(--sage);margin-top:2px">${I.check}</span><span class="xsmall">${v}</span></div>`).join('')}</div>
+          <div class="xsmall strong" style="color:var(--terracotta)">Ne reçoit jamais</div>
+          <div class="stack gap-4 mt-4">${n.jamais.map(v=>`<div class="row gap-8" style="align-items:flex-start"><span style="width:14px;height:14px;flex:none;color:var(--terracotta);margin-top:2px">${I.close}</span><span class="xsmall">${v}</span></div>`).join('')}</div>
+        </div>
+      </div>`).join('')}
+    </div>
+    <div class="note wood mt-16">${I.info}<div class="small">Chaque partage reste limité dans le temps et révocable à tout moment. C'est vous qui choisissez, à chaque fois, ce qui part et à qui.</div></div>
+    <div class="row gap-8 wrap mt-16"><button class="btn btn-quiet" data-act="closeModal">Fermer</button></div>`);
+}
+
 
 /* ============================================================
    VITRINE PUBLIQUE
@@ -4050,7 +4463,7 @@ function viewSite(){
         <button class="btn btn-primary btn-lg" data-act="obstart">Créer la mémoire de mon logement</button>
         <button class="btn btn-ghost btn-lg" data-act="enter">Voir une maison réelle</button>
       </div>
-      <div class="hero-note">Gratuit pour commencer · Aucune publicité · Vos données ne sont jamais vendues</div>
+      <div class="hero-note">Toujours gratuit pour vous · Aucune publicité · Vos données ne sont jamais vendues</div>
     </div>
 
     <div class="container" style="padding-bottom:70px">
@@ -4165,40 +4578,40 @@ function viewSite(){
 
     <div class="site-section">
       <div class="container">
-        <div class="eyebrow">Tarifs</div>
-        <h2>Un logement, un abonnement.</h2>
-        <p class="muted mt-8" style="max-width:52ch">L'abonnement suit le logement, pas son propriétaire. Le jour où vous vendez, la mémoire reste attachée à la maison.</p>
+        <div class="eyebrow">Modèle</div>
+        <h2 style="max-width:26ch">Gratuite pour vous. Payante seulement quand elle sert à quelque chose de précis.</h2>
+        <p class="muted mt-8" style="max-width:56ch">La mémoire du logement — création, documents, équipements, chronologie — reste gratuite, sans abonnement, pour toujours. VIDOM se rémunère à l'usage : un dossier prêt à l'emploi pour un moment précis, ou la présence active d'un professionnel.</p>
         <div class="grid g3 mt-32" style="gap:20px">
           <div class="price-card">
-            <div class="strong">Gratuit</div>
+            <div class="strong">Pour vous</div>
             <div class="p">0 €</div>
-            <div class="small muted">Pour toujours</div>
+            <div class="small muted">Toujours, sans abonnement</div>
             <ul class="price-list">
-              ${['Création du logement','Documents essentiels','Historique des travaux','Carnet des équipements','Rappels simples','Partage avec le foyer']
+              ${['Création du logement','Tous les documents et équipements','Chronologie complète','Recherche et rappels','Partage avec le foyer','Export intégral à tout moment']
                 .map(x=>`<li>${I.check}<span>${x}</span></li>`).join('')}
             </ul>
             <button class="btn btn-ghost btn-block mt-20" data-act="obstart">Commencer</button>
           </div>
           <div class="price-card feat">
-            <div class="tagline">LE PLUS CHOISI</div>
-            <div class="strong">Premium</div>
-            <div class="p">49 € <span class="per">par an</span></div>
-            <div class="small muted">soit 4,99 € par mois</div>
+            <div class="tagline">SEULEMENT QUAND VOUS EN AVEZ BESOIN</div>
+            <div class="strong">Dossiers consolidés</div>
+            <div class="p">≈ 19 € <span class="per">le dossier</span></div>
+            <div class="small muted">Vente, sinistre ou succession</div>
             <ul class="price-list">
-              ${['Tout le gratuit, plus :','Stockage étendu','Classement automatique des documents','Recherche avancée','Chronologie complète','Partage sécurisé avec un notaire ou un acquéreur','Export intégral','Sauvegarde renforcée']
+              ${['Tout le gratuit, plus :','Dossier de vente prêt à transmettre','Dossier sinistre pour l\'assureur','Livre de succession pour les héritiers','Composé en quelques minutes','Payé une fois, gardé pour toujours']
                 .map((x,i)=>`<li>${i===0?'':I.check}<span class="${i===0?'strong':''}" style="${i===0?'color:var(--ink)':''}">${x}</span></li>`).join('')}
             </ul>
-            <button class="btn btn-primary btn-block mt-20" data-act="enter">Voir la démonstration</button>
+            <button class="btn btn-primary btn-block mt-20" data-act="enter">Voir un dossier consolidé</button>
           </div>
           <div class="price-card">
-            <div class="strong">Premium+</div>
-            <div class="p">9,99 € <span class="per">par mois</span></div>
-            <div class="small muted">Plusieurs logements</div>
+            <div class="strong">Professionnels</div>
+            <div class="p">Gratuit</div>
+            <div class="small muted">Profil actif en option</div>
             <ul class="price-list">
-              ${['Tout le Premium, plus :','Plusieurs logements','Tableau de bord du patrimoine','Gestion locative simplifiée','Accès multi-utilisateurs','Assistance prioritaire']
-                .map((x,i)=>`<li>${i===0?'':I.check}<span class="${i===0?'strong':''}" style="${i===0?'color:var(--ink)':''}">${x}</span></li>`).join('')}
+              ${['Présence historique gratuite et permanente','Recontacté directement par le propriétaire','Profil actif pour rester à jour, en option','Jamais de publicité, jamais de classement acheté']
+                .map(x=>`<li>${I.check}<span>${x}</span></li>`).join('')}
             </ul>
-            <button class="btn btn-ghost btn-block mt-20">Être prévenu</button>
+            <button class="btn btn-ghost btn-block mt-20">Être informé</button>
           </div>
         </div>
       </div>
@@ -4439,8 +4852,10 @@ function bind(){
     el.addEventListener('click', ev => {
       const a = el.dataset.act;
 
-      // Un clic sur le fond ne ferme que si l'on vise bien le fond
-      if ((a === 'closePanel' || a === 'closeModal' || a === 'closeDrawer') && ev.target !== el) return;
+      // Un clic sur le fond (l'overlay) ne ferme que si l'on vise bien le fond, pas un enfant du fond.
+      // Un bouton explicite (icône ✕, « Fermer », « Confirmer »…) doit toujours fonctionner, même si le
+      // clic tombe sur une icône ou un texte à l'intérieur du bouton plutôt que sur le bouton lui-même.
+      if ((a === 'closePanel' || a === 'closeModal' || a === 'closeDrawer') && el.tagName === 'DIV' && ev.target !== el) return;
       ev.stopPropagation();
 
       switch(a){
@@ -4493,6 +4908,30 @@ function bind(){
         /* --- Dépôts par un tiers (code de fin de travaux) — VIDOM-024 --- */
         case 'validerdoc':   validerDocument(el.dataset.id); break;
         case 'refuserdoc':   refuserDocument(el.dataset.id); break;
+
+        /* --- Trouver un professionnel — mémoire actionnable — VIDOM-063 --- */
+        case 'trouverpro':   S.pro = {cat:el.dataset.cat, eq:el.dataset.eq||null}; S.modal = 'trouverpro'; render(); break;
+        case 'panne':         S.panneEq = el.dataset.eq; S.modal = 'panne'; render(); break;
+
+        /* --- Identité numérique du logement — VIDOM-063 --- */
+        case 'partageradresse': S.modal = 'partageradresse'; render(); break;
+        case 'regen-toggle':  S.regen = !S.regen; render(); break;
+        case 'regen-confirm': {
+          const suffixes = ['d4n','q9r','m2w','t6y'];
+          const nv = suffixes[Math.floor(Math.random()*suffixes.length)];
+          LOGEMENT.adresseDepot = LOGEMENT.adresseDepot.replace(/^[a-z0-9-]+@/, `maison-des-tilleuls-${nv}@`);
+          S.regen = false; render();
+          break;
+        }
+
+        /* --- Copier l'adresse de dépôt du logement — VIDOM-063 --- */
+        case 'copy': {
+          if (navigator.clipboard) navigator.clipboard.writeText(el.dataset.val).catch(()=>{});
+          const orig = el.innerHTML;
+          el.innerHTML = `${I.check} Copié`;
+          setTimeout(()=>{ el.innerHTML = orig; }, 1400);
+          break;
+        }
       }
     });
   });
