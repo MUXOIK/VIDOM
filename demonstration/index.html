@@ -124,6 +124,32 @@ label.f span{display:block;font-size:.85em;color:var(--ardoise);margin-bottom:3p
 .progress{height:6px;background:var(--bois-c);border-radius:3px;overflow:hidden}
 .progress i{display:block;height:100%;background:var(--sauge)}
 
+
+/* visuels */
+.ico{display:inline-flex;width:22px;height:22px;color:var(--sauge-f);flex:none;vertical-align:middle}
+.ico svg{width:100%;height:100%}
+.ico.lg{width:34px;height:34px}
+.ico.xl{width:48px;height:48px;padding:10px;box-sizing:content-box;background:var(--sauge-cc);border-radius:12px}
+.ico.tile{width:26px;height:26px;padding:7px;box-sizing:content-box;background:var(--sauge-cc);border-radius:9px}
+.mono{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;color:#fff;font-weight:700;font-size:.72em;letter-spacing:.02em;flex:none}
+.mono.big{width:46px;height:46px;font-size:1em}
+.ill{width:100%;max-width:320px;height:auto;display:block;margin:0 auto 14px}
+.ill.small{max-width:120px;margin:0 auto 6px}
+.room{position:relative;padding-top:14px}
+.room .ico{margin-bottom:8px}
+.room.done .ico{background:var(--sauge);color:#fff}
+.doc .thumb{color:var(--sauge-f);font-size:1em;background:var(--sauge-cc);border-color:var(--bois-c)}
+.doc .thumb .ico{width:22px;height:22px}
+.hub .t .ico{width:16px;height:16px;margin-right:5px}
+.eqrow{display:flex;align-items:center;gap:10px}
+.hero{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:center;background:var(--blanc);border:1px solid var(--bois);border-radius:var(--r2);padding:16px 18px;margin-bottom:16px}
+.hero .ill{margin:0}
+.stat{display:flex;align-items:center;gap:12px}
+.stat>div b{font-size:1.4em}
+.empty .ill{margin-bottom:8px}
+.tabs-ico{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:860px){.hero{grid-template-columns:1fr}.hero .ill{max-width:240px}}
+
 /* plan simplifié */
 .plan{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .room{border:1px solid var(--bois);background:var(--blanc);border-radius:var(--r2);padding:12px;cursor:pointer;text-align:left;min-height:88px;display:flex;flex-direction:column;justify-content:space-between}
@@ -374,13 +400,14 @@ const DATA = (() => {
 
   const tiers = [
     { id: "notaire", nom: "Notaire", motif: "Succession, vente, donation", voit: ["Acte d'achat", "Diagnostics", "Plans", "Chronologie des travaux", "Garanties actives", "Fiche du logement"], exclus: ["Factures d'électroménager", "Photos intérieures", "Contrats d'assurance", "Coût d'achat détaillé"], angle: 90 },
-    { id: "agent", nom: "Agent immobilier", motif: "Mise en vente", voit: ["Chronologie des rénovations", "Fiches équipement", "Garanties actives", "DPE et diagnostics", "Photos des travaux"], exclus: ["Factures d'énergie", "Contrats d'assurance", "Prix d'acquisition", "Documents privés"], angle: 45 },
-    { id: "artisan", nom: "Artisan", motif: "Chantier en cours", voit: ["Équipements concernés", "Interventions passées", "Plans utiles au chantier"], exclus: ["Documents financiers", "Autres équipements", "Photos privées", "Assurance"], angle: 0 },
-    { id: "assureur", nom: "Assureur", motif: "Déclaration de sinistre", voit: ["Équipements sinistrés", "Documents du sinistre", "Factures des réparations", "Dernier entretien"], exclus: ["Historique complet", "Prix d'acquisition", "Autres sinistres"], angle: -45 },
-    { id: "acquereur", nom: "Futur acquéreur", motif: "Avant l'achat", voit: ["Le livre du logement", "Chronologie", "Équipements", "Garanties transmissibles"], exclus: ["Prix payé", "Documents privés", "Correspondance"], angle: -90 },
-    { id: "heritier", nom: "Héritier", motif: "Transmission familiale", voit: ["Livre de succession", "Contrats en cours", "Équipements", "Artisans du logement"], exclus: ["Correspondance", "Photos privées non partagées"], angle: -135 },
-    { id: "banque", nom: "Banque", motif: "Financement", voit: ["Classe énergétique", "Historique des travaux", "Diagnostics"], exclus: ["Factures", "Photos", "Contrats"], angle: 180 },
-    { id: "diagnostiqueur", nom: "Diagnostiqueur", motif: "Contrôle réglementaire", voit: ["Fiche du logement", "Diagnostics précédents", "Équipements de chauffage"], exclus: ["Financier", "Photos privées"], angle: 135 }
+    { id: "agent", nom: "Agent immobilier", motif: "Mise en vente", voit: ["Chronologie des rénovations", "Fiches équipement", "Garanties actives", "DPE et diagnostics", "Photos des travaux"], exclus: ["Factures d'énergie", "Contrats d'assurance", "Prix d'acquisition", "Documents privés"], angle: 50 },
+    { id: "gestionnaire", nom: "Gestionnaire locatif", motif: "Location gérée — agit au nom du logement", voit: ["Fiche du logement", "Équipements", "Interventions et travaux", "États des lieux d'entrée et de sortie", "Artisans du logement", "Documents de la location"], exclus: ["Acte d'achat et prix", "Documents de financement", "Assurance du propriétaire", "Documents privés"], angle: -30, court: "Gestionnaire", particulier: "Statut particulier : pendant son mandat, il agit au nom du logement — il sollicite un artisan, ouvre et clôt une intervention, dépose un état des lieux. Il ne transmet pas, ne vend pas, ne voit pas les documents privés. Quand le mandat s'arrête, ce qu'il a déposé reste dans la mémoire.", mandat: true },
+    { id: "artisan", nom: "Artisan", motif: "Chantier en cours", voit: ["Équipements concernés", "Interventions passées", "Plans utiles au chantier"], exclus: ["Documents financiers", "Autres équipements", "Photos privées", "Assurance"], angle: 10 },
+    { id: "assureur", nom: "Assureur", motif: "Déclaration de sinistre", voit: ["Équipements sinistrés", "Documents du sinistre", "Factures des réparations", "Dernier entretien"], exclus: ["Historique complet", "Prix d'acquisition", "Autres sinistres"], angle: -70 },
+    { id: "acquereur", nom: "Futur acquéreur", motif: "Avant l'achat", voit: ["Le livre du logement", "Chronologie", "Équipements", "Garanties transmissibles"], exclus: ["Prix payé", "Documents privés", "Correspondance"], angle: -110 },
+    { id: "heritier", nom: "Héritier", motif: "Transmission familiale", voit: ["Livre de succession", "Contrats en cours", "Équipements", "Artisans du logement"], exclus: ["Correspondance", "Photos privées non partagées"], angle: -150 },
+    { id: "banque", nom: "Banque", motif: "Financement", voit: ["Classe énergétique", "Historique des travaux", "Diagnostics"], exclus: ["Factures", "Photos", "Contrats"], angle: 170 },
+    { id: "diagnostiqueur", nom: "Diagnostiqueur", motif: "Contrôle réglementaire", voit: ["Fiche du logement", "Diagnostics précédents", "Équipements de chauffage"], exclus: ["Financier", "Photos privées"], angle: 130 }
   ];
 
   // reconnaissance simulée : tirage parmi ces résultats quand une photo est prise
@@ -429,6 +456,90 @@ const DATA = (() => {
 
   return { logement, pieces, pros, equipements, docs, events, rappels, inbox, tiers, recos, qa, trouves, choixDPE, choixVentes };
 })();
+/* ================= VISUELS : icônes par famille, monogrammes, illustrations ================= */
+const VS = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"';
+const ICO = {
+  // familles d'équipements
+  "Chauffage": `<svg ${VS}><path d="M12 3c1 3 4 4 4 8a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-7z"/><path d="M6 21h12"/></svg>`,
+  "Toiture": `<svg ${VS}><path d="M3 12 12 4l9 8"/><path d="M5 11v9h14v-9"/><path d="M5 15h14M5 18h14"/></svg>`,
+  "Ventilation": `<svg ${VS}><circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 3-6 5-5s0 4-5 5zM14 12c4 0 6 3 5 5s-4 0-5-5zM12 14c0 4-3 6-5 5s0-4 5-5zM10 12c-4 0-6-3-5-5s4 0 5 5z"/></svg>`,
+  "Eau chaude": `<svg ${VS}><path d="M12 3s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/><path d="M9 14a3 3 0 0 0 3 3"/></svg>`,
+  "Eau": `<svg ${VS}><path d="M12 3s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/></svg>`,
+  "Électroménager": `<svg ${VS}><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M7 6h3"/></svg>`,
+  "Électricité": `<svg ${VS}><path d="M13 2 5 13h6l-1 9 8-12h-6z"/></svg>`,
+  "Menuiseries": `<svg ${VS}><rect x="4" y="3" width="16" height="18"/><path d="M12 3v18M4 12h16"/></svg>`,
+  "Sécurité": `<svg ${VS}><path d="M12 3l7 3v6c0 5-3 8-7 9-4-1-7-4-7-9V6z"/><path d="m9 12 2 2 4-4"/></svg>`,
+  "Extérieur": `<svg ${VS}><path d="M4 20V9l4-3 4 3 4-3 4 3v11"/><path d="M4 13h16M4 17h16M8 9v11M12 9v11M16 9v11"/></svg>`,
+  "Jardin": `<svg ${VS}><path d="M12 21v-7"/><path d="M12 14c-4 0-6-3-6-7 4 0 6 3 6 7zM12 14c4 0 6-3 6-7-4 0-6 3-6 7z"/><path d="M7 21h10"/></svg>`,
+  // pièces
+  cuisine: `<svg ${VS}><rect x="3" y="10" width="18" height="10" rx="1"/><path d="M3 14h18M8 10V6a4 4 0 0 1 8 0v4"/></svg>`,
+  salon: `<svg ${VS}><path d="M4 12v6h16v-6"/><path d="M6 12V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4"/><path d="M4 12a2 2 0 1 1 2 0M18 12a2 2 0 1 1 2 0M6 18v2M18 18v2"/></svg>`,
+  chambre: `<svg ${VS}><path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"/><path d="M3 15h18M6 10V7h5v3M13 10V7h5v3M3 18v2M21 18v2"/></svg>`,
+  sdb: `<svg ${VS}><path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M6 12V6a2 2 0 0 1 4 0"/><path d="M7 19v2M17 19v2"/></svg>`,
+  wc: `<svg ${VS}><path d="M6 3h8v8H6z"/><path d="M6 11c0 5 3 7 6 7s6-2 6-7H6z"/><path d="M9 18v3h6v-3"/></svg>`,
+  garage: `<svg ${VS}><path d="M3 20V9l9-6 9 6v11"/><path d="M7 20v-8h10v8M7 15h10"/></svg>`,
+  buanderie: `<svg ${VS}><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M7 6h3"/></svg>`,
+  chaufferie: `<svg ${VS}><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M12 8c1 2 3 3 3 6a3 3 0 0 1-6 0c0-3 2-4 3-6z"/></svg>`,
+  jardin: `<svg ${VS}><path d="M12 21v-7"/><path d="M12 14c-4 0-6-3-6-7 4 0 6 3 6 7zM12 14c4 0 6-3 6-7-4 0-6 3-6 7z"/><path d="M7 21h10"/></svg>`,
+  exterieur: `<svg ${VS}><path d="M3 12 12 4l9 8"/><path d="M5 11v9h14v-9"/><path d="M9 20v-5h6v5"/></svg>`,
+  // types de documents
+  facture: `<svg ${VS}><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>`,
+  devis: `<svg ${VS}><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h6"/><path d="M10 9h1"/></svg>`,
+  garantie: `<svg ${VS}><path d="M12 3l7 3v6c0 5-3 8-7 9-4-1-7-4-7-9V6z"/><path d="m9 12 2 2 4-4"/></svg>`,
+  notice: `<svg ${VS}><path d="M4 4h7a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"/><path d="M20 4h-7a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h7z"/></svg>`,
+  contrat: `<svg ${VS}><path d="M7 3h10v18H7z"/><path d="M10 8h4M10 12h4"/><path d="M10 17c1-1 2-1 3 0s2 1 3 0"/></svg>`,
+  diagnostic: `<svg ${VS}><path d="M4 20h16"/><path d="M6 20V10h3v10M11 20V6h3v14M16 20v-7h3v7"/></svg>`,
+  photo: `<svg ${VS}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 5"/><circle cx="16" cy="9" r="1.5"/></svg>`,
+  certificat: `<svg ${VS}><circle cx="12" cy="9" r="5"/><path d="m9 13-1 8 4-2 4 2-1-8"/></svg>`,
+  permis: `<svg ${VS}><path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>`,
+  plan: `<svg ${VS}><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2z"/><path d="M9 3v16M15 5v16"/></svg>`,
+  proces_verbal: `<svg ${VS}><path d="M7 3h10v18H7z"/><path d="M10 8h4M10 12h4M10 16h2"/></svg>`,
+  courrier: `<svg ${VS}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>`,
+  assurance: `<svg ${VS}><path d="M12 3l7 3v6c0 5-3 8-7 9-4-1-7-4-7-9V6z"/></svg>`,
+  acte: `<svg ${VS}><path d="M7 3h10v18H7z"/><path d="M10 8h4M10 12h4"/><circle cx="15" cy="17" r="2"/></svg>`,
+  autre: `<svg ${VS}><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/></svg>`,
+  // tiers
+  notaire: `<svg ${VS}><path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6"/><circle cx="15" cy="17" r="2"/></svg>`,
+  agent: `<svg ${VS}><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-5h6v5"/><path d="M15 3h4v4"/></svg>`,
+  gestionnaire: `<svg ${VS}><path d="M8 4h8v3H8z"/><path d="M6 6h12v15H6z"/><path d="m9 14 2 2 4-4"/></svg>`,
+  artisan: `<svg ${VS}><path d="m14 7 3-3 3 3-3 3z"/><path d="M4 20l9-9"/><path d="M5 5l4 4"/></svg>`,
+  assureur: `<svg ${VS}><path d="M12 3l7 3v6c0 5-3 8-7 9-4-1-7-4-7-9V6z"/><path d="M12 8v8M8 12h8"/></svg>`,
+  acquereur: `<svg ${VS}><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l2 2M14 9l2 2"/></svg>`,
+  heritier: `<svg ${VS}><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7-3"/></svg>`,
+  banque: `<svg ${VS}><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9 10v8M15 10v8M19 10v8M3 18h18M3 21h18"/></svg>`,
+  diagnostiqueur: `<svg ${VS}><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>`
+};
+const ROOM_ICO = { cuisine: "cuisine", salon: "salon", chambre: "chambre", sdb: "sdb", wc: "wc", garage: "garage", buanderie: "buanderie", chaufferie: "chaufferie", jardin: "jardin", exterieur: "exterieur" };
+function ico(k, cls) { return `<span class="ico ${cls || ""}">${ICO[k] || I.doc}</span>`; }
+function icoCat(cat) { return ico(cat); }
+function icoRoom(type) { return ico(ROOM_ICO[type] || "salon"); }
+function icoDoc(type) { return ico(ICO[type] ? type : "autre"); }
+/* monogramme (marque, professionnel) : cercle teinté + initiales */
+const TEINTES = ["#5F7A6A", "#7A6A5F", "#6A5F7A", "#5F6E7A", "#7A5F63", "#6E7A5F", "#4A6255", "#8A7A62"];
+function mono(nom, big) {
+  const s = String(nom || "?").trim(); let x = 0; for (let i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) >>> 0;
+  const parts = s.split(/[\s'’-]+/).filter(Boolean); const ini = (parts.length > 1 ? parts[0][0] + parts[1][0] : s.slice(0, 2)).toUpperCase();
+  return `<span class="mono ${big ? "big" : ""}" style="background:${TEINTES[x % TEINTES.length]}">${h(ini)}</span>`;
+}
+/* illustration : la maison, vue de face, dessin de la charte */
+const ILL = {
+  maison: `<svg viewBox="0 0 320 180" class="ill" aria-hidden="true">
+    <defs><linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6F3ED"/><stop offset="1" stop-color="#EFE6D8"/></linearGradient></defs>
+    <rect width="320" height="180" rx="12" fill="url(#ciel)"/>
+    <ellipse cx="160" cy="168" rx="150" ry="14" fill="#E4EBE6"/>
+    <path d="M50 96 160 34l110 62" fill="none" stroke="#4A6255" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M68 92v66h184V92" fill="#FFFDF9" stroke="#4A6255" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M60 92 160 38l100 54" fill="#5F7A6A"/>
+    <rect x="196" y="48" width="16" height="30" fill="#50575E"/>
+    <rect x="144" y="112" width="32" height="46" rx="2" fill="#C9775B"/>
+    <rect x="88" y="108" width="34" height="30" fill="#E4EBE6" stroke="#4A6255" stroke-width="2.5"/><path d="M105 108v30M88 123h34" stroke="#4A6255" stroke-width="2"/>
+    <rect x="198" y="108" width="34" height="30" fill="#E4EBE6" stroke="#4A6255" stroke-width="2.5"/><path d="M215 108v30M198 123h34" stroke="#4A6255" stroke-width="2"/>
+    <circle cx="290" cy="112" r="20" fill="#5F7A6A"/><circle cx="278" cy="122" r="14" fill="#6E8A78"/><rect x="287" y="128" width="6" height="30" fill="#7A6A5F"/>
+    <circle cx="36" cy="120" r="14" fill="#5F7A6A"/><rect x="33" y="130" width="6" height="28" fill="#7A6A5F"/>
+    <text x="160" y="176" text-anchor="middle" font-family="Source Sans 3, sans-serif" font-size="11" fill="#B5B0A5">la Maison des Tilleuls</text>
+  </svg>`,
+  vide: `<svg viewBox="0 0 120 80" class="ill small" aria-hidden="true"><path d="M20 44 60 16l40 28" fill="none" stroke="#B5B0A5" stroke-width="3" stroke-linejoin="round"/><path d="M28 42v30h64V42" fill="none" stroke="#B5B0A5" stroke-width="2.5" stroke-dasharray="4 4"/><circle cx="60" cy="56" r="8" fill="#F4E3DB" stroke="#C9775B" stroke-width="2"/><path d="M60 52v8M56 56h8" stroke="#C9775B" stroke-width="2"/></svg>`
+};
 /* ================= NOYAU : état, sauvegarde, routes, aides ================= */
 const KEY = "vidom-demo-v1";
 let S = null;
@@ -648,15 +759,14 @@ function lirePhoto(file, cb) {
 }
 /* ================= L'ENTRÉE : les quatre premiers écrans ================= */
 const Onb = {
-  steps(n) { return `<div class="steps">${[1, 2, 3, 4].map(i => `<i class="${i <= n ? "on" : ""}"></i>`).join("")}</div>`; },
+  steps(n) { return `<div class="steps">${[1, 2, 3].map(i => `<i class="${i <= n ? "on" : ""}"></i>`).join("")}</div>`; },
   head() { return `<div class="logo">${I.logo}<span>vidom</span></div>`; },
   render() {
     const e = S.etape;
     let body = "";
     if (e === 1) body = this.e1();
     else if (e === 2) body = this.e2();
-    else if (e === 3) body = this.e3();
-    else body = this.e4();
+    else body = this.e3();
     return `<div class="ob"><div class="box">${this.head()}${this.steps(e)}${body}</div></div>`;
   },
   after() {
@@ -671,16 +781,16 @@ const Onb = {
   /* --- écran 1 --- */
   e1() {
     const o = S.onb;
-    if (!o.adresseOk) return `
+    if (!o.adresseOk) return `${ILL.maison}
       <h1>Quelle est l'adresse de votre logement ?</h1>
-      <p class="lead">VIDOM reconnaît votre logement et prépare sa mémoire.</p>
+      <p class="lead">C'est tout ce qu'il faut pour commencer.</p>
       <input class="input big" id="adr" placeholder="Commencez à taper… par exemple 14 rue des Tilleuls" value="${h(o.adresse)}" oninput="Onb.tape(this.value)" autocomplete="off">
       <div id="sugg">${o.adresse.length >= 3 ? `<div class="sug" onclick="Onb.choisit()"><b>14 rue des Tilleuls</b><div class="small muted">44300 Nantes · Loire-Atlantique</div></div>` : ""}</div>
-      <p class="tiny faint" style="margin-top:18px">Démonstration : toute adresse mène à la Maison des Tilleuls. Dans la version test, l'adresse réelle sera reconnue par la Géoplateforme IGN.</p>`;
+      <p class="tiny faint" style="margin-top:18px">Démonstration : toute adresse mène à la Maison des Tilleuls.</p>${S.dejaMaison ? `<p class="small" style="margin-top:6px"><a href="#" onclick="Onb.reprendre();return false">Reprendre ma maison sans rejouer l'entrée →</a></p>` : ""}`;
     const sel = o.parcelles;
     return `
       <h1>C'est bien celle-ci ?</h1>
-      <p class="lead">14 rue des Tilleuls, 44300 Nantes. Touchez une ou plusieurs parcelles pour désigner votre terrain — une maison peut s'étendre sur deux parcelles, l'adresse ne le dit jamais.</p>
+      <p class="lead">14 rue des Tilleuls, Nantes. Touchez votre terrain sur la carte, une ou plusieurs parcelles.</p>
       <div class="map"><svg viewBox="0 0 600 300" aria-label="Vue du ciel et parcelles">
         <defs><pattern id="g" width="30" height="30" patternUnits="userSpaceOnUse"><rect width="30" height="30" fill="#8fa78f"/><circle cx="8" cy="9" r="6" fill="#7d9a7c"/><circle cx="22" cy="20" r="5" fill="#a3b89f"/></pattern></defs>
         <rect width="600" height="300" fill="url(#g)"/>
@@ -691,8 +801,7 @@ const Onb = {
         <rect x="300" y="110" width="95" height="70" fill="#d8c8b2" stroke="#fff" stroke-width="1.5"/><rect x="470" y="150" width="34" height="26" fill="#cbbfa8" stroke="#fff"/>
         <circle cx="347" cy="200" r="7" fill="#C9775B" stroke="#fff" stroke-width="2"/>
       </svg></div>
-      <p class="small muted" style="margin-top:8px">Parcelles retenues : <b>${sel.join(", ") || "aucune"}</b> · ${sel.length === 2 ? "812 m²" : sel.length === 1 ? "≈ 400 m²" : "—"}</p>
-      <div class="row"><button class="btn primary big" onclick="Onb.valide1()" ${sel.length ? "" : "disabled"}>C'est bien celle-ci</button><button class="btn" onclick="Onb.retour1()">Changer d'adresse</button></div>`;
+      <div class="row" style="margin-top:10px"><button class="btn primary big" onclick="Onb.valide1()" ${sel.length ? "" : "disabled"}>Oui, c'est ma maison</button><button class="btn ghost" onclick="Onb.retour1()">Changer d'adresse</button></div>`;
   },
   tape(v) { S.onb.adresse = v; const s = document.getElementById("sugg"); s.innerHTML = v.length >= 3 ? `<div class="sug" onclick="Onb.choisit()"><b>14 rue des Tilleuls</b><div class="small muted">44300 Nantes · Loire-Atlantique</div></div>` : ""; },
   choisit() { S.onb.adresse = "14 rue des Tilleuls, 44300 Nantes"; S.onb.adresseOk = true; save(); route(); },
@@ -703,58 +812,46 @@ const Onb = {
   /* --- écran 2 --- */
   e2() {
     const o = S.onb;
-    if (!o.cherche) return `<h1>Un instant.</h1><p class="lead" id="cherche">VIDOM cherche le cadastre…</p><div class="progress"><i style="width:40%"></i></div><p class="tiny faint" style="margin-top:14px">Pendant que vous confirmiez, VIDOM cherche en silence tout ce que l'adresse seule permet.</p>`;
-    const cas = o.cas;
-    const bandeau = `<div class="notice">Vérifiez en une minute ce que VIDOM a trouvé. Vous restez seul maître de la mémoire de votre logement.</div>`;
-    const autres = `<div class="row" style="margin:14px 0 4px"><span class="small muted">Voir les deux autres cas réels :</span><button class="pill ${cas === "tilleuls" ? "on" : ""}" onclick="Onb.cas('tilleuls')">Maison des Tilleuls</button><button class="pill ${cas === "ancienne" ? "on" : ""}" onclick="Onb.cas('ancienne')">Maison ancienne</button><button class="pill ${cas === "immeuble" ? "on" : ""}" onclick="Onb.cas('immeuble')">Immeuble</button></div>`;
-    if (cas === "ancienne") return `<h1>Ce que VIDOM a déjà trouvé</h1>${bandeau}
+    if (!o.cherche) return `<h1>Un instant.</h1><p class="lead" id="cherche">VIDOM cherche le cadastre…</p><div class="progress"><i style="width:40%"></i></div>`;
+    return `<h1>Voici ce que VIDOM a trouvé.</h1><p class="lead">Rien ne s'enregistre sans vous. Vérifiez, puis continuez.</p>
+      <div class="found" style="padding:10px 12px"><div class="row" style="gap:10px">${[["plan","Parcelles AB 214 et AB 215"],["Extérieur","Argiles : moyen"],["Eau","Inondation : aucun risque"],["Toiture","Un bâtiment, un logement"],["exterieur","Altitude 27 m"]].map(([k,l]) => `<span class="row" style="gap:6px">${ico(k,"tile")}<span class="small">${l}</span></span>`).join("")}</div><div class="tiny faint" style="margin-top:6px">Cadastre, Géorisques, IGN — intégrés, corrigibles dans la fiche du logement.</div></div>
+      <h3 style="margin-top:16px">Deux diagnostics énergétiques à cette adresse. Le vôtre ?</h3>
+      ${DATA.choixDPE.map((c, i) => `<div class="opt ${o.dpe === i ? "on" : ""}" onclick="Onb.pick('dpe',${i})"><span>${h(c.t)}</span><span class="tag">${o.dpe === i ? "✓" : "Choisir"}</span></div>`).join("")}
+      <h3 style="margin-top:14px">Trois ventes sur ces parcelles. La vôtre ?</h3>
+      ${DATA.choixVentes.map((c, i) => `<div class="opt ${o.vente === i ? "on" : ""}" onclick="Onb.pick('vente',${i})"><span>${h(c.t)}</span><span class="tag">${o.vente === i ? "✓" : "Choisir"}</span></div>`).join("")}
+      <div class="row" style="margin-top:16px"><button class="btn primary big" onclick="Onb.valide2()">Continuer</button><button class="btn ghost" onclick="Onb.valide2()">Je ne sais pas, plus tard</button></div>
+      <p class="tiny faint" style="margin-top:14px">Les deux autres cas réels (maison ancienne, immeuble) se voient depuis le profil, dans Simuler.</p>`;
+  },
+  e2cas(cas) {
+    const bandeau = `<div class="notice small">Vérifiez en une minute ce que VIDOM a trouvé. Vous restez seul maître de la mémoire de votre logement.</div>`;
+    if (cas === "ancienne") return `<h2>Ce que VIDOM a trouvé — maison ancienne</h2>${bandeau}
       <div class="found"><b>Nous avons trouvé votre parcelle et vos risques.</b><div class="muted" style="margin-top:4px">Pour le reste, votre maison ne figure dans aucune base publique : sa mémoire commencera par vos documents.</div></div>
       <div class="found"><div class="split"><span>Parcelle ZC 118 — 1 730 m², à désigner sur la carte</span><span class="src">cadastre</span></div></div>
-      <div class="found"><div class="split"><span>Inondation et mouvements de terrain : existants à votre adresse</span><span class="src">Géorisques</span></div></div>
-      ${autres}<div class="row"><button class="btn primary big" onclick="Onb.valide2()">Continuer</button></div>`;
-    if (cas === "immeuble") return `<h1>Ce que VIDOM a déjà trouvé</h1>${bandeau}
+      <div class="found"><div class="split"><span>Inondation et mouvements de terrain : existants à votre adresse</span><span class="src">Géorisques</span></div></div>`;
+    return `<h2>Ce que VIDOM a trouvé — immeuble</h2>${bandeau}
       <div class="found"><b>Cette adresse est une copropriété.</b><div class="muted" style="margin-top:4px">Immatriculation AB1-234-567 · règlement du 4 mars 1966 · 42 lots · syndic non déclaré au registre.</div><div class="src">registre national des copropriétés</div></div>
-      <div class="found"><b>Six diagnostics énergétiques existent à cette adresse. Lequel est le vôtre ?</b>${["2019 · 32 m² · 2ᵉ étage · D", "2021 · 45 m² · 4ᵉ étage · E", "2022 · 38 m² · 1ᵉʳ étage · D", "2023 · 41 m² · 3ᵉ étage · C", "2024 · 36 m² · 5ᵉ étage · D", "2025 · 44 m² · rez-de-chaussée · F"].map(t => `<div class="opt"><span>${t}</span><span class="tag">C'est le mien</span></div>`).join("")}<div class="src">observatoire DPE de l'ADEME</div></div>
-      <div class="found"><b>Quarante ventes sur cette parcelle. Laquelle est la vôtre ?</b><div class="muted small" style="margin-top:4px">Avec vos numéros de lot, VIDOM retrouve exactement votre appartement — et jamais ceux des voisins. Photographiez votre dernier appel de fonds à l'étape suivante.</div></div>
-      ${autres}<div class="row"><button class="btn primary big" onclick="Onb.valide2()">Continuer</button></div>`;
-    return `<h1>Ce que VIDOM a déjà trouvé</h1>${bandeau}
-      <h3 style="margin-top:14px">Intégré sans question</h3>
-      ${DATA.trouves.map(t => `<div class="found"><div class="split"><span>${h(t.t)}</span><span class="src">${h(t.src)}</span></div></div>`).join("")}
-      <h3 style="margin-top:18px">Deux diagnostics énergétiques existent à cette adresse. Lequel est le vôtre ?</h3>
-      ${DATA.choixDPE.map((c, i) => `<div class="opt ${o.dpe === i ? "on" : ""}" onclick="Onb.pick('dpe',${i})"><span>${h(c.t)}</span><span class="tag">${o.dpe === i ? "C'est exact" : "Choisir"}</span></div>`).join("")}<div class="src small faint" style="margin-top:4px">observatoire DPE de l'ADEME · 12 mai 2024</div>
-      <h3 style="margin-top:18px">Trois ventes sur ces parcelles. Laquelle est la vôtre ?</h3>
-      ${DATA.choixVentes.map((c, i) => `<div class="opt ${o.vente === i ? "on" : ""}" onclick="Onb.pick('vente',${i})"><span>${h(c.t)}</span><span class="tag">${o.vente === i ? "C'est exact" : "Choisir"}</span></div>`).join("")}<div class="src small faint" style="margin-top:4px">demandes de valeurs foncières · le prix payé ne s'affiche pas</div>
-      <h3 style="margin-top:18px">Une autorisation de travaux à cette adresse depuis 2005</h3>
-      <div class="opt on"><span>Déclaration préalable · abri de jardin · 3 avril 2017 · accordée</span><span class="tag">Celle-ci me concerne</span></div>
-      ${autres}
-      <div class="row" style="margin-top:8px"><button class="btn primary big" onclick="Onb.valide2()">Continuer</button><button class="btn" onclick="Onb.corriger()">Corriger quelque chose</button></div>`;
+      <div class="found"><b>Six diagnostics énergétiques existent à cette adresse. Lequel est le vôtre ?</b>${["2019 · 32 m² · 2ᵉ étage · D", "2021 · 45 m² · 4ᵉ étage · E", "2022 · 38 m² · 1ᵉʳ étage · D", "2023 · 41 m² · 3ᵉ étage · C", "2024 · 36 m² · 5ᵉ étage · D", "2025 · 44 m² · rez-de-chaussée · F"].map(x => `<div class="opt"><span>${x}</span><span class="tag">C'est le mien</span></div>`).join("")}<div class="src">observatoire DPE de l'ADEME</div></div>
+      <div class="found"><b>Quarante ventes sur cette parcelle. Laquelle est la vôtre ?</b><div class="muted small" style="margin-top:4px">Avec vos numéros de lot, VIDOM retrouve exactement votre appartement — jamais ceux des voisins. Photographiez votre dernier appel de fonds.</div></div>`;
   },
   cas(c) { S.onb.cas = c; save(); route(); },
   pick(k, i) { S.onb[k] = i; save(); route(); },
-  corriger() { modal(`<h2>Corriger</h2><p class="muted">Tout ce que VIDOM intègre reste corrigible dans la fiche du logement. Vous pourrez y modifier la surface, l'année, la classe énergétique et les parcelles à tout moment.</p><button class="btn primary" onclick="closeModal()">Compris</button>`); },
+  corriger() { modal(`<h2>Corriger</h2><p class="muted">Tout ce que VIDOM intègre reste corrigible dans la fiche du logement.</p><button class="btn primary" onclick="closeModal()">Compris</button>`); },
   valide2() { S.onb.cas = "tilleuls"; S.etape = 3; save(); route(); },
 
   /* --- écran 3 --- */
   e3() {
     const o = S.onb, a = o.annexes, L = S.logement;
     const q = (k, t) => `<div class="opt"><span>${t}</span><span class="row"><button class="pill ${a[k] === true ? "on" : ""}" onclick="Onb.rep('${k}',true)">Oui</button><button class="pill ${a[k] === false ? "on" : ""}" onclick="Onb.rep('${k}',false)">Non</button></span></div>`;
-    return `<h1>Votre logement, précisément</h1><p class="lead">Trois questions, seulement celles que l'adresse ne peut pas trancher.</p>
-      ${q("parking", "Avez-vous un parking, une cave, une annexe ?")}${a.parking === true ? `<div class="notice small">Un abri de jardin est déclaré à cette adresse (2017) : il est rattaché à votre logement.</div>` : ""}
-      ${q("lots", "Avez-vous réuni plusieurs lots ?")}
-      ${q("autorisation", "Avez-vous fait des travaux avec une autorisation (permis, déclaration préalable) ?")}${a.autorisation === true ? `<div class="notice small">Déclaration préalable du 3 avril 2017 retrouvée : abri de jardin, 18 m². Rattachée au logement.</div>` : ""}
-      <div class="card" style="margin-top:16px"><h3>Le plus simple pour finir</h3><p class="sub">Photographiez votre dernier appel de fonds, votre taxe foncière ou votre acte d'achat. VIDOM y lira vos numéros de lot et vos parcelles.</p>
-        ${o.photo ? `<img class="photo" src="${o.photo}" alt="Document photographié"><div class="notice">VIDOM a lu : <b>avis de taxe foncière 2025</b> · identifiant fiscal du local ${h(L.identifiantFiscal)} · parcelles AB 214 et AB 215 · valeur locative confirmée. Rien n'est enregistré sans votre accord : <button class="btn sm primary" onclick="toast('Conservé dans la mémoire du logement')">Conserver</button></div>` : `<label class="btn primary">${I.camera} Photographier un document<input type="file" accept="image/*,application/pdf" capture="environment" class="sr" onchange="Onb.photo(this)"></label> <span class="small muted">ou plus tard, rien ne bloque</span>`}
-      </div>
-      <div class="card"><h3>La carte d'identité du logement</h3>
-        <dl class="kv"><dt>Nom</dt><dd><input class="input" style="max-width:280px" value="${h(L.nom)}" onchange="S.logement.nom=this.value;save()"></dd><dt>Adresse</dt><dd>${h(L.adresse)}, ${h(L.cp)} ${h(L.ville)}</dd><dt>Parcelles</dt><dd>${L.parcelles.join(", ")}</dd><dt>Année</dt><dd>${L.annee}</dd><dt>Surface</dt><dd>${L.surface} m²</dd><dt>Classe énergétique</dt><dd>${L.dpe.classe} · DPE du ${fdate(L.dpe.date)} (${L.dpe.methode})</dd></dl>
-      </div>
-      <div class="card"><h3>La boîte aux lettres de la maison</h3><p class="sub">Tout ce qui est envoyé à cette adresse arrive dans la boîte d'arrivée de votre logement. Rien n'y entre sans votre accord.</p>
-        <div class="row" style="align-items:flex-start"><canvas id="qr" class="qr" aria-label="Code QR de l'adresse de dépôt"></canvas><div><b class="num" style="word-break:break-all">${h(L.adresseDepot)}</b><div class="actions"><button class="btn sm" onclick="A.partager()">Partager</button><button class="btn sm" onclick="A.copier()">Copier</button><button class="btn sm" onclick="A.regenerer()">Régénérer</button></div></div></div>
-      </div>
-      <div class="row" style="margin-top:8px"><button class="btn primary big" onclick="Onb.valide3()">Continuer</button></div>`;
+    return `<div class="row" style="gap:12px;margin-bottom:8px">${ico("garage","tile")}${ico("plan","tile")}${ico("permis","tile")}</div><h1>Trois questions, et c'est fini.</h1>
+      ${q("parking", "Un parking, une cave, une annexe ?")}
+      ${q("lots", "Plusieurs lots réunis ?")}
+      ${q("autorisation", "Des travaux avec permis ou déclaration ?")}${a.autorisation === true ? `<div class="notice small">Déclaration préalable de 2017 retrouvée : abri de jardin. Rattachée.</div>` : ""}
+      <div class="card" style="margin-top:16px"><div class="split"><div><h3>Plus simple encore</h3><p class="sub" style="margin:0">Photographiez votre taxe foncière ou votre acte : VIDOM y lit le reste.</p></div>${o.photo ? `<span class="state valide">Lu ✓</span>` : `<label class="btn primary">${I.camera} Photographier<input type="file" accept="image/*,application/pdf" capture="environment" class="sr" onchange="Onb.photo(this)"></label>`}</div>${o.photo ? `<div class="notice small">Taxe foncière 2025 lue : identifiant fiscal ${h(L.identifiantFiscal)}, parcelles AB 214 et AB 215.</div>` : ""}</div>
+      <div class="row" style="margin-top:16px"><button class="btn primary big" onclick="Onb.fin()">Entrer dans ma maison</button></div>
+      <p class="tiny faint" style="margin-top:10px">L'adresse de dépôt de la maison et ce qui manque encore vous attendent à l'intérieur.</p>`;
   },
   rep(k, v) { S.onb.annexes[k] = v; save(); route(); },
-  photo(inp) { const f = inp.files && inp.files[0]; if (!f) return; if (f.type === "application/pdf") { S.onb.photo = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><rect width="600" height="200" fill="#EFE6D8"/><text x="300" y="110" text-anchor="middle" font-family="sans-serif" font-size="22" fill="#50575E">Document PDF reçu</text></svg>'); save(); route(); return; } lirePhoto(f, d => { S.onb.photo = d; save(); route(); }); },
+  photo(inp) { const f = inp.files && inp.files[0]; if (!f) return; if (f.type === "application/pdf") { S.onb.photo = "pdf"; save(); route(); return; } lirePhoto(f, d => { S.onb.photo = d; save(); route(); }); },
   valide3() { S.etape = 4; save(); route(); },
 
   /* --- écran 4 --- */
@@ -766,9 +863,9 @@ const Onb = {
       { id: "m4", t: "Les plans et les annexes de l'acte", qui: "Me Bertrand (notaire)", mail: "etude.bertrand@notaires.fr", delai: 30 }
     ];
     const faites = S.onb.demandes || [];
-    return `<h1>Ce qui manque, et à qui le demander</h1><p class="lead">Une liste courte, déduite de ce qui a été trouvé. VIDOM prépare le message ; vous le relisez et l'envoyez vous-même, depuis votre messagerie.</p>
+    return `<h1>Ce qui manque, et à qui le demander</h1><p class="lead">VIDOM prépare le message ; vous l'envoyez vous-même.</p>
       ${manques.map(m => `<div class="opt"><div><b>${h(m.t)}</b><div class="small muted">${h(m.qui)}${m.espace ? " — ce professionnel répond dans son propre espace en ligne : pensez à y récupérer les documents et à les déposer ici" : ""}</div></div>${faites.includes(m.id) ? `<span class="state valide">Demandé</span>` : `<button class="btn sm primary" onclick="Onb.demander('${m.id}','${h(m.t)}','${h(m.qui)}','${m.mail}',${m.delai})">Demander</button>`}</div>`).join("")}
-      <p class="small muted" style="margin-top:10px">Chaque demande envoyée apparaît ensuite dans « À faire », avec sa date et le délai attendu.</p>
+      <p class="small muted" style="margin-top:10px">Chaque demande se suit dans « À faire ».</p>
       <div class="row" style="margin-top:14px"><button class="btn primary big" onclick="Onb.fin()">Entrer dans ma maison</button></div>`;
   },
   demander(id, t, qui, mail, delai) {
@@ -785,7 +882,8 @@ const Onb = {
     S.metrics.demandes++; S.journal.push({ d: today(), t: "Demande préparée pour " + qui + " — envoyée depuis votre messagerie" });
     closeModal(); toast("Message ouvert dans votre messagerie. La réponse arrivera dans la boîte d'arrivée."); save(); route();
   },
-  fin() { S.cree = true; save(); location.hash = "#/accueil"; route(); }
+  reprendre() { S.cree = true; save(); location.hash = "#/accueil"; route(); },
+  fin() { S.cree = true; S.bienvenue = true; save(); location.hash = "#/accueil"; route(); }
 };
 /* ================= ACTIONS COMMUNES ================= */
 const A = {
@@ -835,7 +933,7 @@ const A = {
          ${img ? `<img class="photo" src="${img}" alt="">` : ""}
          <dl class="kv" style="margin-top:10px"><dt>Type</dt><dd>${TYPES[r.type]}</dd><dt>Titre</dt><dd>${h(r.titre)}</dd><dt>Fournisseur</dt><dd>${h(r.four)}</dd><dt>Date</dt><dd>${fdate(r.date)}</dd><dt>Montant</dt><dd>${eur(r.montant)}</dd><dt>Référence lue</dt><dd class="num">${h(r.ref)}</dd><dt>Pièce</dt><dd>${h(piece(pc).nom)}</dd></dl>
          <div class="notice"><b>À partir de la référence lue sur ce document, VIDOM a retrouvé :</b><br>${h(r.notice)}<br>Service après-vente : ${h(r.sav)}<div class="tiny faint">Source : site du fabricant · proposé, jamais imposé</div></div>`;
-    modal(`<h2>${r.kind === "equipement" ? "Un équipement reconnu" : "Un document reconnu"}</h2>${body}
+    modal(`<h2 class="eqrow">${r.kind === "equipement" ? ico(r.cat,"lg") : icoDoc(r.type).replace('class="ico ','class="ico lg ')}${r.kind === "equipement" ? "Un équipement reconnu" : "Un document reconnu"}</h2>${body}
       <div class="row" style="margin-top:12px"><button class="btn primary" onclick='A.conserve(${JSON.stringify(r).replace(/'/g, "&#39;")},"${pc}",${img ? "true" : "false"})'>Conserver</button><button class="btn" onclick="A.corrige()">Corriger</button><button class="btn ghost" onclick="closeModal()">Ne pas garder</button></div>`, { noX: false });
     S._img = img;
   },
@@ -872,25 +970,29 @@ V.accueil = () => {
   const dern = S.events.slice().sort((a, b) => b.d.localeCompare(a.d)).slice(0, 4);
   const vieux = S.equipements.filter(e => e.etat === "a_remplacer" || e.etat === "moyen");
   const nDocs = S.docs.filter(d => d.statut !== "refuse").length;
-  return `<div class="page">
-    <div class="page-h"><div><h1>${h(L.nom)}</h1><p>${h(L.adresse)}, ${h(L.cp)} ${h(L.ville)} · maison de ${L.annee} · ${L.surface} m² · gardienne : ${h(L.gardien)}</p></div><a class="btn" href="#/memoire">${I.coeur} La maison raconte</a></div>
+  const bienvenue = S.bienvenue ? `<div class="card" style="margin-bottom:16px;border-color:var(--sauge)"><div class="split"><div><h3>Bienvenue dans la mémoire de la ${h(L.nom)}.</h3><p class="sub" style="margin:0">Deux choses utiles pour commencer — quand vous voulez.</p></div><button class="btn ghost sm" onclick="S.bienvenue=false;save();route()">Fermer</button></div>
+      <div class="grid2" style="grid-template-columns:1fr 1fr;margin-top:10px"><div class="opt" onclick="A.partager()"><div><b>La boîte aux lettres de la maison</b><div class="small muted num" style="word-break:break-all">${h(L.adresseDepot)}</div></div><span class="tag">Partager</span></div><div class="opt" onclick="location.hash='#/manque'"><div><b>Ce qui manque encore</b><div class="small muted">Quatre documents, et à qui les demander</div></div><span class="tag">Voir</span></div></div></div>` : "";
+  return `<div class="page">${bienvenue}
+    <div class="hero"><div><h1>${h(L.nom)}</h1><p class="muted">${h(L.adresse)}, ${h(L.cp)} ${h(L.ville)} · maison de ${L.annee} · ${L.surface} m² · gardienne : ${h(L.gardien)}</p><div class="row" style="margin-top:8px"><a class="btn" href="#/memoire">${I.coeur} La maison raconte</a><a class="btn" href="#/pieces">${I.camera} Photographier une pièce</a></div></div>${ILL.maison}</div>
     <div class="grid3" style="margin-bottom:16px">
-      <div class="stat"><b>${nDocs}</b><span>documents conservés</span></div>
-      <div class="stat"><b>${S.equipements.filter(e => !e.deposee).length}</b><span>équipements connus</span></div>
-      <div class="stat"><b>${S.pros.length}</b><span>professionnels du logement</span></div>
+      <div class="stat">${ico("facture","xl")}<div><b>${nDocs}</b><span>documents conservés</span></div></div>
+      <div class="stat">${ico("Électroménager","xl")}<div><b>${S.equipements.filter(e => !e.deposee).length}</b><span>équipements connus</span></div></div>
+      <div class="stat">${ico("artisan","xl")}<div><b>${S.pros.length}</b><span>professionnels du logement</span></div></div>
     </div>
     <div class="grid2">
       <div>
-        ${inbox.length ? `<div class="card"><div class="split"><h3>Boîte d'arrivée</h3><a class="btn sm" href="#/boite">Tout voir</a></div><p class="sub">${inbox.length} document${inbox.length > 1 ? "s" : ""} à confirmer. Rien n'entre sans vous.</p>${inbox.slice(0, 2).map(i => `<div class="doc" onclick="location.hash='#/boite'" style="cursor:pointer"><div class="thumb">${TYPES[i.reco.type]}</div><div><span class="state propose">Proposé</span><b>${h(i.titre)}</b><span class="l">${fdate(i.date)} · ${h(i.exp)}</span></div></div>`).join("")}</div>` : `<div class="card"><h3>Boîte d'arrivée</h3><p class="sub">Rien en attente. Ce qui arrive par l'adresse de la maison apparaîtra ici.</p></div>`}
+        ${inbox.length ? `<div class="card"><div class="split"><h3>Boîte d'arrivée</h3><a class="btn sm" href="#/boite">Tout voir</a></div><p class="sub">${inbox.length} document${inbox.length > 1 ? "s" : ""} à confirmer. Rien n'entre sans vous.</p>${inbox.slice(0, 2).map(i => `<div class="doc" onclick="location.hash='#/boite'" style="cursor:pointer"><div class="thumb">${icoDoc(i.reco.type)}</div><div><span class="state propose">Proposé</span><b>${h(i.titre)}</b><span class="l">${fdate(i.date)} · ${h(i.exp)}</span></div></div>`).join("")}</div>` : `<div class="card"><h3>Boîte d'arrivée</h3><p class="sub">Rien en attente. Ce qui arrive par l'adresse de la maison apparaîtra ici.</p></div>`}
         <div class="card"><div class="split"><h3>Ce qui vient de se passer</h3><a class="btn sm" href="#/chronologie">Chronologie</a></div><ul class="tl">${dern.map(e => `<li class="${e.wow ? "wow" : ""}">${h(e.t)}<span class="d">${fdate(e.d)}</span></li>`).join("")}</ul></div>
       </div>
       <div>
         <div class="card"><div class="split"><h3>À faire</h3><a class="btn sm" href="#/afaire">Tout voir</a></div>${rap.map(r => `<div class="opt" onclick="location.hash='#/afaire'"><div><b>${h(r.t)}</b><div class="small muted">${fmois(r.d)}</div></div></div>`).join("")}</div>
-        <div class="card"><h3>Équipements à surveiller</h3><p class="sub">${vieux.length ? "" : "Tout est en bon état."}</p>${vieux.map(e => `<div class="opt" onclick="location.hash='#/equipements/${e.id}'"><span>${h(e.nom)}</span><span class="state ${e.etat === "a_remplacer" ? "attention" : ""}">${ETATS[e.etat]}</span></div>`).join("")}</div>
+        <div class="card"><h3>Équipements à surveiller</h3><p class="sub">${vieux.length ? "" : "Tout est en bon état."}</p>${vieux.map(e => `<div class="opt" onclick="location.hash='#/equipements/${e.id}'"><span class="eqrow">${icoCat(e.cat)}${h(e.nom)}</span><span class="state ${e.etat === "a_remplacer" ? "attention" : ""}">${ETATS[e.etat]}</span></div>`).join("")}</div>
         <div class="card"><h3>La boîte aux lettres de la maison</h3><p class="sub num" style="word-break:break-all">${h(L.adresseDepot)}</p><div class="row"><button class="btn sm" onclick="A.partager()">Partager</button><button class="btn sm" onclick="A.copier()">Copier</button></div></div>
       </div>
     </div></div>`;
 };
+
+V.manque = () => `<div class="page"><div class="page-h"><div><a class="small" href="#/accueil">← Accueil</a></div></div>${Onb.e4().replace('<button class="btn primary big" onclick="Onb.fin()">Entrer dans ma maison</button>', '<a class="btn" href="#/accueil">Retour à l\'accueil</a>')}</div>`;
 
 V.memoire = () => {
   const L = S.logement;
@@ -953,7 +1055,7 @@ V.pieces = (param) => {
   return `<div class="page"><div class="page-h"><div><h1>Pièces et espaces</h1><p>Entrez dans une pièce, et photographiez ce qui s'y trouve. Un jeu de recherche, pas un interrogatoire.</p></div></div>
     ${rythme ? "" : `<div class="card" style="margin-bottom:14px"><h3>À quel rythme ?</h3><p class="sub">VIDOM ne vous impose jamais un long parcours d'un bloc.</p><div class="row"><button class="btn primary" onclick="S.rythme='maintenant';save();route()">Maintenant, pièce après pièce</button><button class="btn" onclick="S.rythme='fil';save();route()">Au fil du temps</button><button class="btn" onclick="S.rythme='plustard';save();route();toast('Vous retrouverez les pièces ici quand vous voudrez')">Plus tard</button></div></div>`}
     <div class="split" style="margin-bottom:10px"><span class="muted">${done} pièce${done > 1 ? "s" : ""} sur ${DATA.pieces.length} parcourue${done > 1 ? "s" : ""}</span><span class="progress" style="width:160px"><i style="width:${Math.round(done / DATA.pieces.length * 100)}%"></i></span></div>
-    <div class="plan">${DATA.pieces.map(p => { const st = S.pieces[p.id] || {}; const nEq = S.equipements.filter(e => e.piece === p.id && !e.deposee).length; const nObj = (st.objets || []).length; return `<button class="room ${st.fait ? "done" : ""}" onclick="location.hash='#/pieces/${p.id}'"><b>${h(p.nom)}</b><span class="c">${nEq + nObj} objet${nEq + nObj > 1 ? "s" : ""} trouvé${nEq + nObj > 1 ? "s" : ""}${st.photos ? ` · ${st.photos} photo${st.photos > 1 ? "s" : ""}` : ""}</span></button>`; }).join("")}</div>
+    <div class="plan">${DATA.pieces.map(p => { const st = S.pieces[p.id] || {}; const nEq = S.equipements.filter(e => e.piece === p.id && !e.deposee).length; const nObj = (st.objets || []).length; return `<button class="room ${st.fait ? "done" : ""}" onclick="location.hash='#/pieces/${p.id}'">${icoRoom(p.type).replace('class="ico ','class="ico tile ')}<b>${h(p.nom)}</b><span class="c">${nEq + nObj} objet${nEq + nObj > 1 ? "s" : ""} trouvé${nEq + nObj > 1 ? "s" : ""}${st.photos ? ` · ${st.photos} photo${st.photos > 1 ? "s" : ""}` : ""}</span></button>`; }).join("")}</div>
     <p class="tiny faint" style="margin-top:12px">Le plan est simplifié à partir du comptage des pièces. VIDOM ne parle jamais des fondations, des murs ou des matériaux de toiture.</p></div>`;
 };
 V.piece = (id) => {
@@ -961,7 +1063,7 @@ V.piece = (id) => {
   const st = S.pieces[id] = S.pieces[id] || { objets: [], photos: 0 };
   const eqs = S.equipements.filter(e => e.piece === id && !e.deposee);
   const docs = S.docs.filter(d => d.cible === id && d.statut !== "refuse");
-  return `<div class="page"><div class="page-h"><div><a class="small" href="#/pieces">← Toutes les pièces</a><h1>${h(p.nom)}</h1><p>${eqs.length + st.objets.length} objet${eqs.length + st.objets.length > 1 ? "s" : ""} trouvé${eqs.length + st.objets.length > 1 ? "s" : ""}</p></div>
+  return `<div class="page"><div class="page-h"><div><a class="small" href="#/pieces">← Toutes les pièces</a><h1 class="eqrow">${icoRoom(p.type).replace('class="ico ','class="ico xl ')}${h(p.nom)}</h1><p>${eqs.length + st.objets.length} objet${eqs.length + st.objets.length > 1 ? "s" : ""} trouvé${eqs.length + st.objets.length > 1 ? "s" : ""}</p></div>
       <label class="btn primary">${I.camera} Photographier<input type="file" accept="image/*" capture="environment" class="sr" onchange="A.photoPrise(this,'${id}')"></label></div>
     <div class="grid2">
       <div>
@@ -972,10 +1074,10 @@ V.piece = (id) => {
         </div>
       </div>
       <div>
-        <div class="card"><h3>Équipements connus ici</h3>${eqs.length ? eqs.map(e => `<div class="opt" onclick="location.hash='#/equipements/${e.id}'"><div><b>${h(e.nom)}</b><div class="small muted">${h(e.marque)} ${h(e.modele)}</div></div><span class="state ${e.etat === "bon" ? "valide" : "attention"}">${ETATS[e.etat]}</span></div>`).join("") : `<div class="empty"><b>Aucun équipement encore</b>Photographiez un appareil ou son étiquette : VIDOM le reconnaît et va chercher sa notice.</div>`}
+        <div class="card"><h3>Équipements connus ici</h3>${eqs.length ? eqs.map(e => `<div class="opt" onclick="location.hash='#/equipements/${e.id}'"><div class="eqrow">${mono(e.marque)}<div><b>${h(e.nom)}</b><div class="small muted">${h(e.marque)} ${h(e.modele)}</div></div></div><span class="state ${e.etat === "bon" ? "valide" : "attention"}">${ETATS[e.etat]}</span></div>`).join("") : `<div class="empty">${ILL.vide}<b>Aucun équipement encore</b>Photographiez un appareil ou son étiquette : VIDOM le reconnaît et va chercher sa notice.</div>`}
           ${st.objets.filter(o => !eqs.some(e => e.nom === o)).map(o => `<div class="opt"><span>${h(o)}</span><span class="tag">déclaré</span></div>`).join("")}
         </div>
-        <div class="card"><h3>Documents de cette pièce</h3>${docs.length ? docs.map(d => `<div class="doc" onclick="location.hash='#/documents/${d.id}'" style="cursor:pointer"><div class="thumb">${d.img ? `<img src="${d.img}" alt="">` : TYPES[d.type]}</div><div><b>${h(d.titre)}</b><span class="l">${fdate(d.date)} · ${h(d.four)}</span></div></div>`).join("") : `<div class="empty"><b>Rien encore</b>Une facture, une notice, une photo — tout se rattache à la pièce.</div>`}</div>
+        <div class="card"><h3>Documents de cette pièce</h3>${docs.length ? docs.map(d => `<div class="doc" onclick="location.hash='#/documents/${d.id}'" style="cursor:pointer"><div class="thumb">${d.img ? `<img src="${d.img}" alt="">` : icoDoc(d.type)}</div><div><b>${h(d.titre)}</b><span class="l">${fdate(d.date)} · ${h(d.four)}</span></div></div>`).join("") : `<div class="empty"><b>Rien encore</b>Une facture, une notice, une photo — tout se rattache à la pièce.</div>`}</div>
       </div>
     </div></div>`;
 };
@@ -988,7 +1090,7 @@ V.boite = () => {
   const prop = items.filter(i => i.statut === "propose");
   const st = { recu: "Reçu", propose: "Proposé", valide: "Validé", refuse: "Refusé" };
   return `<div class="page"><div class="page-h"><div><h1>Boîte d'arrivée — le sas</h1><p>Ce qui est arrivé à l'adresse de la maison, par courriel, code QR ou lien, attend ici. Rien n'entre dans la mémoire sans un geste de votre main : Conserver, ou Refuser.</p></div><div class="row">${prop.length > 1 ? `<button class="btn" onclick="A.toutGarder()">Tout garder, un par un</button>` : ""}<button class="btn" onclick="A.partager()">Partager l'adresse</button></div></div>
-    ${items.length ? items.map(i => `<div class="card" style="margin-top:0;margin-bottom:10px"><div class="doc" style="border:0;padding:0;margin:0"><div class="thumb">${TYPES[i.reco.type]}</div><div>
+    ${items.length ? items.map(i => `<div class="card" style="margin-top:0;margin-bottom:10px"><div class="doc" style="border:0;padding:0;margin:0"><div class="thumb">${icoDoc(i.reco.type)}</div><div>
         <div class="row"><span class="state ${i.statut}">${st[i.statut]}</span>${i.doublon ? `<span class="state attention">Doublon possible</span>` : ""}${i.verifie === false ? `<span class="state attention">Expéditeur non vérifié</span>` : ""}</div>
         <b>${h(i.titre)}</b><span class="l">De ${h(i.exp)} · ${fdate(i.date)} · « ${h(i.objet)} »</span>
         ${i.statut === "propose" ? `<div class="notice small" style="margin:8px 0">VIDOM propose : <b>${TYPES[i.reco.type]}</b> · ${h(i.reco.four)} · ${fdate(i.reco.date)}${i.reco.montant ? " · " + eur(i.reco.montant) : ""} → <b>${h(nomCible(i.reco.cible))}</b>${i.doublon ? `<br>Ce document ressemble à un document déjà reçu le ${fdate(S.inbox.find(x => x.id === i.doublon).date)}.` : ""}${i.verifie === false ? "<br>Nous n'avons pas pu vérifier l'expéditeur : regardez le document avec prudence." : ""}</div>
@@ -1019,7 +1121,7 @@ V.equipements = (param) => {
   const cats = [...new Set(list.map(e => e.cat))];
   return `<div class="page"><div class="page-h"><div><h1>Équipements</h1><p>${list.length} équipements connus, chacun avec sa fiche, ses documents et ses actions.</p></div><label class="btn primary">${I.camera} Photographier un appareil<input type="file" accept="image/*" capture="environment" class="sr" onchange="A.photoPrise(this,null)"></label></div>
     <div class="card tbl"><table><thead><tr><th>Équipement</th><th>Pièce</th><th>Installé</th><th>Garantie</th><th>État</th></tr></thead><tbody>
-    ${cats.map(c => list.filter(e => e.cat === c).map(e => `<tr class="link" onclick="location.hash='#/equipements/${e.id}'"><td><b>${h(e.nom)}</b><div class="small muted">${h(e.marque)} ${h(e.modele)}</div></td><td>${h(piece(e.piece).nom)}</td><td class="num">${fmois(e.install)}</td><td class="num">${e.garantie ? (e.garantie >= today() ? "jusqu'en " + fmois(e.garantie) : `<span class="faint">échue</span>`) : "—"}</td><td><span class="state ${e.etat === "bon" ? "valide" : "attention"}">${ETATS[e.etat]}</span></td></tr>`).join("")).join("")}
+    ${cats.map(c => list.filter(e => e.cat === c).map(e => `<tr class="link" onclick="location.hash='#/equipements/${e.id}'"><td><div class="eqrow">${icoCat(e.cat)}<div><b>${h(e.nom)}</b><div class="small muted">${h(e.marque)} ${h(e.modele)}</div></div></div></td><td>${h(piece(e.piece).nom)}</td><td class="num">${fmois(e.install)}</td><td class="num">${e.garantie ? (e.garantie >= today() ? "jusqu'en " + fmois(e.garantie) : `<span class="faint">échue</span>`) : "—"}</td><td><span class="state ${e.etat === "bon" ? "valide" : "attention"}">${ETATS[e.etat]}</span></td></tr>`).join("")).join("")}
     </tbody></table></div>
     ${old.length ? `<div class="card"><h3>Dans l'histoire</h3><p class="sub">Un équipement remplacé n'est jamais effacé.</p>${old.map(e => `<div class="opt" onclick="location.hash='#/equipements/${e.id}'"><span>${h(e.nom)} · ${h(e.marque)} ${h(e.modele)}</span><span class="state">déposé le ${fdate(e.deposee)}</span></div>`).join("")}</div>` : ""}</div>`;
 };
@@ -1030,18 +1132,18 @@ V.equipement = (id) => {
   const inst = e.par ? pro(e.par) : null;
   const gar = e.garantie ? (e.garantie >= today() ? `${e.garantieType ? e.garantieType + ", " : "constructeur, "}jusqu'au ${fdate(e.garantie)}` : `échue le ${fdate(e.garantie)}`) : "non connue";
   const factures = docs.filter(d => d.montant);
-  return `<div class="page"><div class="page-h"><div><a class="small" href="#/equipements">← Équipements</a><h1>${h(e.nom)}</h1><p>${h(e.marque)} ${h(e.modele)} · ${h(piece(e.piece).nom)} · installé ${fmois(e.install)}${inst ? " par " + h(inst.nom) : ""}${e.deposee ? " · <b>déposé le " + fdate(e.deposee) + "</b>" : ""}</p></div><span class="state ${e.etat === "bon" ? "valide" : "attention"}">${ETATS[e.etat]}</span></div>
+  return `<div class="page"><div class="page-h"><div><a class="small" href="#/equipements">← Équipements</a><h1 class="eqrow">${icoCat(e.cat).replace('class="ico ','class="ico xl ')}<span>${h(e.nom)}</span></h1><p>${h(e.marque)} ${h(e.modele)} · ${h(piece(e.piece).nom)} · installé ${fmois(e.install)}${inst ? " par " + h(inst.nom) : ""}${e.deposee ? " · <b>déposé le " + fdate(e.deposee) + "</b>" : ""}</p></div><span class="state ${e.etat === "bon" ? "valide" : "attention"}">${ETATS[e.etat]}</span></div>
     <div class="grid2">
       <div>
         <div class="card">${e.photo ? `<img class="photo" src="${e.photo}" alt="" style="margin-bottom:10px">` : ""}
-          <dl class="kv"><dt>Référence</dt><dd class="num">${h(e.ref) || "—"}</dd><dt>Numéro de série</dt><dd class="num">${h(e.serie) || "—"}</dd><dt>Garantie</dt><dd>${gar}</dd><dt>Dernier entretien</dt><dd>${e.entretien ? fdate(e.entretien) : "aucun enregistré"}</dd><dt>Prochain conseillé</dt><dd>${e.prochain ? fmois(e.prochain) : "—"}</dd><dt>Coût</dt><dd>${eur(e.cout)}</dd>${e.notes ? `<dt>Notes</dt><dd>${h(e.notes)}</dd>` : ""}</dl>
+          <div class="eqrow" style="margin-bottom:10px">${mono(e.marque, true)}<div><b>${h(e.marque)}</b><div class="small muted">${h(e.modele)}</div></div></div><dl class="kv"><dt>Référence</dt><dd class="num">${h(e.ref) || "—"}</dd><dt>Numéro de série</dt><dd class="num">${h(e.serie) || "—"}</dd><dt>Garantie</dt><dd>${gar}</dd><dt>Dernier entretien</dt><dd>${e.entretien ? fdate(e.entretien) : "aucun enregistré"}</dd><dt>Prochain conseillé</dt><dd>${e.prochain ? fmois(e.prochain) : "—"}</dd><dt>Coût</dt><dd>${eur(e.cout)}</dd>${e.notes ? `<dt>Notes</dt><dd>${h(e.notes)}</dd>` : ""}</dl>
           ${e.notice || e.sav ? `<div class="notice"><b>Retrouvé à partir de la référence${factures.length ? " lue sur la facture" : ""} :</b><br>${e.notice ? "la notice du fabricant · " : ""}${e.sav ? "service après-vente : " + h(e.sav) : ""}<div class="tiny faint">Source : site du fabricant · vous pouvez corriger</div></div>` : ""}
           <div class="actions">${e.notice ? `<button class="btn" onclick="A.notice('${id}')">Voir la notice</button>` : ""}${e.sav ? `<button class="btn" onclick="A.sav('${id}')">Contacter le SAV</button>` : ""}${inst ? `<a class="btn" href="#/professionnels/${inst.id}">Recontacter ${h(inst.nom)}</a>` : `<a class="btn" href="#/professionnels/trouver/${id}">Trouver un professionnel</a>`}${!e.deposee ? `<button class="btn warn" onclick="A.probleme('${id}')">J'ai un problème</button>` : ""}<button class="btn ghost sm" onclick="A.corrige()">Corriger</button></div>
         </div>
         <div class="card tbl"><h3>Entretiens et interventions</h3>${evs.length ? `<table><thead><tr><th>Date</th><th>Événement</th></tr></thead><tbody>${evs.sort((a, b) => b.d.localeCompare(a.d)).map(v => `<tr><td class="num">${fdate(v.d)}</td><td>${h(v.t)}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">Rien encore.</p>`}</div>
       </div>
       <div>
-        <div class="card"><h3>Documents reliés</h3>${docs.length ? docs.map(d => `<div class="doc" onclick="location.hash='#/documents/${d.id}'" style="cursor:pointer"><div class="thumb">${d.img ? `<img src="${d.img}" alt="">` : TYPES[d.type]}</div><div><b>${h(d.titre)}</b><span class="l">${fdate(d.date)} · ${h(d.four)}${d.montant ? " · " + eur(d.montant) : ""}</span></div></div>`).join("") : `<div class="empty"><b>Aucun document</b>Photographiez la facture ou l'étiquette : VIDOM la rattache ici.</div>`}
+        <div class="card"><h3>Documents reliés</h3>${docs.length ? docs.map(d => `<div class="doc" onclick="location.hash='#/documents/${d.id}'" style="cursor:pointer"><div class="thumb">${d.img ? `<img src="${d.img}" alt="">` : icoDoc(d.type)}</div><div><b>${h(d.titre)}</b><span class="l">${fdate(d.date)} · ${h(d.four)}${d.montant ? " · " + eur(d.montant) : ""}</span></div></div>`).join("") : `<div class="empty"><b>Aucun document</b>Photographiez la facture ou l'étiquette : VIDOM la rattache ici.</div>`}
           <label class="btn" style="margin-top:10px">${I.camera} Ajouter un document<input type="file" accept="image/*,application/pdf" capture="environment" class="sr" onchange="A.photoPrise(this,'${e.piece}')"></label></div>
       </div>
     </div></div>`;
@@ -1085,12 +1187,12 @@ V.documents = (param) => {
   const docs = S.docs.filter(d => d.statut !== "refuse" && (!f || d.type === f)).sort((a, b) => b.date.localeCompare(a.date));
   const types = [...new Set(S.docs.map(d => d.type))];
   return `<div class="page"><div class="page-h"><div><h1>Documents</h1><p>${S.docs.filter(d => d.statut !== "refuse").length} documents, chacun relié à ce qu'il prouve.</p></div><div class="row"><button class="btn" onclick="A.export()">Emporter ma mémoire</button><label class="btn primary">${I.camera} Ajouter<input type="file" accept="image/*,application/pdf" capture="environment" class="sr" onchange="A.photoPrise(this,null)"></label></div></div>
-    <div class="row" style="margin-bottom:12px"><button class="pill ${!f ? "on" : ""}" onclick="S._fdoc='';route()">Tous</button>${types.map(t => `<button class="pill ${f === t ? "on" : ""}" onclick="S._fdoc='${t}';route()">${TYPES[t]}</button>`).join("")}</div>
-    <div class="card tbl"><table><thead><tr><th>Document</th><th>Type</th><th>Date</th><th>Rattaché à</th><th>Montant</th><th>Source</th></tr></thead><tbody>${docs.map(d => `<tr class="link" onclick="location.hash='#/documents/${d.id}'"><td><b>${h(d.titre)}</b><div class="small muted">${h(d.four)}</div></td><td>${TYPES[d.type]}</td><td class="num">${fdate(d.date)}</td><td>${h(nomCible(d.cible))}</td><td class="num">${d.montant ? eur(d.montant) : ""}</td><td class="small muted">${{ main: "déposé", courriel: "courriel", web: "retrouvé", photo: "photo", tiers: "tiers" }[d.source] || d.source}</td></tr>`).join("")}</tbody></table></div></div>`;
+    <div class="row" style="margin-bottom:12px"><button class="pill ${!f ? "on" : ""}" onclick="S._fdoc='';route()">Tous</button>${types.map(t => `<button class="pill ${f === t ? "on" : ""}" onclick="S._fdoc='${t}';route()"><span class="ico" style="width:14px;height:14px;color:inherit">${ICO[t] || ""}</span> ${TYPES[t]}</button>`).join("")}</div>
+    <div class="card tbl"><table><thead><tr><th>Document</th><th>Type</th><th>Date</th><th>Rattaché à</th><th>Montant</th><th>Source</th></tr></thead><tbody>${docs.map(d => `<tr class="link" onclick="location.hash='#/documents/${d.id}'"><td><div class="eqrow">${icoDoc(d.type)}<div><b>${h(d.titre)}</b><div class="small muted">${h(d.four)}</div></div></div></td><td>${TYPES[d.type]}</td><td class="num">${fdate(d.date)}</td><td>${h(nomCible(d.cible))}</td><td class="num">${d.montant ? eur(d.montant) : ""}</td><td class="small muted">${{ main: "déposé", courriel: "courriel", web: "retrouvé", photo: "photo", tiers: "tiers" }[d.source] || d.source}</td></tr>`).join("")}</tbody></table></div></div>`;
 };
 V.document = (id) => {
   const d = S.docs.find(x => x.id === id); if (!d) return V.documents("");
-  return `<div class="page"><div class="page-h"><div><a class="small" href="#/documents">← Documents</a><h1>${h(d.titre)}</h1><p>${TYPES[d.type]} · ${fdate(d.date)} · ${h(d.four)}</p></div><span class="state valide">Conservé</span></div>
+  return `<div class="page"><div class="page-h"><div><a class="small" href="#/documents">← Documents</a><h1 class="eqrow">${icoDoc(d.type).replace('class="ico ','class="ico xl ')}<span>${h(d.titre)}</span></h1><p>${TYPES[d.type]} · ${fdate(d.date)} · ${h(d.four)}</p></div><span class="state valide">Conservé</span></div>
     <div class="grid2"><div class="card">${d.img ? `<img class="photo" src="${d.img}" alt="" style="max-height:420px">` : `<div class="book" style="min-height:300px"><h2>${TYPES[d.type]}</h2><p class="muted">${h(d.four)} · ${fdate(d.date)}</p><p>${h(d.titre)}</p>${d.montant ? `<p><b>Montant : ${eur(d.montant)}</b></p>` : ""}<div class="pn">document de démonstration</div></div>`}</div>
     <div><div class="card"><h3>Ce que VIDOM a lu</h3><dl class="kv"><dt>Type</dt><dd>${TYPES[d.type]}</dd><dt>Date</dt><dd>${fdate(d.date)}</dd><dt>Fournisseur</dt><dd>${h(d.four)}</dd><dt>Montant</dt><dd>${eur(d.montant)}</dd><dt>Rattaché à</dt><dd>${d.cible !== "logement" && eq(d.cible) ? `<a href="#/equipements/${d.cible}">${h(nomCible(d.cible))}</a>` : h(nomCible(d.cible))}</dd><dt>Source</dt><dd>${{ main: "déposé par vous", courriel: "reçu par courriel à l'adresse de la maison", web: "retrouvé par VIDOM à partir de la référence", photo: "photographié", tiers: "déposé par un professionnel" }[d.source] || d.source}</dd></dl><div class="actions"><button class="btn sm" onclick="A.corrige()">Corriger</button><button class="btn sm" onclick="toast('Le document d\\'origine n\\'est jamais modifié ; il est archivé, pas supprimé')">Archiver</button></div></div></div></div></div>`;
 };
@@ -1106,18 +1208,18 @@ V.professionnels = (param) => {
   if (param && param.startsWith("trouver")) return V.trouver(param.split("/")[1]);
   if (param) return V.pro(param);
   return `<div class="page"><div class="page-h"><div><h1>Professionnels du logement</h1><p>Ceux qui sont réellement intervenus ici. Leur présence ne s'achète pas et ne disparaît jamais.</p></div><a class="btn primary" href="#/professionnels/trouver">Trouver un professionnel</a></div>
-    <div class="cards">${S.pros.map(p => `<div class="card" style="margin:0"><div class="split"><h3>${h(p.nom)}</h3><span class="state ${p.statut === "actif" ? "actif" : ""}">${p.statut === "actif" ? "Actif" : "Historique"}</span></div><p class="sub">${h(p.metier)} · ${h(p.ville)}</p><div class="small">${h(p.motif.charAt(0).toUpperCase() + p.motif.slice(1))}<br><span class="muted">Dernière intervention : ${fdate(p.derniere)}</span></div><div class="actions"><a class="btn sm primary" href="#/professionnels/${p.id}">Recontacter</a></div></div>`).join("")}</div>
+    <div class="cards">${S.pros.map(p => `<div class="card" style="margin:0"><div class="split"><h3 class="eqrow">${mono(p.nom)}${h(p.nom)}</h3><span class="state ${p.statut === "actif" ? "actif" : ""}">${p.statut === "actif" ? "Actif" : "Historique"}</span></div><p class="sub">${h(p.metier)} · ${h(p.ville)}</p><div class="small">${h(p.motif.charAt(0).toUpperCase() + p.motif.slice(1))}<br><span class="muted">Dernière intervention : ${fdate(p.derniere)}</span></div><div class="actions"><a class="btn sm primary" href="#/professionnels/${p.id}">Recontacter</a></div></div>`).join("")}</div>
     ${S.artisanCarte ? "" : `<div class="notice small" style="margin-top:14px">Quand un professionnel dépose un document, VIDOM lui demande s'il souhaite que sa carte reste mémorisée pour ce logement — jamais à froid. Essayez avec le panneau Simuler, dans le profil.</div>`}</div>`;
 };
 V.pro = (id) => {
   const p = pro(id); if (!p) return V.professionnels("");
   const eqs = S.equipements.filter(e => e.par === id); const docs = S.docs.filter(d => d.pro === id && d.statut !== "refuse");
-  return `<div class="page"><div class="page-h"><div><a class="small" href="#/professionnels">← Professionnels</a><h1>${h(p.nom)}</h1><p>${h(p.metier)} · ${h(p.ville)} · ${p.km} km</p></div><span class="state ${p.statut === "actif" ? "actif" : ""}">${p.statut === "actif" ? "Profil actif" : "Historique"}</span></div>
+  return `<div class="page"><div class="page-h"><div><a class="small" href="#/professionnels">← Professionnels</a><h1 class="eqrow">${mono(p.nom, true)}<span>${h(p.nom)}</span></h1><p>${h(p.metier)} · ${h(p.ville)} · ${p.km} km</p></div><span class="state ${p.statut === "actif" ? "actif" : ""}">${p.statut === "actif" ? "Profil actif" : "Historique"}</span></div>
     <div class="grid2"><div><div class="card"><dl class="kv"><dt>Motif</dt><dd>${h(p.motif)}</dd><dt>Dernière intervention</dt><dd>${fdate(p.derniere)}</dd><dt>Téléphone</dt><dd class="num">${h(p.tel) || "—"}</dd><dt>Courriel</dt><dd>${h(p.mail) || "—"}</dd><dt>SIRET</dt><dd class="num">${h(p.siret) || "non renseigné"}</dd></dl>
       <div class="actions"><button class="btn primary" onclick="A.contact('${id}','tel')">Appeler</button>${p.mail ? `<button class="btn" onclick="A.contact('${id}','mail')">Écrire</button>` : ""}<button class="btn" onclick="A.demandeDoc('${id}')">Demander un document</button></div>
       <p class="tiny faint" style="margin-top:10px">Au premier contact, l'adresse de dépôt de la maison part avec votre message : ce que ${h(p.nom)} enverra arrivera dans la boîte d'arrivée.</p></div>
       <div class="card"><h3>Ce qu'il a fait ici</h3>${eqs.map(e => `<div class="opt" onclick="location.hash='#/equipements/${e.id}'"><span>${h(e.nom)}</span><span class="tag">${fmois(e.install)}</span></div>`).join("") || `<p class="muted">Une intervention ponctuelle.</p>`}</div></div>
-    <div class="card"><h3>Documents</h3>${docs.map(d => `<div class="doc" onclick="location.hash='#/documents/${d.id}'" style="cursor:pointer"><div class="thumb">${TYPES[d.type]}</div><div><b>${h(d.titre)}</b><span class="l">${fdate(d.date)}${d.montant ? " · " + eur(d.montant) : ""}</span></div></div>`).join("") || `<p class="muted">Aucun document.</p>`}</div></div></div>`;
+    <div class="card"><h3>Documents</h3>${docs.map(d => `<div class="doc" onclick="location.hash='#/documents/${d.id}'" style="cursor:pointer"><div class="thumb">${icoDoc(d.type)}</div><div><b>${h(d.titre)}</b><span class="l">${fdate(d.date)}${d.montant ? " · " + eur(d.montant) : ""}</span></div></div>`).join("") || `<p class="muted">Aucun document.</p>`}</div></div></div>`;
 };
 A.contact = (id, mode) => { const p = pro(id); S.journal.push({ d: today(), t: "Contact avec " + p.nom + " — adresse de dépôt transmise" }); save(); modal(`<h2>${mode === "tel" ? "Appeler" : "Écrire à"} ${h(p.nom)}</h2><p>${mode === "tel" ? `<b class="num">${h(p.tel)}</b>` : `<b>${h(p.mail)}</b>`}</p><p class="muted small">L'adresse de dépôt de la maison, <span class="num">${h(S.logement.adresseDepot)}</span>, est ${mode === "tel" ? "à dicter : elle a été faite pour ça, sans caractère ambigu" : "déjà en copie de votre message"}.</p><div class="row"><button class="btn primary" onclick="closeModal();toast('${mode === "tel" ? "Appel" : "Message"} préparé')">${mode === "tel" ? "Appeler" : "Ouvrir ma messagerie"}</button><button class="btn" onclick="closeModal()">Fermer</button></div>`); };
 A.demandeDoc = (id) => { const p = pro(id); const L = S.logement; modal(`<h2>Demander un document à ${h(p.nom)}</h2><label class="f"><span>Quel document ?</span><input class="input" id="dq" placeholder="Par exemple : l'attestation de garantie de la toiture"></label><label class="f"><span>Message</span><textarea class="input" id="dm" style="min-height:150px">Bonjour,\n\nPourriez-vous m'adresser [le document] concernant ${L.adresse} à ${L.ville} ?\n\nMerci de mettre ${L.adresseDepot} en copie de l'ensemble des échanges de ce dossier.\n\n${L.gardien}</textarea></label><div class="row"><button class="btn primary" onclick="A.demandeOk('${id}')">Envoyer depuis ma messagerie</button><button class="btn" onclick="closeModal()">Annuler</button></div>`); };
@@ -1127,8 +1229,8 @@ V.trouver = (eqId) => {
   const connus = S.pros.slice().sort((a, b) => (a.statut === "actif" ? 0 : 1) - (b.statut === "actif" ? 0 : 1));
   const autres = [{ nom: "Chauffage Loire Atlantique", metier: "Chauffage", km: 5, actif: true }, { nom: "Ets Morvan", metier: "Plomberie, chauffage", km: 8, actif: true }, { nom: "Dépann'Énergie 44", metier: "Électroménager, dépannage", km: 3, actif: true }, { nom: "Atelier Ligérien", metier: "Menuiserie", km: 11, actif: false }];
   return `<div class="page"><div class="page-h"><div><a class="small" href="#/professionnels">← Professionnels</a><h1>Trouver un professionnel</h1><p>${e ? "Pour " + h(e.nom.toLowerCase()) + ". " : ""}D'abord ceux que la maison connaît, puis ceux qui sont proches.</p></div></div>
-    <div class="card"><h3>La maison les connaît déjà</h3><p class="sub">Un professionnel qui est déjà venu passe avant un inconnu.</p>${connus.map(p => `<div class="opt" onclick="location.hash='#/professionnels/${p.id}'"><div><b>${h(p.nom)}</b><div class="small muted">${h(p.metier)} · ${h(p.motif)} · ${p.km} km</div></div><span class="state ${p.statut === "actif" ? "actif" : ""}">${p.statut === "actif" ? "Actif" : "Historique"}</span></div>`).join("")}</div>
-    <div class="card"><h3>Près de chez vous</h3><p class="sub">Profils actifs, dans un rayon de 15 km. Aucun classement acheté, aucune commission.</p>${autres.map(p => `<div class="opt" onclick="A.contactNouveau('${h(p.nom)}')"><div><b>${h(p.nom)}</b><div class="small muted">${h(p.metier)} · ${p.km} km</div></div><span class="state ${p.actif ? "actif" : ""}">${p.actif ? "Actif" : "Historique"}</span></div>`).join("")}</div></div>`;
+    <div class="card"><h3>La maison les connaît déjà</h3><p class="sub">Un professionnel qui est déjà venu passe avant un inconnu.</p>${connus.map(p => `<div class="opt" onclick="location.hash='#/professionnels/${p.id}'"><div class="eqrow">${mono(p.nom)}<div><b>${h(p.nom)}</b><div class="small muted">${h(p.metier)} · ${h(p.motif)} · ${p.km} km</div></div></div><span class="state ${p.statut === "actif" ? "actif" : ""}">${p.statut === "actif" ? "Actif" : "Historique"}</span></div>`).join("")}</div>
+    <div class="card"><h3>Près de chez vous</h3><p class="sub">Profils actifs, dans un rayon de 15 km. Aucun classement acheté, aucune commission.</p>${autres.map(p => `<div class="opt" onclick="A.contactNouveau('${h(p.nom)}')"><div class="eqrow">${mono(p.nom)}<div><b>${h(p.nom)}</b><div class="small muted">${h(p.metier)} · ${p.km} km</div></div></div><span class="state ${p.actif ? "actif" : ""}">${p.actif ? "Actif" : "Historique"}</span></div>`).join("")}</div></div>`;
 };
 A.contactNouveau = (nom) => modal(`<h2>${h(nom)}</h2><p class="muted">En le contactant, l'adresse de dépôt de la maison part avec votre message. Ce qu'il enverra en fin d'intervention arrivera dans la boîte d'arrivée — proposé, jamais imposé.</p><div class="row"><button class="btn primary" onclick="S.journal.push({d:today(),t:'Contact avec ${h(nom)} — adresse de dépôt transmise'});save();closeModal();toast('Message préparé, adresse de la maison en copie')">Écrire</button><button class="btn" onclick="closeModal()">Fermer</button></div>`);
 
@@ -1137,7 +1239,7 @@ V.afaire = () => {
   const r = S.rappels.slice().sort((a, b) => a.d.localeCompare(b.d)); const q = S.demandes.filter(d => d.statut === "sans réponse");
   return `<div class="page"><div class="page-h"><div><h1>À faire</h1><p>Une information importante à la fois. Un seul courriel par mois, en tableau de bord — jamais un par équipement.</p></div></div>
     <div class="grid2"><div>
-      <div class="card"><h3>Prochaines échéances</h3>${r.length ? r.map(x => `<div class="opt" style="align-items:flex-start"><div><b>${h(x.t)}</b><div class="small muted">${fmois(x.d)}${x.eq && eq(x.eq) ? ` · <a href="#/equipements/${x.eq}">${h(eq(x.eq).nom)}</a>` : ""}</div><div class="small">${h(x.txt)}</div></div><div class="row" style="flex-direction:column;align-items:flex-end">${x.k === "entretien" || x.k === "garantie" ? `<button class="btn sm primary" onclick="A.dejaFait('${x.id}')">Déjà fait ?</button>` : `<button class="btn sm" onclick="A.relancer('${x.id}')">Relancer</button>`}<button class="btn sm ghost" onclick="A.clore('${x.id}')">Clore</button></div></div>`).join("") : `<div class="empty"><b>Rien à faire</b>La maison est à jour.</div>`}</div>
+      <div class="card"><h3>Prochaines échéances</h3>${r.length ? r.map(x => `<div class="opt" style="align-items:flex-start"><div class="eqrow" style="align-items:flex-start">${ico(x.eq && eq(x.eq) ? eq(x.eq).cat : "courrier","tile")}<div><b>${h(x.t)}</b><div class="small muted">${fmois(x.d)}${x.eq && eq(x.eq) ? ` · <a href="#/equipements/${x.eq}">${h(eq(x.eq).nom)}</a>` : ""}</div><div class="small">${h(x.txt)}</div></div></div><div class="row" style="flex-direction:column;align-items:flex-end">${x.k === "entretien" || x.k === "garantie" ? `<button class="btn sm primary" onclick="A.dejaFait('${x.id}')">Déjà fait ?</button>` : `<button class="btn sm" onclick="A.relancer('${x.id}')">Relancer</button>`}<button class="btn sm ghost" onclick="A.clore('${x.id}')">Clore</button></div></div>`).join("") : `<div class="empty"><b>Rien à faire</b>La maison est à jour.</div>`}</div>
     </div><div>
       <div class="card"><h3>Demandes envoyées</h3><p class="sub">VIDOM ne voit pas partir vos courriels ; seule la réponse est visible, dans la boîte d'arrivée.</p>${q.length ? q.map(d => `<div class="opt" style="align-items:flex-start"><div><b>${h(d.objet)}</b><div class="small muted">À ${h(d.tiers)} · envoyée le ${fdate(d.d)} · réponse attendue avant le ${fdate(d.delai)}</div></div><div class="row" style="flex-direction:column;align-items:flex-end"><span class="state ${d.delai < today() ? "attention" : ""}">${d.delai < today() ? "en retard" : "sans réponse"}</span><button class="btn sm ghost" onclick="A.cloreDemande('${d.id}')">Clore</button></div></div>`).join("") : `<p class="muted">Aucune demande en attente.</p>`}</div>
       <div class="card"><h3>Le courriel du mois</h3><p class="sub">Ce que vous recevrez, une fois par mois, et rien d'autre.</p><div class="book" style="min-height:0;padding:18px 20px;font-size:.92em"><b>Maison des Tilleuls — ${MOIS[new Date().getMonth()]} ${new Date().getFullYear()}</b><p style="margin-top:8px">Ce mois-ci, ${S.metrics.docs || 3} documents ont rejoint la mémoire de la maison. Il en manque encore ${q.length} que vous avez demandés.<br>Prochaine échéance : ${r[0] ? h(r[0].t.toLowerCase()) + ", " + fmois(r[0].d) : "aucune"}.</p><p class="tiny faint">Aucun courriel de VIDOM ne parle d'argent, d'essai ou d'abonnement.</p></div></div>
@@ -1156,15 +1258,15 @@ V.echanges = (param) => {
   const pos = t => { const a = t.angle * Math.PI / 180; return { x: 50 + Math.cos(a) * 44, y: 50 - Math.sin(a) * 41 }; };
   const acc = S.acces;
   return `<div class="page"><div class="page-h"><div><h1>Échanges et accès</h1><p>Le logement au centre, les tiers autour. Chacun voit ce qui le concerne, et rien d'autre.</p></div><a class="btn" href="#/echanges/journal">Qui a vu quoi</a></div>
-    <div class="hubgrid"><div class="card"><div class="hub"><div class="ring"></div><div class="center">Le logement<br>au centre</div>${T.map(t => { const p = pos(t); return `<button class="t ${acc[t.id] && acc[t.id].ouvert ? "open" : ""}" style="left:${p.x}%;top:${p.y}%" onclick="A.tiers('${t.id}')">${h(t.nom)}</button>`; }).join("")}</div></div>
-    <div class="cards tiers2">${T.map(t => `<div class="card" style="margin:0;cursor:pointer" onclick="A.tiers('${t.id}')"><div class="split"><h3 style="font-size:1em">${h(t.nom)}</h3>${acc[t.id] && acc[t.id].ouvert ? `<span class="state actif">ouvert</span>` : ""}</div><div class="small muted">${h(t.motif)}</div><div class="small" style="margin-top:6px">${t.voit.length} éléments visibles · ${t.exclus.length} exclus</div></div>`).join("")}</div></div></div>`;
+    <div class="hubgrid"><div class="card"><div class="hub"><div class="ring"></div><div class="center">Le logement<br>au centre</div>${T.map(t => { const p = pos(t); return `<button class="t ${acc[t.id] && acc[t.id].ouvert ? "open" : ""}" style="left:${p.x}%;top:${p.y}%" onclick="A.tiers('${t.id}')">${ico(t.id)}${h(t.court || t.nom)}</button>`; }).join("")}</div></div>
+    <div class="cards tiers2">${T.map(t => `<div class="card" style="margin:0;cursor:pointer" onclick="A.tiers('${t.id}')"><div class="split"><h3 style="font-size:1em" class="eqrow">${ico(t.id,"tile")}${h(t.nom)}</h3>${acc[t.id] && acc[t.id].ouvert ? `<span class="state actif">ouvert</span>` : ""}</div><div class="small muted">${h(t.motif)}</div>${t.particulier ? `<div style="margin-top:6px"><span class="state actif">statut particulier</span></div>` : ""}<div class="small" style="margin-top:6px">${t.voit.length} éléments visibles · ${t.exclus.length} exclus</div></div>`).join("")}</div></div></div>`;
 };
 A.tiers = (id) => {
   const t = DATA.tiers.find(x => x.id === id); const a = S.acces[id] || {};
-  modal(`<h2>${h(t.nom)}</h2><p class="muted">${h(t.motif)}</p>
+  modal(`<h2 class="eqrow">${ico(t.id,"lg")}${h(t.nom)}</h2><p class="muted">${h(t.motif)}</p>${t.particulier ? `<div class="notice">${h(t.particulier)}</div>` : ""}
     <div class="grid2" style="grid-template-columns:1fr 1fr;gap:12px"><div><b class="small">Ce qu'il voit</b>${t.voit.map(v => `<div class="opt" style="padding:5px 8px"><span class="small">${h(v)}</span><span class="state valide">visible</span></div>`).join("")}</div><div><b class="small">Ce qu'il ne voit jamais</b>${t.exclus.map(v => `<div class="opt" style="padding:5px 8px"><span class="small">${h(v)}</span><span class="state refuse">exclu</span></div>`).join("")}</div></div>
     ${a.ouvert ? `<div class="notice">Accès ouvert jusqu'au ${fdate(a.jusqu)}. Il se refermera de lui-même.</div>` : ""}
-    <div class="row" style="margin-top:12px"><button class="btn" onclick="A.voirComme('${id}')">Voir comme ${h(t.nom.toLowerCase())}</button>${a.ouvert ? `<button class="btn terra" onclick="A.fermer('${id}')">Fermer l'accès</button>` : `<select class="input" id="duree" style="max-width:160px"><option value="30">1 mois</option><option value="90">3 mois</option><option value="180">6 mois</option></select><button class="btn primary" onclick="A.ouvrir('${id}')">Ouvrir l'accès</button>`}</div>`);
+    <div class="row" style="margin-top:12px"><button class="btn" onclick="A.voirComme('${id}')">Voir comme ${h(t.nom.toLowerCase())}</button>${a.ouvert ? `<button class="btn terra" onclick="A.fermer('${id}')">Fermer l'accès</button>` : `<select class="input" id="duree" style="max-width:160px">${t.mandat ? `<option value="365">1 an (mandat)</option><option value="730">2 ans</option><option value="1095">3 ans</option>` : `<option value="30">1 mois</option><option value="90">3 mois</option><option value="180">6 mois</option>`}</select><button class="btn primary" onclick="A.ouvrir('${id}')">Ouvrir l'accès</button>`}</div>`);
 };
 A.ouvrir = (id) => { const d = +document.getElementById("duree").value; S.acces[id] = { ouvert: true, jusqu: addDays(today(), d) }; const t = DATA.tiers.find(x => x.id === id); S.journal.push({ d: today(), t: "Accès ouvert à " + t.nom + " jusqu'au " + fdate(S.acces[id].jusqu) }); closeModal(); toast("Accès ouvert. Il se refermera de lui-même."); save(); route(); };
 A.fermer = (id) => { S.acces[id] = { ouvert: false }; S.journal.push({ d: today(), t: "Accès fermé : " + DATA.tiers.find(x => x.id === id).nom }); closeModal(); toast("Accès fermé"); save(); route(); };
@@ -1193,7 +1295,7 @@ V.transmission = (param) => {
   const L = S.logement;
   const dossiers = [{ id: "vente", t: "Dossier de vente", s: "Prêt à transmettre à l'acquéreur", c: ["Chronologie des travaux", "Fiches des 17 équipements", "Garanties transmissibles", "Diagnostics et DPE", "Plans", "Photos des travaux"] }, { id: "sinistre", t: "Dossier sinistre", s: "Pour l'assureur", c: ["Déclaration", "Photos", "Factures des réparations", "Garanties", "Correspondance du dossier"] }, { id: "succession", t: "Livre de succession", s: "Pour les héritiers — aussi sur papier", c: ["Le livre du logement", "Contrats en cours", "Équipements et artisans", "Documents de propriété", "Ce qui reste à faire"] }];
   return `<div class="page"><div class="page-h"><div><h1>Transmission</h1><p>Les livres de la maison, et le jour où elle change de mains.</p></div></div>
-    <div class="cards">${dossiers.map(d => `<div class="card" style="margin:0"><h3>${h(d.t)}</h3><p class="sub">${h(d.s)}</p><div class="small">${d.c.join(" · ")}</div><div class="split" style="margin-top:10px"><span><b>19 €</b> <span class="small muted">— gratuit pendant la version test</span></span><button class="btn sm primary" onclick="A.dossier('${d.id}')">Préparer</button></div></div>`).join("")}
+    <div class="cards">${dossiers.map(d => `<div class="card" style="margin:0"><h3 class="eqrow">${ico({vente:"agent",sinistre:"assureur",succession:"heritier"}[d.id],"tile")}${h(d.t)}</h3><p class="sub">${h(d.s)}</p><div class="small">${d.c.join(" · ")}</div><div class="split" style="margin-top:10px"><span><b>19 €</b> <span class="small muted">— gratuit pendant la version test</span></span><button class="btn sm primary" onclick="A.dossier('${d.id}')">Préparer</button></div></div>`).join("")}
       <div class="card" style="margin:0"><h3>Le livre du logement</h3><p class="sub">Gratuit, toujours.</p><div class="small">L'histoire de la maison, telle qu'elle s'écrit.</div><div class="actions"><button class="btn sm" onclick="A.livre()">Feuilleter</button></div></div>
       <div class="card" style="margin:0"><h3>Le carnet d'entretien</h3><p class="sub">Gratuit, toujours.</p><div class="small">Chaque équipement, chaque entretien, chaque échéance.</div><div class="actions"><button class="btn sm" onclick="A.carnet()">Feuilleter</button></div></div>
     </div>
@@ -1232,7 +1334,8 @@ V.profil = () => {
     <div class="grid2"><div>
       <div class="card"><h3>Taille du texte</h3><p class="sub">Une personne de 80 ans doit pouvoir lire sans effort.</p><div class="row">${[["normal", "Normal"], ["grand", "Grand"], ["tres-grand", "Très grand"]].map(([k, l]) => `<button class="pill ${S.texte === k ? "on" : ""}" onclick="S.texte='${k}';document.documentElement.dataset.texte='${k}';save();route()">${l}</button>`).join("")}</div></div>
       <div class="card"><h3>Mes mesures</h3><p class="sub">Trois chiffres, à joindre à votre avis si vous le souhaitez.</p><div class="grid3"><div class="stat"><b>${m.docs}</b><span>documents déposés</span></div><div class="stat"><b>${m.jours.length}</b><span>jours d'activité</span></div><div class="stat"><b>${m.demandes}</b><span>demandes envoyées</span></div></div><div class="actions"><button class="btn" onclick="A.avis('profil')">Donner mon avis</button></div></div>
-      <div class="card"><h3>Ma mémoire, à moi</h3><div class="actions"><button class="btn" onclick="A.export()">Emporter ma mémoire</button><a class="btn" href="#/etiquette">La carte de la maison (QR)</a><button class="btn warn" onclick="A.reset()">Repartir de zéro</button></div><p class="tiny faint" style="margin-top:8px">Cette démonstration garde tout sur cet appareil. Aucune donnée ne le quitte.</p></div>
+      <div class="card"><h3>Pour tester</h3><p class="sub">Rejouer l'entrée sans rien perdre, ou tout effacer.</p><div class="actions"><button class="btn primary" onclick="A.revoirEntree()">Revoir l'entrée (les trois écrans)</button><button class="btn warn" onclick="A.reset()">Repartir de zéro</button></div></div>
+      <div class="card"><h3>Ma mémoire, à moi</h3><div class="actions"><button class="btn" onclick="A.export()">Emporter ma mémoire</button><a class="btn" href="#/etiquette">La carte de la maison (QR)</a></div><p class="tiny faint" style="margin-top:8px">Cette démonstration garde tout sur cet appareil. Aucune donnée ne le quitte.</p></div>
     </div><div>
       <div class="simul"><h3>Simuler</h3><p class="sub">Pour vivre les échanges avec les tiers, sans attendre qu'ils se produisent.</p>
         <div class="opt" onclick="Sim.artisan()"><div><b>Un artisan dépose sa facture</b><div class="small muted">Couverture Bretonne, fin de chantier</div></div><span class="tag">→ boîte d'arrivée</span></div>
@@ -1240,14 +1343,18 @@ V.profil = () => {
         <div class="opt" onclick="Sim.inconnu()"><div><b>Un courriel inconnu arrive</b><div class="small muted">Expéditeur non vérifié</div></div><span class="tag">→ sas</span></div>
         <div class="opt" onclick="Sim.garantie()"><div><b>Une garantie expire demain</b><div class="small muted">Le portail</div></div><span class="tag">→ à faire</span></div>
         <div class="opt" onclick="A.acquereur()"><div><b>Un acquéreur demande la mémoire</b><div class="small muted">Sophie Marchand</div></div><span class="tag">→ transmission</span></div>
+        <div class="opt" onclick="Sim.cas('ancienne')"><div><b>Voir le cas « maison ancienne »</b><div class="small muted">Presque rien ne remonte des bases publiques</div></div><span class="tag">→ écran 2</span></div>
+        <div class="opt" onclick="Sim.cas('immeuble')"><div><b>Voir le cas « immeuble »</b><div class="small muted">Tout remonte, rien ne désigne le logement</div></div><span class="tag">→ écran 2</span></div>
         <div class="opt" onclick="Sim.carte()"><div><b>L'artisan accepte que sa carte reste</b><div class="small muted">Consentement demandé au dépôt, jamais à froid</div></div><span class="tag">→ professionnels</span></div>
       </div>
       <div class="card"><h3>Le premier jour</h3><p class="sub">Trois indications, une seule fois.</p><button class="btn sm" onclick="S.tips.vus=[];save();renderTip();toast('Indications réaffichées')">Revoir les indications</button></div>
     </div></div></div>`;
 };
+A.revoirEntree = () => { S.cree = false; S.etape = 1; S.dejaMaison = true; Object.assign(S.onb, { adresse: "", adresseOk: false, cherche: false, dpe: null, vente: null, photo: null, annexes: { parking: null, lots: null, autorisation: null } }); save(); location.hash = ""; route(); toast("L'entrée se rejoue. Votre maison vous attend à la fin."); };
 A.reset = () => modal(`<h2>Repartir de zéro ?</h2><p class="muted">Tout ce que vous avez ajouté sur cet appareil sera effacé et la démonstration reprendra au premier écran.</p><div class="row"><button class="btn terra" onclick="localStorage.removeItem(KEY);location.hash='';location.reload()">Effacer et recommencer</button><button class="btn" onclick="closeModal()">Garder</button></div>`);
 
 const Sim = {
+  cas(c) { const html = Onb.e2cas(c); modal(html + `<div class="row" style="margin-top:12px"><button class="btn" onclick="closeModal()">Fermer</button></div>`); },
   artisan() { S.inbox.push({ id: uid("i"), titre: "Facture et attestation de garantie — Couverture Bretonne", exp: "compta@couverture-bretonne.fr", objet: "Fin de chantier — facture n° 2026-131", date: today(), statut: "propose", reco: { type: "facture", date: today(), four: "Couverture Bretonne", montant: 1240, cible: "toiture" }, verifie: true, pro: "cb" }); S.journal.push({ d: today(), t: "Document reçu de compta@couverture-bretonne.fr" }); save(); toast("Un document vient d'arriver dans la boîte d'arrivée"); location.hash = "#/boite"; route(); },
   assureur() { S.inbox.push({ id: uid("i"), titre: "Accusé de réception — dossier sinistre", exp: "sinistres@maif.fr", objet: "Votre déclaration du " + fdate(today()), date: today(), statut: "propose", reco: { type: "courrier", date: today(), four: "Maif", montant: null, cible: "logement" }, verifie: true }); S.inbox.push({ id: uid("i"), titre: "Rapport d'expertise", exp: "expert@cabinet-ouest.fr", objet: "Expertise du " + fdate(today()), date: today(), statut: "propose", reco: { type: "courrier", date: today(), four: "Cabinet Expertise Ouest", montant: null, cible: "logement" }, verifie: true }); S.journal.push({ d: today(), t: "Deux documents reçus (assureur, expert)" }); save(); toast("L'assureur a répondu : deux documents dans la boîte d'arrivée. Le dossier n'est pas clos pour autant — c'est votre geste."); location.hash = "#/boite"; route(); },
   inconnu() { S.inbox.push({ id: uid("i"), titre: "Devis toiture — offre spéciale", exp: "promo@toitures-express.biz", objet: "Votre toiture à -40 %", date: today(), statut: "propose", reco: { type: "devis", date: today(), four: "toitures-express.biz", montant: 4900, cible: "toiture" }, verifie: false }); save(); toast("Un courriel d'un expéditeur inconnu est arrivé — regardez-le avec prudence"); location.hash = "#/boite"; route(); },
@@ -1265,7 +1372,7 @@ V.etiquette.after = () => { const c = document.getElementById("qr"); if (c) draw
 V.menu = () => {
   const nInbox = S.inbox.filter(i => i.statut === "propose").length;
   const nDocs = S.docs.filter(d => d.statut !== "refuse").length, nEq = S.equipements.filter(e => !e.deposee).length;
-  const it = (go, ico, t, s, b, alert) => `<a class="opt" href="#/${go}" style="text-decoration:none;color:inherit"><div class="row" style="gap:10px"><span style="width:20px;height:20px;color:var(--sauge-f)">${I[ico]}</span><div><b>${t}</b><div class="small muted">${s}</div></div></div>${b ? `<span class="badge ${alert ? "alert" : ""}" style="background:${alert ? "var(--terra)" : "var(--bois-c)"};color:${alert ? "#fff" : "var(--ardoise)"}">${b}</span>` : ""}</a>`;
+  const it = (go, ico, t, s, b, alert) => `<a class="opt" href="#/${go}" style="text-decoration:none;color:inherit"><div class="row" style="gap:10px"><span class="ico tile">${I[ico] || ICO[ico] || ""}</span><div><b>${t}</b><div class="small muted">${s}</div></div></div>${b ? `<span class="badge ${alert ? "alert" : ""}" style="background:${alert ? "var(--terra)" : "var(--bois-c)"};color:${alert ? "#fff" : "var(--ardoise)"}">${b}</span>` : ""}</a>`;
   return `<div class="page"><div class="page-h"><div><h1>La mémoire de la maison</h1><p>Toutes les sections, au même endroit.</p></div></div>
     ${it("boite", "boite", "Boîte d'arrivée — le sas", "Ce qui est arrivé par l'adresse de la maison. Vous décidez ce qui entre.", nInbox, true)}
     ${it("pieces", "pieces", "Pièces et espaces", "Photographier, pièce après pièce", "")}
