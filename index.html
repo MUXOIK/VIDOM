@@ -784,7 +784,7 @@ const Onb = {
       <p class="lead">C'est tout ce qu'il faut pour commencer.</p>
       <input class="input big" id="adr" placeholder="Commencez à taper… par exemple 14 rue des Tilleuls" value="${h(o.adresse)}" oninput="Onb.tape(this.value)" autocomplete="off">
       <div id="sugg">${o.adresse.length >= 3 ? `<div class="sug" onclick="Onb.choisit()"><b>14 rue des Tilleuls</b><div class="small muted">44300 Nantes · Loire-Atlantique</div></div>` : ""}</div>
-      <p class="tiny faint" style="margin-top:18px">Démonstration : toute adresse mène à la Maison des Tilleuls.</p>`;
+      <p class="tiny faint" style="margin-top:18px">Démonstration : toute adresse mène à la Maison des Tilleuls.</p>${S.dejaMaison ? `<p class="small" style="margin-top:6px"><a href="#" onclick="Onb.reprendre();return false">Reprendre ma maison sans rejouer l'entrée →</a></p>` : ""}`;
     const sel = o.parcelles;
     return `
       <h1>C'est bien celle-ci ?</h1>
@@ -880,6 +880,7 @@ const Onb = {
     S.metrics.demandes++; S.journal.push({ d: today(), t: "Demande préparée pour " + qui + " — envoyée depuis votre messagerie" });
     closeModal(); toast("Message ouvert dans votre messagerie. La réponse arrivera dans la boîte d'arrivée."); save(); route();
   },
+  reprendre() { S.cree = true; save(); location.hash = "#/accueil"; route(); },
   fin() { S.cree = true; S.bienvenue = true; save(); location.hash = "#/accueil"; route(); }
 };
 /* ================= ACTIONS COMMUNES ================= */
@@ -1331,7 +1332,8 @@ V.profil = () => {
     <div class="grid2"><div>
       <div class="card"><h3>Taille du texte</h3><p class="sub">Une personne de 80 ans doit pouvoir lire sans effort.</p><div class="row">${[["normal", "Normal"], ["grand", "Grand"], ["tres-grand", "Très grand"]].map(([k, l]) => `<button class="pill ${S.texte === k ? "on" : ""}" onclick="S.texte='${k}';document.documentElement.dataset.texte='${k}';save();route()">${l}</button>`).join("")}</div></div>
       <div class="card"><h3>Mes mesures</h3><p class="sub">Trois chiffres, à joindre à votre avis si vous le souhaitez.</p><div class="grid3"><div class="stat"><b>${m.docs}</b><span>documents déposés</span></div><div class="stat"><b>${m.jours.length}</b><span>jours d'activité</span></div><div class="stat"><b>${m.demandes}</b><span>demandes envoyées</span></div></div><div class="actions"><button class="btn" onclick="A.avis('profil')">Donner mon avis</button></div></div>
-      <div class="card"><h3>Ma mémoire, à moi</h3><div class="actions"><button class="btn" onclick="A.export()">Emporter ma mémoire</button><a class="btn" href="#/etiquette">La carte de la maison (QR)</a><button class="btn warn" onclick="A.reset()">Repartir de zéro</button></div><p class="tiny faint" style="margin-top:8px">Cette démonstration garde tout sur cet appareil. Aucune donnée ne le quitte.</p></div>
+      <div class="card"><h3>Pour tester</h3><p class="sub">Rejouer l'entrée sans rien perdre, ou tout effacer.</p><div class="actions"><button class="btn primary" onclick="A.revoirEntree()">Revoir l'entrée (les trois écrans)</button><button class="btn warn" onclick="A.reset()">Repartir de zéro</button></div></div>
+      <div class="card"><h3>Ma mémoire, à moi</h3><div class="actions"><button class="btn" onclick="A.export()">Emporter ma mémoire</button><a class="btn" href="#/etiquette">La carte de la maison (QR)</a></div><p class="tiny faint" style="margin-top:8px">Cette démonstration garde tout sur cet appareil. Aucune donnée ne le quitte.</p></div>
     </div><div>
       <div class="simul"><h3>Simuler</h3><p class="sub">Pour vivre les échanges avec les tiers, sans attendre qu'ils se produisent.</p>
         <div class="opt" onclick="Sim.artisan()"><div><b>Un artisan dépose sa facture</b><div class="small muted">Couverture Bretonne, fin de chantier</div></div><span class="tag">→ boîte d'arrivée</span></div>
@@ -1346,6 +1348,7 @@ V.profil = () => {
       <div class="card"><h3>Le premier jour</h3><p class="sub">Trois indications, une seule fois.</p><button class="btn sm" onclick="S.tips.vus=[];save();renderTip();toast('Indications réaffichées')">Revoir les indications</button></div>
     </div></div></div>`;
 };
+A.revoirEntree = () => { S.cree = false; S.etape = 1; S.dejaMaison = true; Object.assign(S.onb, { adresse: "", adresseOk: false, cherche: false, dpe: null, vente: null, photo: null, annexes: { parking: null, lots: null, autorisation: null } }); save(); location.hash = ""; route(); toast("L'entrée se rejoue. Votre maison vous attend à la fin."); };
 A.reset = () => modal(`<h2>Repartir de zéro ?</h2><p class="muted">Tout ce que vous avez ajouté sur cet appareil sera effacé et la démonstration reprendra au premier écran.</p><div class="row"><button class="btn terra" onclick="localStorage.removeItem(KEY);location.hash='';location.reload()">Effacer et recommencer</button><button class="btn" onclick="closeModal()">Garder</button></div>`);
 
 const Sim = {
