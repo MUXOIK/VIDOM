@@ -1,0 +1,1275 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>VIDOM — Maison des Tilleuls</title>
+<meta name="theme-color" content="#4A6255">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="VIDOM">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --sauge:#5F7A6A;--sauge-f:#4A6255;--sauge-c:#E4EBE6;--sauge-cc:#F0F4F1;
+  --ivoire:#F6F3ED;--ivoire-f:#EEE9DF;--blanc:#FFFDF9;
+  --bois:#D8C8B2;--bois-c:#EFE6D8;--sable:#B5B0A5;--ardoise:#50575E;--encre:#2F3439;
+  --terra:#C9775B;--terra-c:#F4E3DB;--terra-f:#A85F45;
+  --r:6px;--r2:8px;--nav:220px;
+  --fs:14px;
+}
+html[data-texte="grand"]{--fs:16px}
+html[data-texte="tres-grand"]{--fs:18px}
+*{box-sizing:border-box;scroll-margin-top:70px}
+html,body{height:100%}
+body{margin:0;background:var(--ivoire);color:var(--encre);font-family:"Source Sans 3",system-ui,-apple-system,sans-serif;font-size:var(--fs);line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--sauge-f)}
+h1,h2,h3,h4{margin:0;font-weight:600;line-height:1.2;text-wrap:balance}
+h1{font-size:1.5em}h2{font-size:1.25em}h3{font-size:1.08em}
+p{margin:0 0 .6em}
+.muted{color:var(--ardoise)}.faint{color:var(--sable)}
+.small{font-size:.9em}.tiny{font-size:.8em}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--terra);outline-offset:2px}
+.sr{position:absolute;left:-9999px}
+[hidden]{display:none!important}
+
+/* ---------- shell ---------- */
+#root.app{display:grid;grid-template-columns:var(--nav) 1fr;min-height:100vh}
+.nav{background:var(--sauge-f);color:#fff;padding:14px 10px 80px;position:sticky;top:0;height:100vh;overflow:auto}
+.nav .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1.15em;letter-spacing:.02em;padding:4px 8px 12px}
+.nav .logo svg{width:26px;height:26px}
+.home{background:rgba(255,255,255,.08);border-radius:var(--r2);padding:10px 12px;margin-bottom:10px;cursor:pointer;border:0;color:#fff;text-align:left;width:100%}
+.home b{display:block;font-size:1em}
+.home span{font-size:.85em;color:rgba(255,255,255,.7);display:block}
+.home .chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.chip{font-size:.78em;border:1px solid rgba(255,255,255,.3);border-radius:5px;padding:1px 7px;color:#fff}
+.grp{font-size:.72em;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55);margin:12px 8px 4px}
+.nav a.item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:5px;color:rgba(255,255,255,.92);text-decoration:none;font-size:.95em}
+.nav a.item svg{width:16px;height:16px;flex:none;opacity:.85}
+.nav a.item .lab{display:flex;align-items:center;gap:8px;min-width:0}
+.nav a.item .lab span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav a.item.on{background:rgba(255,255,255,.14);color:#fff;font-weight:600}
+.nav a.item.lock{color:rgba(255,255,255,.5)}
+.badge{font-size:.78em;background:rgba(255,255,255,.15);color:#fff;border-radius:999px;padding:1px 7px;min-width:22px;text-align:center;font-variant-numeric:tabular-nums}
+.badge.alert{background:var(--terra)}
+.lockico{font-size:.72em;border:1px solid rgba(255,255,255,.4);border-radius:4px;padding:0 5px;white-space:nowrap}
+
+.main{min-width:0;display:flex;flex-direction:column;min-height:100vh}
+.bar{display:flex;gap:8px;align-items:center;padding:10px 16px;background:var(--ivoire);border-bottom:1px solid var(--bois);position:sticky;top:0;z-index:5}
+.bar .search{flex:1;display:flex;align-items:center;gap:8px;border:1px solid var(--bois);background:var(--blanc);border-radius:var(--r);padding:6px 10px;color:var(--sable);cursor:text;min-width:0}
+.bar .search span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .search kbd{font-size:.75em;border:1px solid var(--bois);border-radius:4px;padding:0 5px;color:var(--ardoise);white-space:nowrap}
+.bar .search svg{width:16px;height:16px;flex:none}
+.btn{border:1px solid var(--bois);background:var(--blanc);border-radius:var(--r);padding:6px 11px;font-size:.95em;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;color:var(--encre);text-decoration:none;line-height:1.3}
+.btn svg{width:15px;height:15px}
+.btn:hover{border-color:var(--sable)}
+.btn.primary{background:var(--sauge);color:#fff;border-color:var(--sauge)}
+.btn.primary:hover{background:var(--sauge-f)}
+.btn.terra{background:var(--terra);color:#fff;border-color:var(--terra)}
+.btn.warn{border-color:var(--terra);color:var(--terra-f)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{padding:3px 8px;font-size:.85em}
+.btn[disabled]{opacity:.5;cursor:default}
+.page{padding:18px 20px 90px;max-width:1180px;width:100%}
+.page-h{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:14px}
+.page-h p{margin:2px 0 0;color:var(--ardoise)}
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.card{background:var(--blanc);border:1px solid var(--bois);border-radius:var(--r2);padding:14px 16px}
+.card+.card{margin-top:14px}
+.card h3{margin-bottom:2px}
+.card .sub{color:var(--ardoise);margin:0 0 10px;font-size:.95em}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+.kv dt{color:var(--sable)}.kv dd{margin:0}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+table{width:100%;border-collapse:collapse;font-size:.95em}
+th{text-align:left;font-weight:600;color:var(--ardoise);border-bottom:1px solid var(--bois);padding:5px 6px;font-size:.8em;text-transform:uppercase;letter-spacing:.06em}
+td{padding:7px 6px;border-bottom:1px solid var(--bois-c);vertical-align:top}
+tr.link{cursor:pointer}tr.link:hover td{background:var(--sauge-cc)}
+.tbl{overflow-x:auto}
+.state{display:inline-block;font-size:.78em;padding:1px 8px;border-radius:999px;background:var(--bois-c);color:var(--ardoise);white-space:nowrap}
+.state.propose{background:var(--terra-c);color:var(--terra-f)}
+.state.valide,.state.actif{background:var(--sauge-c);color:var(--sauge-f)}
+.state.refuse{background:#eee;color:#888;text-decoration:line-through}
+.state.attention{background:var(--terra-c);color:var(--terra-f)}
+.tl{list-style:none;margin:8px 0 0;padding:0;border-left:2px solid var(--sauge-c)}
+.tl li{padding:0 0 12px 14px;position:relative}
+.tl li::before{content:"";position:absolute;left:-6px;top:7px;width:8px;height:8px;border-radius:50%;background:var(--sauge)}
+.tl li.wow::before{background:var(--terra)}
+.tl li .d{color:var(--sable);font-size:.85em;display:block}
+.tl .year{font-weight:700;color:var(--sauge-f);padding:6px 0 6px 14px;font-size:1.05em}
+.empty{border:1px dashed var(--bois);border-radius:var(--r2);padding:22px;text-align:center;color:var(--ardoise);background:var(--blanc)}
+.empty b{display:block;color:var(--encre);margin-bottom:4px}
+.doc{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;padding:10px;border:1px solid var(--bois-c);border-radius:var(--r);margin-top:8px;background:var(--blanc)}
+.doc .thumb{width:44px;height:56px;background:linear-gradient(var(--ivoire-f),var(--bois-c));border-radius:3px;border:1px solid var(--bois);display:flex;align-items:center;justify-content:center;color:var(--sable);font-size:.65em;text-transform:uppercase;overflow:hidden}
+.doc .thumb img{width:100%;height:100%;object-fit:cover}
+.doc b{display:block}.doc .l{display:block;color:var(--ardoise);font-size:.9em}
+.tag{display:inline-block;font-size:.78em;border:1px solid var(--bois);border-radius:4px;padding:0 6px;color:var(--ardoise);margin-right:4px}
+.notice{background:var(--sauge-cc);border-left:3px solid var(--sauge);padding:8px 12px;border-radius:0 var(--r) var(--r) 0;font-size:.95em;margin:10px 0}
+.notice.terra{background:var(--terra-c);border-color:var(--terra)}
+.lockbox{background:var(--blanc);border:1px dashed var(--sable);border-radius:var(--r2);padding:22px;color:var(--ardoise);display:flex;gap:14px;align-items:flex-start}
+.lockbox svg{width:28px;height:28px;flex:none;color:var(--sable)}
+.input{width:100%;border:1px solid var(--bois);background:var(--blanc);border-radius:var(--r);padding:8px 10px}
+textarea.input{min-height:90px;resize:vertical}
+label.f{display:block;margin-bottom:8px}
+label.f span{display:block;font-size:.85em;color:var(--ardoise);margin-bottom:3px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.split{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{border:1px solid var(--bois);border-radius:999px;padding:3px 10px;background:var(--blanc);font-size:.9em;cursor:pointer}
+.pill.on{background:var(--sauge);color:#fff;border-color:var(--sauge)}
+.stat{background:var(--blanc);border:1px solid var(--bois);border-radius:var(--r2);padding:12px 14px}
+.stat b{font-size:1.5em;display:block;font-variant-numeric:tabular-nums;font-weight:600}
+.stat span{color:var(--ardoise);font-size:.9em}
+.check{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--bois-c)}
+.check input{margin-top:4px}
+.progress{height:6px;background:var(--bois-c);border-radius:3px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--sauge)}
+
+/* plan simplifié */
+.plan{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.room{border:1px solid var(--bois);background:var(--blanc);border-radius:var(--r2);padding:12px;cursor:pointer;text-align:left;min-height:88px;display:flex;flex-direction:column;justify-content:space-between}
+.room:hover{border-color:var(--sauge)}
+.room b{display:block}
+.room .c{color:var(--ardoise);font-size:.9em}
+.room.done{border-color:var(--sauge);background:var(--sauge-cc)}
+
+/* hub */
+.hubgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.tiers2{grid-template-columns:1fr 1fr}
+.hub{position:relative;height:420px;max-width:520px;margin:0 auto}
+.hub .center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:118px;height:118px;border-radius:50%;background:var(--sauge);color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:600;font-size:.9em;padding:10px}
+.hub .ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:330px;height:330px;border:1px dashed var(--bois);border-radius:50%}
+.hub .t{position:absolute;transform:translate(-50%,-50%);border:1px solid var(--bois);background:var(--blanc);border-radius:999px;padding:5px 11px;font-size:.9em;cursor:pointer;white-space:nowrap}
+.hub .t.open{border-color:var(--sauge);background:var(--sauge-c)}
+.hub .t:hover{border-color:var(--sauge)}
+
+/* chat */
+.chat{display:flex;flex-direction:column;gap:10px;max-width:720px}
+.msg{max-width:85%;padding:9px 12px;border-radius:10px;background:var(--blanc);border:1px solid var(--bois-c)}
+.msg.me{align-self:flex-end;background:var(--sauge-c);border-color:var(--sauge-c)}
+.msg .att{display:flex;gap:8px;align-items:center;margin-top:6px;padding:6px 8px;border:1px solid var(--bois);border-radius:var(--r);background:var(--ivoire);font-size:.9em}
+.chat-in{display:flex;gap:8px;margin-top:14px;max-width:720px}
+.chat-in input{flex:1}
+
+/* onboarding */
+.ob{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 18px 60px;background:var(--ivoire)}
+.ob .box{width:100%;max-width:640px}
+.ob .logo{display:flex;align-items:center;gap:8px;color:var(--sauge-f);font-weight:700;font-size:1.3em;margin-bottom:26px}
+.ob .logo svg{width:30px;height:30px}
+.ob h1{font-size:1.6em;margin-bottom:6px}
+.ob .lead{color:var(--ardoise);margin-bottom:18px}
+.ob .big{font-size:1.15em;padding:12px 14px}
+.steps{display:flex;gap:6px;margin-bottom:22px}
+.steps i{flex:1;height:4px;border-radius:2px;background:var(--bois-c)}
+.steps i.on{background:var(--sauge)}
+.map{position:relative;height:300px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--bois);background:#8fa78f}
+.map svg{width:100%;height:100%;display:block}
+.map .parc{fill:rgba(255,255,255,.12);stroke:#fff;stroke-width:2;cursor:pointer}
+.map .parc.sel{fill:rgba(201,119,91,.45);stroke:var(--terra)}
+.map .lbl{fill:#fff;font-size:12px;font-weight:600;pointer-events:none}
+.sug{border:1px solid var(--bois);background:var(--blanc);border-radius:var(--r);padding:10px 12px;cursor:pointer;margin-top:6px}
+.sug:hover{background:var(--sauge-cc)}
+.found{border:1px solid var(--bois);background:var(--blanc);border-radius:var(--r2);padding:12px 14px;margin-top:10px}
+.found .src{font-size:.78em;color:var(--sable)}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--bois-c);border-radius:var(--r);margin-top:6px;cursor:pointer}
+.opt.on{border-color:var(--sauge);background:var(--sauge-cc)}
+.qr{width:120px;height:120px;image-rendering:pixelated;border:6px solid #fff;border-radius:4px;background:#fff}
+
+/* overlays */
+.overlay{position:fixed;inset:0;background:rgba(47,52,57,.45);z-index:40;display:flex;align-items:flex-start;justify-content:center;padding:6vh 14px}
+.modal{background:var(--blanc);border-radius:10px;width:100%;max-width:640px;max-height:88vh;overflow:auto;padding:18px 20px;border:1px solid var(--bois)}
+.modal h2{margin-bottom:4px}
+.modal .x{float:right;border:0;background:transparent;font-size:1.3em;line-height:1;color:var(--ardoise)}
+.toasts{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{background:var(--encre);color:#fff;padding:8px 14px;border-radius:var(--r);font-size:.95em;box-shadow:0 6px 18px -8px rgba(0,0,0,.4)}
+.cmd{position:fixed;inset:0;z-index:50;background:rgba(47,52,57,.35);display:flex;justify-content:center;align-items:flex-start;padding:8vh 14px}
+.cmd .box{width:100%;max-width:620px;background:var(--blanc);border-radius:10px;border:1px solid var(--bois);overflow:hidden}
+.cmd input{width:100%;border:0;border-bottom:1px solid var(--bois);padding:14px 16px;font-size:1.05em;background:transparent}
+.cmd .res{max-height:50vh;overflow:auto}
+.cmd .r{padding:9px 16px;display:flex;justify-content:space-between;gap:10px;cursor:pointer;border-bottom:1px solid var(--bois-c)}
+.cmd .r:hover,.cmd .r.on{background:var(--sauge-cc)}
+.cmd .r small{color:var(--sable)}
+.tip{position:fixed;right:16px;bottom:80px;z-index:30;background:var(--sauge-f);color:#fff;padding:12px 14px;border-radius:var(--r2);max-width:300px;box-shadow:0 10px 24px -10px rgba(0,0,0,.4)}
+.tip b{display:block;margin-bottom:4px}
+.tip .btn{margin-top:8px;background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.avis{position:fixed;right:14px;bottom:16px;z-index:25}
+.tabbar{display:none}
+.simul{border:1px dashed var(--sable);border-radius:var(--r2);padding:12px 14px;background:var(--blanc)}
+.book{background:#fff;border:1px solid var(--bois);box-shadow:0 10px 30px -18px rgba(0,0,0,.4);padding:32px 36px;max-width:640px;margin:0 auto;min-height:420px;font-size:.98em}
+.book h2{font-size:1.4em;margin-bottom:2px}
+.book .pn{color:var(--sable);text-align:right;font-size:.8em;margin-top:24px}
+.sortcol{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sortcol .col{border:1px solid var(--bois);border-radius:var(--r2);padding:10px;background:var(--blanc);min-height:120px}
+.sortcol .col h4{font-size:.9em;margin-bottom:6px;color:var(--sauge-f)}
+.sortcol .it{display:flex;justify-content:space-between;gap:6px;padding:5px 6px;border:1px solid var(--bois-c);border-radius:4px;margin-bottom:4px;font-size:.9em;background:var(--ivoire)}
+.sortcol .it button{border:0;background:transparent;color:var(--sable);padding:0 2px}
+.photo{width:100%;max-height:260px;object-fit:cover;border-radius:var(--r);border:1px solid var(--bois)}
+.print-only{display:none}
+@media (max-width:860px){
+  #root.app{grid-template-columns:1fr}
+  .nav{display:none}
+  .grid2,.grid3,.sortcol{grid-template-columns:1fr}
+  .page{padding:14px 14px 96px}
+  .bar{padding:8px 10px}
+  .bar .btn .t{display:none}
+  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;background:var(--sauge-f);color:#fff;z-index:20;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .tabbar a{display:flex;flex-direction:column;align-items:center;gap:2px;color:rgba(255,255,255,.85);text-decoration:none;font-size:.7em;padding:4px 0;position:relative}
+  .tabbar a svg{width:20px;height:20px}
+  .tabbar a.on{color:#fff;font-weight:600}
+  .tabbar a.plus span.c{width:44px;height:44px;border-radius:50%;background:var(--terra);display:flex;align-items:center;justify-content:center;margin-top:-16px;border:3px solid var(--sauge-f)}
+  .tabbar a.plus span.c svg{width:22px;height:22px}
+  .tabbar .badge{position:absolute;top:0;right:14%}
+  .hubgrid,.tiers2{grid-template-columns:1fr}
+  .hub{height:340px}.hub .ring{width:250px;height:250px}.hub .t{font-size:.8em;padding:4px 8px}.hub .center{width:96px;height:96px;font-size:.8em}
+  .avis{bottom:78px}
+  .tip{bottom:120px}
+  .toasts{bottom:90px}
+}
+@media print{
+  body *{visibility:hidden}
+  .print-only,.print-only *{visibility:visible;display:block}
+  .print-only{position:absolute;left:0;top:0;width:100%;padding:40px;text-align:center}
+}
+@media (prefers-reduced-motion:no-preference){
+  .view{animation:fade .18s ease}
+  @keyframes fade{from{opacity:.4}to{opacity:1}}
+}
+</style>
+</head><body><div id="root"></div><div class="toasts" id="toasts"></div>
+<script>
+/* ================= DONNÉES FICTIVES — Maison des Tilleuls ================= */
+const DATA = (() => {
+  const logement = {
+    nom: "Maison des Tilleuls", adresse: "14 rue des Tilleuls", cp: "44300", ville: "Nantes",
+    type: "maison", annee: 1978, surface: 128, jardin: true, parcelles: ["AB 214", "AB 215"],
+    dpe: { classe: "C", climat: "B", date: "2024-05-12", methode: "Méthode 2021" },
+    risques: [{ n: "Retrait-gonflement des argiles", v: "moyen" }, { n: "Inondation", v: "aucun risque connu" }, { n: "Radon", v: "faible" }, { n: "Sismicité", v: "zone 2, faible" }],
+    acquisition: "2015-07-03", adresseDepot: "maison-des-tilleuls-b3k@depot.vidom.fr",
+    identifiantFiscal: "4402 1 0123 456", altitude: 27, gardien: "Marie Lefort"
+  };
+
+  const pieces = [
+    { id: "cuisine", nom: "Cuisine", type: "cuisine", sugg: ["Réfrigérateur", "Four", "Lave-vaisselle", "Plaques de cuisson", "Hotte", "Micro-ondes", "Cafetière", "Robinetterie"] },
+    { id: "salon", nom: "Salon", type: "salon", sugg: ["Téléviseur", "Poêle ou cheminée", "Canapé", "Store banne (terrasse)", "Volets roulants", "Thermostat"] },
+    { id: "ch1", nom: "Chambre 1", type: "chambre", sugg: ["Radiateur", "Volet roulant", "Literie", "Détecteur de fumée"] },
+    { id: "ch2", nom: "Chambre 2", type: "chambre", sugg: ["Radiateur", "Volet roulant", "Literie"] },
+    { id: "ch3", nom: "Chambre 3", type: "chambre", sugg: ["Radiateur", "Volet roulant", "Bureau"] },
+    { id: "sdb", nom: "Salle de bain", type: "sdb", sugg: ["Ballon d'eau chaude", "Sèche-serviettes", "Douche ou baignoire", "Meuble vasque", "VMC (bouche)"] },
+    { id: "wc1", nom: "WC", type: "wc", sugg: ["WC", "Lave-mains"] },
+    { id: "wc2", nom: "WC de l'étage", type: "wc", sugg: ["WC"] },
+    { id: "garage", nom: "Garage", type: "garage", sugg: ["Portail motorisé", "Porte de garage", "Tableau électrique", "Vélos", "Outillage"] },
+    { id: "buanderie", nom: "Buanderie", type: "buanderie", sugg: ["Lave-linge", "Sèche-linge", "Adoucisseur", "Congélateur"] },
+    { id: "chaufferie", nom: "Chaufferie", type: "chaufferie", sugg: ["Pompe à chaleur", "Ballon thermodynamique", "VMC (caisson)", "Compteur d'eau"] },
+    { id: "jardin", nom: "Jardin", type: "jardin", sugg: ["Tilleul", "Abri de jardin", "Récupérateur d'eau", "Tondeuse", "Clôture"] },
+    { id: "toiture", nom: "Toiture et façades", type: "exterieur", sugg: ["Toiture", "Gouttières", "Fenêtres", "Volets"] }
+  ];
+
+  const pros = [
+    { id: "cb", nom: "Couverture Bretonne", metier: "Couverture et zinguerie", statut: "actif", siret: "812 345 678 00021", tel: "02 40 12 34 56", mail: "contact@couverture-bretonne.fr", derniere: "2023-06-20", motif: "a refait la toiture", ville: "Sainte-Luce-sur-Loire", km: 6 },
+    { id: "to", nom: "Thermic Ouest", metier: "Chauffage, pompe à chaleur", statut: "actif", siret: "798 111 222 00034", tel: "02 40 98 76 54", mail: "sav@thermic-ouest.fr", derniere: "2026-04-02", motif: "a installé et entretient la pompe à chaleur", ville: "Nantes", km: 4 },
+    { id: "lg", nom: "Plomberie Le Guen", metier: "Plomberie", statut: "historique", siret: "", tel: "06 12 34 56 78", mail: "", derniere: "2019-10-14", motif: "a réparé une fuite", ville: "Rezé", km: 9 },
+    { id: "ea", nom: "Élec'Atlantique", metier: "Électricité", statut: "historique", siret: "523 987 654 00012", tel: "02 51 00 11 22", mail: "contact@elec-atlantique.fr", derniere: "2019-03-05", motif: "a remis le tableau aux normes", ville: "Nantes", km: 3 },
+    { id: "dl", nom: "Diagnostic Loire", metier: "Diagnostiqueur", statut: "historique", siret: "901 222 333 00045", tel: "02 40 55 66 77", mail: "contact@diagnostic-loire.fr", derniere: "2024-05-12", motif: "a établi le DPE", ville: "Orvault", km: 7 }
+  ];
+
+  const equipements = [
+    { id: "pac", nom: "Pompe à chaleur air/eau", marque: "Daikin", modele: "Altherma 3 H HT", ref: "EPRA16DW1 · ETVH16S23E6V", serie: "J024587", piece: "chaufferie", cat: "Chauffage", install: "2022-03-15", par: "to", garantie: "2027-03-14", entretien: "2026-04-02", prochain: "2027-04-01", etat: "bon", notes: "Aidée par MaPrimeRénov' (4 000 €). Remplace la chaudière Bosch d'origine.", notice: true, sav: "Daikin France · 0 820 26 26 26 (SAV) · daikin.fr/assistance", cout: 11900 },
+    { id: "toiture", nom: "Toiture en tuiles", marque: "Monier", modele: "Romane Évolution", ref: "ROM-EVO-TER", serie: "", piece: "toiture", cat: "Toiture", install: "2023-06-20", par: "cb", garantie: "2033-06-19", garantieType: "décennale", entretien: "2025-10-10", prochain: "2027-10-01", etat: "bon", notes: "Démoussage conseillé tous les deux ans.", notice: false, sav: "", cout: 18400 },
+    { id: "vmc", nom: "VMC simple flux", marque: "Aldes", modele: "EasyHOME Auto", ref: "11033052", serie: "AL-2214-77", piece: "chaufferie", cat: "Ventilation", install: "2016-09-01", par: "", garantie: "2018-09-01", entretien: "2024-03-01", prochain: "2027-03-01", etat: "moyen", notes: "Nettoyage des bouches tous les 3 ans.", notice: true, sav: "Aldes · 0 800 07 08 09 · aldes.fr/sav", cout: 640 },
+    { id: "ballon", nom: "Ballon thermodynamique", marque: "Atlantic", modele: "Calypso VS 200", ref: "232516", serie: "AT-9931-02", piece: "chaufferie", cat: "Eau chaude", install: "2022-03-15", par: "to", garantie: "2027-03-14", entretien: "2026-04-02", prochain: "2027-04-01", etat: "bon", notes: "Anode à vérifier à chaque entretien.", notice: true, sav: "Atlantic · 0 825 30 30 30 · atlantic.fr/sav", cout: 2300 },
+    { id: "portail", nom: "Portail motorisé", marque: "Somfy", modele: "Ixengo L 3S", ref: "1216458", serie: "SF-77120", piece: "garage", cat: "Extérieur", install: "2024-12-10", par: "", garantie: "2026-12-09", entretien: "", prochain: "", etat: "bon", notes: "Garantie qui expire dans trois mois.", notice: true, sav: "Somfy · 0 820 05 50 55 · somfy.fr/assistance", cout: 1450 },
+    { id: "chaudiere", nom: "Chaudière gaz (déposée)", marque: "Bosch", modele: "Condens 5000 W", ref: "ZBR 24-3", serie: "BO-1978-0455", piece: "chaufferie", cat: "Chauffage", install: "1998-11-02", par: "", garantie: "2000-11-02", entretien: "2021-10-04", prochain: "", etat: "hors_service", deposee: "2022-03-15", notes: "Remplacée par la pompe à chaleur le 15 mars 2022. Conservée dans l'histoire.", notice: false, sav: "", cout: 3200 },
+    { id: "lv", nom: "Lave-vaisselle", marque: "Bosch", modele: "Série 4", ref: "SMS4HTI45E", serie: "FD 0106 00318", piece: "cuisine", cat: "Électroménager", install: "2021-05-22", par: "", garantie: "2023-05-21", entretien: "", prochain: "", etat: "bon", notes: "", notice: true, sav: "Bosch Electroménager · 01 40 10 11 00 · bosch-home.fr/sav", cout: 599 },
+    { id: "four", nom: "Four encastrable", marque: "Siemens", modele: "iQ500", ref: "HB578ABS0", serie: "SI-4478-10", piece: "cuisine", cat: "Électroménager", install: "2018-02-14", par: "", garantie: "2020-02-13", entretien: "", prochain: "", etat: "bon", notes: "", notice: true, sav: "Siemens · 01 40 10 12 00 · siemens-home.bsh-group.com/fr/sav", cout: 749 },
+    { id: "frigo", nom: "Réfrigérateur combiné", marque: "Liebherr", modele: "CNsfd 5223", ref: "CNsfd 5223-20", serie: "LB-77.201.4", piece: "cuisine", cat: "Électroménager", install: "2023-01-09", par: "", garantie: "2025-01-08", entretien: "", prochain: "", etat: "bon", notes: "", notice: true, sav: "Liebherr · 03 88 04 47 00 · home.liebherr.com/fr", cout: 899 },
+    { id: "ll", nom: "Lave-linge", marque: "Miele", modele: "WSD 323", ref: "WSD323 WCS", serie: "MI-2020-8816", piece: "buanderie", cat: "Électroménager", install: "2020-11-03", par: "", garantie: "2022-11-02", entretien: "", prochain: "", etat: "bon", notes: "", notice: true, sav: "Miele · 09 74 50 10 00 · miele.fr/sav", cout: 1099 },
+    { id: "sl", nom: "Sèche-linge", marque: "Miele", modele: "TSB 143 WP", ref: "TSB143WP", serie: "MI-2020-8817", piece: "buanderie", cat: "Électroménager", install: "2020-11-03", par: "", garantie: "2022-11-02", entretien: "", prochain: "", etat: "moyen", notes: "Filtre à nettoyer après chaque cycle.", notice: true, sav: "Miele · 09 74 50 10 00 · miele.fr/sav", cout: 1249 },
+    { id: "tableau", nom: "Tableau électrique", marque: "Legrand", modele: "Drivia 13", ref: "401223", serie: "", piece: "garage", cat: "Électricité", install: "2019-03-05", par: "ea", garantie: "2021-03-04", entretien: "", prochain: "", etat: "bon", notes: "Remis aux normes NF C 15-100 en 2019, attestation Consuel conservée.", notice: false, sav: "", cout: 2150 },
+    { id: "fenetres", nom: "Fenêtres PVC double vitrage", marque: "Tryba", modele: "T70", ref: "T70-DV-4/16/4", serie: "", piece: "toiture", cat: "Menuiseries", install: "2016-04-18", par: "", garantie: "2026-04-17", garantieType: "décennale menuiserie", entretien: "", prochain: "", etat: "bon", notes: "Huit fenêtres et une porte-fenêtre.", notice: false, sav: "Tryba · 03 88 20 20 20 · tryba.com", cout: 9800 },
+    { id: "volets", nom: "Volets roulants", marque: "Somfy", modele: "Oximo io", ref: "1041101", serie: "", piece: "salon", cat: "Menuiseries", install: "2016-04-18", par: "", garantie: "2021-04-17", entretien: "", prochain: "", etat: "moyen", notes: "Le volet du salon est lent : à faire vérifier.", notice: true, sav: "Somfy · 0 820 05 50 55 · somfy.fr/assistance", cout: 3400 },
+    { id: "daaf", nom: "Détecteurs de fumée (3)", marque: "Kidde", modele: "29HD-FR", ref: "29HD-FR", serie: "", piece: "ch1", cat: "Sécurité", install: "2016-06-01", par: "", garantie: "2026-05-31", entretien: "2026-01-10", prochain: "2027-01-10", etat: "a_remplacer", notes: "Dix ans : à remplacer en 2026.", notice: true, sav: "Kidde · 01 60 03 10 40 · kidde.fr", cout: 75 },
+    { id: "adoucisseur", nom: "Adoucisseur d'eau", marque: "Culligan", modele: "Medallist", ref: "MED-20", serie: "CU-330-19", piece: "buanderie", cat: "Eau", install: "2019-06-11", par: "lg", garantie: "2021-06-10", entretien: "2025-06-11", prochain: "2026-12-11", etat: "bon", notes: "Sel à recharger tous les deux mois.", notice: true, sav: "Culligan · 0 800 00 33 33 · culligan.fr", cout: 1600 },
+    { id: "store", nom: "Store banne", marque: "Somfy (moteur)", modele: "Sunea io", ref: "1240200", serie: "", piece: "salon", cat: "Extérieur", install: "2021-07-02", par: "", garantie: "2026-07-01", entretien: "", prochain: "", etat: "bon", notes: "", notice: true, sav: "Somfy · 0 820 05 50 55", cout: 2100 }
+  ];
+
+  // Documents — 54
+  const docs = [];
+  let n = 1;
+  const add = (o) => { docs.push(Object.assign({ id: "d" + (n++), source: "main", statut: "valide" }, o)); };
+  add({ type: "acte", titre: "Acte d'achat — Maison des Tilleuls", date: "2015-07-03", four: "Me Bertrand, notaire", montant: 285000, cible: "logement" });
+  add({ type: "plan", titre: "Plans de la maison (rez-de-chaussée et étage)", date: "1978-03-10", four: "Architecte Rouaud", cible: "logement" });
+  add({ type: "diagnostic", titre: "Diagnostic de performance énergétique — classe C", date: "2024-05-12", four: "Diagnostic Loire", montant: 140, cible: "logement", pro: "dl" });
+  add({ type: "diagnostic", titre: "Diagnostic électricité", date: "2024-05-12", four: "Diagnostic Loire", cible: "logement", pro: "dl" });
+  add({ type: "diagnostic", titre: "État des risques et pollutions (ERP)", date: "2024-05-12", four: "Diagnostic Loire", cible: "logement", pro: "dl" });
+  add({ type: "contrat", titre: "Contrat d'assurance habitation", date: "2026-01-01", four: "Maif", montant: 412, cible: "logement" });
+  add({ type: "assurance", titre: "Attestation d'assurance habitation 2026", date: "2026-01-05", four: "Maif", cible: "logement" });
+  add({ type: "courrier", titre: "Avis de taxe foncière 2025", date: "2025-09-01", four: "Direction des finances publiques", montant: 1240, cible: "logement" });
+  add({ type: "proces_verbal", titre: "Déclaration de sinistre tempête — dossier clos", date: "2023-11-04", four: "Maif", cible: "logement" });
+  add({ type: "courrier", titre: "Rapport d'expertise — tempête Ciarán", date: "2023-11-20", four: "Cabinet Expertise Ouest", cible: "logement" });
+  add({ type: "courrier", titre: "Confirmation d'indemnisation", date: "2023-12-15", four: "Maif", montant: 2850, cible: "logement" });
+  add({ type: "permis", titre: "Déclaration préalable — abri de jardin", date: "2017-04-03", four: "Ville de Nantes", cible: "jardin" });
+  add({ type: "photo", titre: "Plantation du tilleul", date: "2016-03-20", four: "Marie Lefort", cible: "jardin", wow: true });
+  add({ type: "photo", titre: "La maison à l'achat, façade sud", date: "2015-07-03", four: "Marie Lefort", cible: "logement" });
+  // équipements
+  const eqdocs = {
+    pac: [["facture", "Facture pose pompe à chaleur", "2022-03-15", "to", 11900], ["devis", "Devis pompe à chaleur", "2022-01-20", "to", 11900], ["garantie", "Garantie constructeur Daikin 5 ans", "2022-03-15", "to"], ["notice", "Notice Daikin Altherma 3 H HT (retrouvée)", "2022-03-15", ""], ["certificat", "Attestation MaPrimeRénov'", "2022-04-02", "Anah", 4000], ["facture", "Entretien annuel PAC 2024", "2024-04-05", "to", 170], ["facture", "Entretien annuel PAC 2025", "2025-04-03", "to", 175], ["facture", "Entretien annuel PAC 2026", "2026-04-02", "to", 180], ["contrat", "Contrat d'entretien PAC", "2022-03-15", "to", 175], ["photo", "Photo de la PAC installée", "2022-03-15", "to"]],
+    toiture: [["facture", "Facture réfection toiture", "2023-06-20", "cb", 18400], ["devis", "Devis toiture Monier", "2023-03-02", "cb", 18400], ["garantie", "Attestation décennale Couverture Bretonne", "2023-06-20", "cb"], ["photo", "Toiture avant travaux", "2023-06-05", "cb"], ["photo", "Toiture après travaux", "2023-06-20", "cb"], ["facture", "Démoussage et vérification", "2025-10-10", "cb", 320]],
+    vmc: [["facture", "Facture VMC Aldes", "2016-09-01", "Leroy Merlin", 640], ["notice", "Notice VMC Aldes EasyHOME", "2016-09-01", ""]],
+    ballon: [["facture", "Facture ballon thermodynamique", "2022-03-15", "to", 2300], ["garantie", "Garantie Atlantic 5 ans", "2022-03-15", "to"], ["notice", "Notice Atlantic Calypso", "2022-03-15", ""]],
+    portail: [["facture", "Facture portail motorisé", "2024-12-10", "Portails de Loire", 1450], ["garantie", "Garantie moteur Somfy 2 ans", "2024-12-10", "Portails de Loire"], ["notice", "Notice Somfy Ixengo", "2024-12-10", ""]],
+    chaudiere: [["facture", "Facture chaudière Bosch (1998)", "1998-11-02", "Ets Guérin", 3200], ["facture", "Dernier entretien chaudière", "2021-10-04", "Ets Guérin", 120]],
+    lv: [["facture", "Facture lave-vaisselle Bosch", "2021-05-22", "Darty", 599], ["notice", "Notice Bosch SMS4HTI45E (retrouvée)", "2021-05-22", ""]],
+    four: [["facture", "Facture four Siemens", "2018-02-14", "Boulanger", 749], ["notice", "Notice Siemens iQ500", "2018-02-14", ""]],
+    frigo: [["facture", "Facture réfrigérateur Liebherr", "2023-01-09", "Darty", 899], ["garantie", "Extension de garantie 4 ans", "2023-01-09", "Darty", 89]],
+    ll: [["facture", "Facture lave-linge Miele", "2020-11-03", "Miele Store", 1099]],
+    sl: [["facture", "Facture sèche-linge Miele", "2020-11-03", "Miele Store", 1249], ["notice", "Notice Miele TSB 143", "2020-11-03", ""]],
+    tableau: [["facture", "Facture mise aux normes électrique", "2019-03-05", "ea", 2150], ["certificat", "Attestation Consuel", "2019-03-20", "Consuel"]],
+    fenetres: [["facture", "Facture fenêtres Tryba", "2016-04-18", "Tryba Nantes", 9800], ["garantie", "Garantie décennale menuiseries", "2016-04-18", "Tryba Nantes"]],
+    volets: [["facture", "Facture volets roulants", "2016-04-18", "Tryba Nantes", 3400]],
+    daaf: [["facture", "Facture détecteurs de fumée", "2016-06-01", "Castorama", 75]],
+    adoucisseur: [["facture", "Facture adoucisseur", "2019-06-11", "lg", 1600], ["facture", "Réparation fuite et pose adoucisseur", "2019-10-14", "lg", 380], ["notice", "Notice Culligan Medallist", "2019-06-11", ""]],
+    store: [["facture", "Facture store banne", "2021-07-02", "Stores Atlantique", 2100], ["notice", "Notice moteur Sunea io", "2021-07-02", ""]]
+  };
+  Object.keys(eqdocs).forEach(eid => eqdocs[eid].forEach(([type, titre, date, four, montant]) => {
+    const pro = pros.find(p => p.id === four);
+    add({ type, titre, date, four: pro ? pro.nom : four, pro: pro ? pro.id : "", montant, cible: eid, source: type === "notice" ? "web" : (pro && Math.random() < .5 ? "courriel" : "main") });
+  }));
+
+  const events = [
+    { d: "1978-03-10", t: "Construction de la maison", k: "construction" },
+    { d: "1998-11-02", t: "Chaudière gaz Bosch installée", k: "install", eq: "chaudiere" },
+    { d: "2015-07-03", t: "Achat par Marie et Julien Lefort", k: "achat" },
+    { d: "2016-03-20", t: "Plantation du tilleul au fond du jardin", k: "wow", wow: true },
+    { d: "2016-04-18", t: "Fenêtres et volets remplacés (Tryba)", k: "travaux", eq: "fenetres" },
+    { d: "2016-09-01", t: "VMC installée", k: "install", eq: "vmc" },
+    { d: "2019-03-05", t: "Tableau électrique remis aux normes par Élec'Atlantique", k: "travaux", eq: "tableau" },
+    { d: "2019-10-14", t: "Fuite réparée par Plomberie Le Guen", k: "reparation" },
+    { d: "2021-05-22", t: "Lave-vaisselle Bosch installé", k: "install", eq: "lv" },
+    { d: "2022-03-15", t: "Pompe à chaleur installée par Thermic Ouest — la chaudière est déposée", k: "travaux", eq: "pac" },
+    { d: "2023-06-20", t: "Toiture refaite par Couverture Bretonne — fin de chantier", k: "travaux", eq: "toiture", wow: true },
+    { d: "2023-11-04", t: "Tempête Ciarán : déclaration de sinistre (dossier clos le 15 décembre)", k: "sinistre" },
+    { d: "2024-05-12", t: "Diagnostics établis par Diagnostic Loire (DPE C)", k: "controle" },
+    { d: "2024-12-10", t: "Portail motorisé posé", k: "install", eq: "portail" },
+    { d: "2025-10-10", t: "Démoussage de la toiture", k: "entretien", eq: "toiture" },
+    { d: "2026-01-10", t: "Détecteurs de fumée testés", k: "entretien", eq: "daaf" },
+    { d: "2026-04-02", t: "Entretien annuel de la pompe à chaleur", k: "entretien", eq: "pac" },
+    { d: "2026-06-14", t: "Adresse de dépôt donnée à Couverture Bretonne", k: "info" },
+    { d: "2026-08-30", t: "Demande de PV d'assemblée envoyée — sans objet, maison individuelle (test)", k: "info" },
+    { d: "2026-09-04", t: "Facture de Couverture Bretonne reçue dans la boîte d'arrivée", k: "info" }
+  ];
+
+  const rappels = [
+    { id: "r1", t: "Entretien annuel de la pompe à chaleur", d: "2027-04-01", eq: "pac", k: "entretien", txt: "Le dernier entretien date du 2 avril 2026. Thermic Ouest connaît l'installation." },
+    { id: "r2", t: "La garantie du portail expire dans trois mois", d: "2026-12-09", eq: "portail", k: "garantie", txt: "Si le moteur montre une faiblesse, c'est le moment de faire jouer la garantie." },
+    { id: "r3", t: "Ramonage et nettoyage des bouches de VMC", d: "2027-03-01", eq: "vmc", k: "entretien", txt: "Nettoyage des bouches conseillé tous les trois ans." },
+    { id: "r4", t: "Demande envoyée à Diagnostic Loire — sans réponse", d: "2026-09-16", k: "demande", txt: "Diagnostic complet demandé le 2 septembre. Délai attendu : deux semaines." },
+    { id: "r5", t: "Demande envoyée au notaire — sans réponse", d: "2026-09-30", k: "demande", txt: "Plans et annexes de l'acte demandés le 2 septembre. Délai attendu : un mois." }
+  ];
+
+  const inbox = [
+    { id: "i1", titre: "Facture — Couverture Bretonne", exp: "compta@couverture-bretonne.fr", objet: "Facture n° 2026-118 · démoussage", date: "2026-09-04", statut: "propose", reco: { type: "facture", date: "2026-09-04", four: "Couverture Bretonne", montant: 320, cible: "toiture" }, verifie: true, pro: "cb" },
+    { id: "i2", titre: "Devis — Thermic Ouest", exp: "devis@thermic-ouest.fr", objet: "Devis remplacement VMC double flux", date: "2026-09-06", statut: "propose", reco: { type: "devis", date: "2026-09-06", four: "Thermic Ouest", montant: 3480, cible: "vmc" }, verifie: true, pro: "to" },
+    { id: "i3", titre: "Attestation d'assurance 2026-2027", exp: "noreply@maif.fr", objet: "Votre attestation", date: "2026-09-07", statut: "propose", reco: { type: "assurance", date: "2026-09-07", four: "Maif", montant: null, cible: "logement" }, verifie: true },
+    { id: "i4", titre: "Facture — Couverture Bretonne (déjà reçue)", exp: "marie.lefort@gmail.com", objet: "Fwd : Facture n° 2026-118", date: "2026-09-08", statut: "propose", reco: { type: "facture", date: "2026-09-04", four: "Couverture Bretonne", montant: 320, cible: "toiture" }, verifie: true, doublon: "i1" }
+  ];
+
+  const tiers = [
+    { id: "notaire", nom: "Notaire", motif: "Succession, vente, donation", voit: ["Acte d'achat", "Diagnostics", "Plans", "Chronologie des travaux", "Garanties actives", "Fiche du logement"], exclus: ["Factures d'électroménager", "Photos intérieures", "Contrats d'assurance", "Coût d'achat détaillé"], angle: 90 },
+    { id: "agent", nom: "Agent immobilier", motif: "Mise en vente", voit: ["Chronologie des rénovations", "Fiches équipement", "Garanties actives", "DPE et diagnostics", "Photos des travaux"], exclus: ["Factures d'énergie", "Contrats d'assurance", "Prix d'acquisition", "Documents privés"], angle: 45 },
+    { id: "artisan", nom: "Artisan", motif: "Chantier en cours", voit: ["Équipements concernés", "Interventions passées", "Plans utiles au chantier"], exclus: ["Documents financiers", "Autres équipements", "Photos privées", "Assurance"], angle: 0 },
+    { id: "assureur", nom: "Assureur", motif: "Déclaration de sinistre", voit: ["Équipements sinistrés", "Documents du sinistre", "Factures des réparations", "Dernier entretien"], exclus: ["Historique complet", "Prix d'acquisition", "Autres sinistres"], angle: -45 },
+    { id: "acquereur", nom: "Futur acquéreur", motif: "Avant l'achat", voit: ["Le livre du logement", "Chronologie", "Équipements", "Garanties transmissibles"], exclus: ["Prix payé", "Documents privés", "Correspondance"], angle: -90 },
+    { id: "heritier", nom: "Héritier", motif: "Transmission familiale", voit: ["Livre de succession", "Contrats en cours", "Équipements", "Artisans du logement"], exclus: ["Correspondance", "Photos privées non partagées"], angle: -135 },
+    { id: "banque", nom: "Banque", motif: "Financement", voit: ["Classe énergétique", "Historique des travaux", "Diagnostics"], exclus: ["Factures", "Photos", "Contrats"], angle: 180 },
+    { id: "diagnostiqueur", nom: "Diagnostiqueur", motif: "Contrôle réglementaire", voit: ["Fiche du logement", "Diagnostics précédents", "Équipements de chauffage"], exclus: ["Financier", "Photos privées"], angle: 135 }
+  ];
+
+  // reconnaissance simulée : tirage parmi ces résultats quand une photo est prise
+  const recos = [
+    { kind: "equipement", titre: "Lave-vaisselle Bosch Série 4", marque: "Bosch", modele: "Série 4", ref: "SMS4HTI45E", cat: "Électroménager", notice: "Notice Bosch SMS4HTI45E retrouvée (bosch-home.fr)", sav: "Bosch Electroménager · 01 40 10 11 00", piece: "cuisine" },
+    { kind: "equipement", titre: "Réfrigérateur Liebherr CNsfd 5223", marque: "Liebherr", modele: "CNsfd 5223", ref: "CNsfd 5223-20", cat: "Électroménager", notice: "Notice Liebherr retrouvée (home.liebherr.com)", sav: "Liebherr · 03 88 04 47 00", piece: "cuisine" },
+    { kind: "document", titre: "Facture Darty — micro-ondes Samsung", type: "facture", four: "Darty", montant: 189, date: "2026-08-21", ref: "MS23K3513AW", notice: "Notice Samsung MS23K3513 retrouvée (samsung.com/fr/support)", sav: "Samsung · 01 48 63 00 00", piece: "cuisine" },
+    { kind: "document", titre: "Garantie — Sèche-serviettes Atlantic", type: "garantie", four: "Atlantic", montant: null, date: "2025-11-30", ref: "Doris digital 750 W", notice: "Notice Atlantic Doris retrouvée", sav: "Atlantic · 0 825 30 30 30", piece: "sdb" },
+    { kind: "equipement", titre: "Chauffe-serviettes Acova", marque: "Acova", modele: "Fassane Spa", ref: "TSXP-050-055", cat: "Chauffage", notice: "Notice Acova Fassane retrouvée (acova.fr)", sav: "Acova · 04 72 47 72 00", piece: "sdb" },
+    { kind: "document", titre: "Facture Castorama — détecteurs de fumée", type: "facture", four: "Castorama", montant: 54, date: "2026-09-01", ref: "Kidde 29HD-FR", notice: "Notice Kidde retrouvée", sav: "Kidde · 01 60 03 10 40", piece: "ch1" },
+    { kind: "equipement", titre: "Tondeuse Honda HRX 476", marque: "Honda", modele: "HRX 476", ref: "HRX476C1VYEA", cat: "Jardin", notice: "Notice Honda retrouvée (honda.fr/jardin)", sav: "Honda Jardin · 01 60 37 30 00", piece: "jardin" },
+    { kind: "document", titre: "Notice papier — plaques Bosch", type: "notice", four: "Bosch", montant: null, date: "2018-02-14", ref: "PXE651FC1E", notice: "Notice déjà connue, version en ligne plus récente retrouvée", sav: "Bosch · 01 40 10 11 00", piece: "cuisine" }
+  ];
+
+  // messagerie : questions prévues
+  const qa = [
+    { k: ["facture", "chaudi"], r: "La dernière facture liée à la chaudière est celle de son entretien du 4 octobre 2021, par les Ets Guérin (120 €). La chaudière a été déposée le 15 mars 2022 et remplacée par la pompe à chaleur.", doc: "Dernier entretien chaudière" },
+    { k: ["facture", "pompe"], r: "La facture de la pompe à chaleur date du 15 mars 2022, Thermic Ouest, 11 900 €. Une aide MaPrimeRénov' de 4 000 € s'y rattache.", doc: "Facture pose pompe à chaleur" },
+    { k: ["toiture"], r: "La toiture a été refaite en juin 2023 par Couverture Bretonne, en tuiles Monier Romane Évolution. La garantie décennale court jusqu'au 19 juin 2033. Un démoussage a été fait le 10 octobre 2025.", doc: "Facture réfection toiture" },
+    { k: ["salle de bain", "sdb"], r: "Aucune intervention n'est enregistrée dans la salle de bain. Le ballon thermodynamique qui l'alimente est en chaufferie, installé par Thermic Ouest en mars 2022." },
+    { k: ["plombier", "plomberie", "fuite"], r: "Plomberie Le Guen est venu une fois, le 14 octobre 2019, pour réparer une fuite et poser l'adoucisseur (380 €).", doc: "Réparation fuite et pose adoucisseur" },
+    { k: ["combien", "travaux", "depuis"], r: "Depuis 2020, les travaux enregistrés totalisent 34 580 € : pompe à chaleur et ballon (14 200 €), toiture (18 400 €), portail (1 450 €), démoussage (320 €), sans compter l'électroménager." },
+    { k: ["expire", "garantie", "bientôt"], r: "Deux garanties arrivent à échéance : le portail (9 décembre 2026) et les détecteurs de fumée (31 mai 2026, déjà passée — ils sont à remplacer). La pompe à chaleur reste garantie jusqu'au 14 mars 2027." },
+    { k: ["fenêtre", "fenetre"], r: "Les fenêtres ont été changées le 18 avril 2016 par Tryba Nantes (PVC double vitrage, 9 800 €). La garantie décennale des menuiseries court jusqu'au 17 avril 2026.", doc: "Facture fenêtres Tryba" },
+    { k: ["dpe", "énergét", "energet", "classe"], r: "Le logement est classé C (climat B), d'après le DPE du 12 mai 2024 établi par Diagnostic Loire selon la méthode 2021.", doc: "Diagnostic de performance énergétique — classe C" },
+    { k: ["tilleul", "arbre"], r: "Le tilleul a été planté le 20 mars 2016, au fond du jardin. C'est un des moments que la maison garde en mémoire.", doc: "Plantation du tilleul" },
+    { k: ["sinistre", "tempête", "tempete"], r: "Un sinistre est enregistré : la tempête Ciarán, déclarée le 4 novembre 2023. L'expertise a eu lieu le 20 novembre et l'indemnisation de 2 850 € a été confirmée le 15 décembre 2023. Le dossier est clos.", doc: "Déclaration de sinistre tempête — dossier clos" },
+    { k: ["qui", "installé", "installe", "pac", "chaleur"], r: "La pompe à chaleur Daikin Altherma a été installée par Thermic Ouest le 15 mars 2022. Ils assurent aussi l'entretien annuel." },
+    { k: ["entretien", "prochain"], r: "Le prochain entretien à prévoir est celui de la pompe à chaleur, en avril 2027. Le nettoyage des bouches de VMC est conseillé en mars 2027." },
+    { k: ["notice", "lave-vaisselle", "lave vaisselle"], r: "La notice du lave-vaisselle Bosch SMS4HTI45E a été retrouvée à partir de la référence lue sur la facture Darty du 22 mai 2021.", doc: "Notice Bosch SMS4HTI45E (retrouvée)" },
+    { k: ["électricien", "electricien", "tableau"], r: "Élec'Atlantique a remis le tableau électrique aux normes le 5 mars 2019 (2 150 €). L'attestation Consuel est conservée.", doc: "Facture mise aux normes électrique" },
+    { k: ["acheté", "achat", "acquisition"], r: "La maison a été achetée le 3 juillet 2015, chez Me Bertrand.", doc: "Acte d'achat — Maison des Tilleuls" },
+    { k: ["surface", "m²", "m2"], r: "La maison fait 128 m², sur deux parcelles (AB 214 et AB 215), avec jardin." },
+    { k: ["adresse", "dépôt", "depot"], r: "L'adresse de dépôt de la maison est maison-des-tilleuls-b3k@depot.vidom.fr. Tout ce qui y est envoyé arrive dans la boîte d'arrivée, et rien n'y entre sans votre accord." }
+  ];
+
+  const trouves = [
+    { t: "Parcelles cadastrales AB 214 et AB 215 — 812 m² au total", src: "cadastre.data.gouv.fr", sur: true },
+    { t: "Retrait-gonflement des argiles : exposition moyenne", src: "Géorisques", sur: true },
+    { t: "Aucun risque d'inondation connu à l'adresse", src: "Géorisques", sur: true },
+    { t: "Bâtiment référencé RNB-44109-7F2A, un seul logement", src: "Référentiel national des bâtiments", sur: true },
+    { t: "Altitude : 27 m", src: "IGN", sur: true }
+  ];
+  const choixDPE = [{ t: "DPE du 12 mai 2024 · 128 m² · classe C", ok: true }, { t: "DPE du 3 février 2015 · 128 m² · classe E (avant travaux)", ok: false }];
+  const choixVentes = [{ t: "Vente du 3 juillet 2015 · 128 m² · maison", ok: true }, { t: "Vente du 8 novembre 1998 · 128 m² · maison", ok: false }, { t: "Vente du 22 mai 2019 · 96 m² · maison voisine (AB 213)", ok: false }];
+
+  return { logement, pieces, pros, equipements, docs, events, rappels, inbox, tiers, recos, qa, trouves, choixDPE, choixVentes };
+})();
+/* ================= NOYAU : état, sauvegarde, routes, aides ================= */
+const KEY = "vidom-demo-v1";
+let S = null;
+
+function etatInitial() {
+  const c = JSON.parse(JSON.stringify(DATA));
+  return {
+    v: 1, cree: false, etape: 1,
+    onb: { adresse: "", parcelles: ["AB 214", "AB 215"], dpe: null, vente: null, annexes: { parking: null, lots: null, autorisation: null }, photo: null, cas: "tilleuls" },
+    logement: c.logement, docs: c.docs, equipements: c.equipements, events: c.events, rappels: c.rappels, inbox: c.inbox, pros: c.pros,
+    pieces: {}, rythme: null,
+    acces: {}, journal: [
+      { d: "2026-06-14", t: "Adresse de dépôt partagée avec Couverture Bretonne (courriel)" },
+      { d: "2026-09-02", t: "Demande envoyée au notaire et à Diagnostic Loire" },
+      { d: "2026-09-04", t: "Document reçu de compta@couverture-bretonne.fr" }
+    ],
+    demandes: [
+      { id: "q1", tiers: "Diagnostic Loire", objet: "Diagnostic de performance énergétique complet", d: "2026-09-02", delai: "2026-09-16", statut: "sans réponse" },
+      { id: "q2", tiers: "Me Bertrand, notaire", objet: "Plans et annexes de l'acte", d: "2026-09-02", delai: "2026-09-30", statut: "sans réponse" }
+    ],
+    chat: [], expediteurs: { confiance: ["@thermic-ouest.fr", "@maif.fr"], exclus: [] },
+    tips: { vus: [] }, texte: "normal", metrics: { docs: 0, demandes: 0, jours: [] },
+    transmission: null, dossiers: {}, artisanCarte: null, simul: 0
+  };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+function load() {
+  try { const r = localStorage.getItem(KEY); if (r) { const o = JSON.parse(r); if (o && o.v === 1) return o; } } catch (e) {}
+  return null;
+}
+S = load() || etatInitial();
+document.documentElement.dataset.texte = S.texte || "normal";
+
+/* ---------- aides ---------- */
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+function fdate(s) { if (!s) return "—"; const [y, m, d] = s.split("-").map(Number); return `${d} ${MOIS[m - 1]} ${y}`; }
+function fmois(s) { if (!s) return "—"; const [y, m] = s.split("-").map(Number); return `${MOIS[m - 1]} ${y}`; }
+function eur(n) { if (n == null || n === "") return "—"; return n.toLocaleString("fr-FR") + " €"; }
+function h(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function today() { return new Date().toISOString().slice(0, 10); }
+function addDays(s, n) { const d = new Date(s); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+function eq(id) { return S.equipements.find(e => e.id === id); }
+function pro(id) { return S.pros.find(p => p.id === id); }
+function piece(id) { return DATA.pieces.find(p => p.id === id); }
+function uid(p) { return p + Math.random().toString(36).slice(2, 8); }
+const TYPES = { facture: "Facture", devis: "Devis", notice: "Notice", garantie: "Garantie", contrat: "Contrat", diagnostic: "Diagnostic", photo: "Photo", certificat: "Certificat", permis: "Autorisation", plan: "Plan", proces_verbal: "Procès-verbal", courrier: "Courrier", assurance: "Assurance", acte: "Acte", autre: "Autre" };
+const ETATS = { bon: "En bon état", moyen: "À surveiller", a_remplacer: "À remplacer", hors_service: "Hors service" };
+function nomCible(c) { if (c === "logement") return "Le logement"; const e = eq(c); if (e) return e.nom; const p = piece(c); return p ? p.nom : c; }
+function noteJour() { const t = today(); if (!S.metrics.jours.includes(t)) { S.metrics.jours.push(t); } }
+
+/* ---------- icônes ---------- */
+const I = {
+  maison: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>',
+  coeur: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>',
+  horloge: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>',
+  fiche: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6-5.5 6-11a6 6 0 0 0-12 0c0 5.5 6 11 6 11z"/><circle cx="12" cy="10" r="2"/></svg>',
+  pieces: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>',
+  boite: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M4 13V6h16v7"/><path d="M4 13v5h16v-5"/></svg>',
+  equip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6"/><circle cx="12" cy="17" r="1"/></svg>',
+  travaux: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 7 3-3 3 3-3 3z"/><path d="M4 20l9-9"/><path d="M5 5l4 4"/></svg>',
+  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h6"/></svg>',
+  pros: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-1a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v1"/><circle cx="12" cy="8" r="4"/></svg>',
+  cloche: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg>',
+  cle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l2 2M14 9l2 2"/></svg>',
+  echanges: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  loupe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>',
+  profil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="9" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>',
+  arbre: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 6 12h4l-3 5h10l-3-5h4z"/><path d="M12 17v4"/></svg>',
+  logo: '<svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#5F7A6A"/><path d="M8 16l8-7 8 7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="11" y="15" width="10" height="9" fill="none" stroke="#fff" stroke-width="2.2"/><rect x="14" y="18" width="4" height="6" fill="#C9775B"/></svg>'
+};
+
+/* ---------- toasts, modales, indications ---------- */
+function toast(t) { const box = document.getElementById("toasts"); const d = document.createElement("div"); d.className = "toast"; d.textContent = t; box.appendChild(d); setTimeout(() => d.remove(), 3200); }
+function modal(html, opts = {}) {
+  closeModal();
+  const o = document.createElement("div"); o.className = "overlay"; o.id = "overlay";
+  o.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${opts.noX ? "" : '<button class="x" aria-label="Fermer" onclick="closeModal()">×</button>'}${html}</div>`;
+  o.addEventListener("click", e => { if (e.target === o && !opts.noX) closeModal(); });
+  document.body.appendChild(o);
+  const f = o.querySelector("input,button:not(.x),textarea"); if (f) setTimeout(() => f.focus(), 30);
+}
+function closeModal() { const o = document.getElementById("overlay"); if (o) o.remove(); }
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); closeCmd(); } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openCmd(); } });
+
+const TIPS = [
+  { id: "photo", b: "Photographiez un appareil", t: "Ouvrez une pièce et prenez en photo ce qui s'y trouve. VIDOM le reconnaît et range.", go: "#/pieces" },
+  { id: "adresse", b: "Donnez l'adresse de la maison à un artisan", t: "Ce qu'il enverra arrivera dans la boîte d'arrivée, et rien n'entrera sans votre accord.", go: "#/fiche" },
+  { id: "trouve", b: "Regardez ce que VIDOM a trouvé", t: "Tout ce qui a été intégré en silence reste visible et corrigible dans la fiche du logement.", go: "#/fiche" }
+];
+function renderTip() {
+  const old = document.getElementById("tip"); if (old) old.remove();
+  if (!S.cree) return;
+  const t = TIPS.find(x => !S.tips.vus.includes(x.id)); if (!t) return;
+  const d = document.createElement("div"); d.className = "tip"; d.id = "tip";
+  d.innerHTML = `<b>${h(t.b)}</b><div class="small">${h(t.t)}</div><div class="row"><a class="btn sm" href="${t.go}" onclick="A.tipVu('${t.id}')">Voir</a><button class="btn sm" onclick="A.tipVu('${t.id}')">Plus tard</button></div>`;
+  document.body.appendChild(d);
+}
+
+/* ---------- recherche Ctrl K ---------- */
+function openCmd() {
+  closeCmd();
+  const d = document.createElement("div"); d.className = "cmd"; d.id = "cmd";
+  d.innerHTML = `<div class="box"><input id="cmdin" placeholder="Rechercher dans la mémoire du logement… un document, un équipement, un artisan, une date" autocomplete="off"><div class="res" id="cmdres"></div></div>`;
+  d.addEventListener("click", e => { if (e.target === d) closeCmd(); });
+  document.body.appendChild(d);
+  const inp = d.querySelector("input"); inp.focus();
+  inp.addEventListener("input", () => renderCmd(inp.value));
+  inp.addEventListener("keydown", e => { if (e.key === "Enter") { const r = d.querySelector(".r"); if (r) r.click(); } });
+  renderCmd("");
+}
+function closeCmd() { const c = document.getElementById("cmd"); if (c) c.remove(); }
+function renderCmd(q) {
+  const box = document.getElementById("cmdres"); if (!box) return;
+  q = q.trim().toLowerCase();
+  const res = [];
+  if (!q) { res.push({ t: "Tapez un mot : « toiture », « facture », « Bosch », « 2023 »…", s: "", go: null }); }
+  else {
+    S.docs.filter(d => d.statut !== "refuse" && (d.titre + " " + d.four + " " + d.date + " " + TYPES[d.type]).toLowerCase().includes(q)).slice(0, 8).forEach(d => res.push({ t: d.titre, s: TYPES[d.type] + " · " + fdate(d.date) + " · " + d.four, go: "#/documents/" + d.id }));
+    S.equipements.filter(e => (e.nom + " " + e.marque + " " + e.modele + " " + e.ref).toLowerCase().includes(q)).slice(0, 5).forEach(e => res.push({ t: e.nom, s: e.marque + " " + e.modele + " · " + piece(e.piece).nom, go: "#/equipements/" + e.id }));
+    S.pros.filter(p => (p.nom + " " + p.metier).toLowerCase().includes(q)).forEach(p => res.push({ t: p.nom, s: p.metier + " · " + p.motif, go: "#/professionnels/" + p.id }));
+    S.events.filter(e => (e.t + " " + e.d).toLowerCase().includes(q)).slice(0, 4).forEach(e => res.push({ t: e.t, s: "Chronologie · " + fdate(e.d), go: "#/chronologie" }));
+    if (!res.length) res.push({ t: "Rien dans la mémoire de la maison pour « " + q + " »", s: "Vous pouvez le demander dans la messagerie, ou à un professionnel.", go: "#/messagerie" });
+  }
+  box.innerHTML = res.map(r => `<div class="r" ${r.go ? `onclick="closeCmd();location.hash='${r.go}'"` : ""}><span>${h(r.t)}</span><small>${h(r.s)}</small></div>`).join("");
+}
+
+/* ---------- routes ---------- */
+const V = {};
+function route() {
+  const hash = location.hash || "#/accueil";
+  const parts = hash.replace(/^#\//, "").split("/");
+  const name = parts[0] || "accueil", param = parts.slice(1).join("/");
+  const root = document.getElementById("root");
+  if (!S.cree) { root.className = ""; root.innerHTML = Onb.render(); Onb.after && Onb.after(); return; }
+  noteJour(); save();
+  const view = V[name] ? V[name] : V.accueil;
+  root.className = "app"; root.innerHTML = Layout(name, view(param));
+  window.scrollTo(0, 0);
+  const after = view.after; if (after) after(param);
+  renderTip();
+}
+window.addEventListener("hashchange", route);
+
+function Layout(name, inner) {
+  const L = S.logement;
+  const nInbox = S.inbox.filter(i => i.statut === "propose").length;
+  const nDocs = S.docs.filter(d => d.statut !== "refuse").length;
+  const nEq = S.equipements.filter(e => !e.deposee).length;
+  const nAfaire = S.rappels.length + S.demandes.filter(d => d.statut === "sans réponse").length;
+  const item = (id, lab, ico, badge, alert, lock) => `<a class="item ${name === id ? "on" : ""} ${lock ? "lock" : ""}" href="#/${id}"><span class="lab">${I[ico] || ""}<span>${lab}</span></span>${lock ? '<span class="lockico">à venir</span>' : badge ? `<span class="badge ${alert ? "alert" : ""}">${badge}</span>` : ""}</a>`;
+  return `
+  <aside class="nav">
+    <div class="logo">${I.logo}<span>vidom</span></div>
+    <button class="home" onclick="location.hash='#/fiche'"><b>${h(L.nom)}</b><span>${h(L.adresse)} · ${h(L.ville)}</span><div class="chips"><span class="chip">${L.surface} m²</span><span class="chip">DPE ${L.dpe.classe}</span><span class="chip">${L.annee}</span></div></button>
+    ${item("accueil", "Accueil", "maison")}
+    <div class="grp">Mémoire</div>
+    ${item("memoire", "Mémoire", "coeur")}${item("chronologie", "Chronologie", "horloge")}${item("fiche", "Fiche du logement", "fiche")}${item("pieces", "Pièces et espaces", "pieces")}${item("boite", "Boîte d'arrivée", "boite", nInbox, true)}
+    <div class="grp">Le logement</div>
+    ${item("equipements", "Équipements", "equip", nEq)}${item("travaux", "Travaux", "travaux")}${item("documents", "Documents", "doc", nDocs)}${item("professionnels", "Professionnels", "pros")}
+    <div class="grp">À faire</div>
+    ${item("afaire", "À faire", "cloche", nAfaire, true)}${item("echanges", "Échanges et accès", "echanges")}${item("messagerie", "Messagerie", "chat")}${item("transmission", "Transmission", "cle")}
+    <div class="grp">Version suivante</div>
+    ${item("consommation", "Consommation", "lock", 0, false, true)}${item("locataire", "Locataire", "lock", 0, false, true)}${item("preremplissage", "Pré-remplissage riche", "lock", 0, false, true)}
+    <div class="grp">Vous</div>
+    ${item("profil", "Profil et réglages", "profil")}
+  </aside>
+  <div class="main">
+    <div class="bar">
+      <button class="search" onclick="openCmd()">${I.loupe}<span>Rechercher dans la mémoire du logement…</span><kbd>Ctrl K</kbd></button>
+      <a class="btn" href="#/afaire">${I.cloche}<span class="t">${S.rappels.length} rappels</span></a>
+      <button class="btn" onclick="A.recevoir()">${I.boite}<span class="t">Recevoir un document</span></button>
+      <button class="btn primary" onclick="A.ajouter()">${I.plus}<span class="t">Ajouter</span></button>
+    </div>
+    <div class="view" id="view">${inner}</div>
+  </div>
+  <nav class="tabbar">
+    <a href="#/accueil" class="${name === "accueil" ? "on" : ""}">${I.maison}Accueil</a>
+    <a href="#/memoire" class="${["memoire", "chronologie", "fiche", "pieces", "boite", "equipements", "documents"].includes(name) ? "on" : ""}">${I.coeur}Mémoire</a>
+    <a href="#" class="plus" onclick="A.ajouter();return false"><span class="c">${I.plus}</span>Ajouter</a>
+    <a href="#/afaire" class="${name === "afaire" ? "on" : ""}">${I.cloche}À faire${nAfaire ? `<span class="badge alert">${nAfaire}</span>` : ""}</a>
+    <a href="#/profil" class="${name === "profil" ? "on" : ""}">${I.profil}Profil</a>
+  </nav>
+  <button class="avis btn sm" onclick="A.avis('${h(name)}')">Donner mon avis</button>`;
+}
+
+/* ---------- manifeste (installable) ---------- */
+(function () {
+  try {
+    const icon = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' + I.logo.replace(/^<svg[^>]*>|<\/svg>$/g, "") + "</svg>");
+    const m = { name: "VIDOM — Maison des Tilleuls", short_name: "VIDOM", start_url: location.href.split("#")[0], display: "standalone", background_color: "#F6F3ED", theme_color: "#4A6255", icons: [{ src: icon, sizes: "any", type: "image/svg+xml" }] };
+    const l = document.createElement("link"); l.rel = "manifest"; l.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: "application/manifest+json" })); document.head.appendChild(l);
+    const a = document.createElement("link"); a.rel = "apple-touch-icon"; a.href = icon; document.head.appendChild(a);
+    const f = document.createElement("link"); f.rel = "icon"; f.href = icon; document.head.appendChild(f);
+  } catch (e) {}
+})();
+
+/* ---------- QR (motif dessiné, pour la démonstration) ---------- */
+function drawQR(canvas, seed) {
+  const n = 25, s = 4; canvas.width = n * s; canvas.height = n * s; const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, n * s, n * s); ctx.fillStyle = "#2F3439";
+  let x = 0; for (let i = 0; i < seed.length; i++) x = (x * 31 + seed.charCodeAt(i)) >>> 0;
+  const rnd = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; };
+  const eye = (cx, cy) => { for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) { const b = i === 0 || j === 0 || i === 6 || j === 6 || (i >= 2 && i <= 4 && j >= 2 && j <= 4); if (b) ctx.fillRect((cx + i) * s, (cy + j) * s, s, s); } };
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const inEye = (i < 8 && j < 8) || (i > 16 && j < 8) || (i < 8 && j > 16); if (!inEye && rnd() < .45) ctx.fillRect(i * s, j * s, s, s); }
+  eye(0, 0); eye(18, 0); eye(0, 18);
+}
+
+/* ---------- photo : compression locale ---------- */
+function lirePhoto(file, cb) {
+  const r = new FileReader();
+  r.onload = () => { const img = new Image(); img.onload = () => { const c = document.createElement("canvas"); const k = Math.min(1, 900 / Math.max(img.width, img.height)); c.width = img.width * k; c.height = img.height * k; c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); cb(c.toDataURL("image/jpeg", .7)); }; img.src = r.result; };
+  r.readAsDataURL(file);
+}
+/* ================= L'ENTRÉE : les quatre premiers écrans ================= */
+const Onb = {
+  steps(n) { return `<div class="steps">${[1, 2, 3, 4].map(i => `<i class="${i <= n ? "on" : ""}"></i>`).join("")}</div>`; },
+  head() { return `<div class="logo">${I.logo}<span>vidom</span></div>`; },
+  render() {
+    const e = S.etape;
+    let body = "";
+    if (e === 1) body = this.e1();
+    else if (e === 2) body = this.e2();
+    else if (e === 3) body = this.e3();
+    else body = this.e4();
+    return `<div class="ob"><div class="box">${this.head()}${this.steps(e)}${body}</div></div>`;
+  },
+  after() {
+    if (S.etape === 2 && !S.onb.cherche) {
+      const phrases = ["le cadastre…", "les risques naturels et technologiques…", "les diagnostics énergétiques établis à l'adresse…", "les ventes passées de la parcelle…", "les autorisations d'urbanisme…"];
+      let i = 0; const el = document.getElementById("cherche");
+      const t = setInterval(() => { i++; if (!el) { clearInterval(t); return; } if (i < phrases.length) el.textContent = "VIDOM cherche " + phrases[i]; else { clearInterval(t); S.onb.cherche = true; save(); route(); } }, 450);
+    }
+    const c = document.getElementById("qr"); if (c) drawQR(c, S.logement.adresseDepot);
+  },
+
+  /* --- écran 1 --- */
+  e1() {
+    const o = S.onb;
+    if (!o.adresseOk) return `
+      <h1>Quelle est l'adresse de votre logement ?</h1>
+      <p class="lead">VIDOM reconnaît votre logement et prépare sa mémoire.</p>
+      <input class="input big" id="adr" placeholder="Commencez à taper… par exemple 14 rue des Tilleuls" value="${h(o.adresse)}" oninput="Onb.tape(this.value)" autocomplete="off">
+      <div id="sugg">${o.adresse.length >= 3 ? `<div class="sug" onclick="Onb.choisit()"><b>14 rue des Tilleuls</b><div class="small muted">44300 Nantes · Loire-Atlantique</div></div>` : ""}</div>
+      <p class="tiny faint" style="margin-top:18px">Démonstration : toute adresse mène à la Maison des Tilleuls. Dans la version test, l'adresse réelle sera reconnue par la Géoplateforme IGN.</p>`;
+    const sel = o.parcelles;
+    return `
+      <h1>C'est bien celle-ci ?</h1>
+      <p class="lead">14 rue des Tilleuls, 44300 Nantes. Touchez une ou plusieurs parcelles pour désigner votre terrain — une maison peut s'étendre sur deux parcelles, l'adresse ne le dit jamais.</p>
+      <div class="map"><svg viewBox="0 0 600 300" aria-label="Vue du ciel et parcelles">
+        <defs><pattern id="g" width="30" height="30" patternUnits="userSpaceOnUse"><rect width="30" height="30" fill="#8fa78f"/><circle cx="8" cy="9" r="6" fill="#7d9a7c"/><circle cx="22" cy="20" r="5" fill="#a3b89f"/></pattern></defs>
+        <rect width="600" height="300" fill="url(#g)"/>
+        <rect x="0" y="230" width="600" height="70" fill="#b9b3a6"/><text x="300" y="272" class="lbl" text-anchor="middle" fill="#fff" font-size="12">rue des Tilleuls</text>
+        <polygon points="40,40 260,30 270,225 45,225" class="parc ${sel.includes("AB 213") ? "sel" : ""}" onclick="Onb.parc('AB 213')"/><text x="70" y="60" class="lbl">AB 213</text>
+        <polygon points="270,30 430,28 435,225 275,225" class="parc ${sel.includes("AB 214") ? "sel" : ""}" onclick="Onb.parc('AB 214')"/><text x="300" y="55" class="lbl">AB 214</text>
+        <polygon points="440,28 570,35 565,225 440,225" class="parc ${sel.includes("AB 215") ? "sel" : ""}" onclick="Onb.parc('AB 215')"/><text x="465" y="60" class="lbl">AB 215</text>
+        <rect x="300" y="110" width="95" height="70" fill="#d8c8b2" stroke="#fff" stroke-width="1.5"/><rect x="470" y="150" width="34" height="26" fill="#cbbfa8" stroke="#fff"/>
+        <circle cx="347" cy="200" r="7" fill="#C9775B" stroke="#fff" stroke-width="2"/>
+      </svg></div>
+      <p class="small muted" style="margin-top:8px">Parcelles retenues : <b>${sel.join(", ") || "aucune"}</b> · ${sel.length === 2 ? "812 m²" : sel.length === 1 ? "≈ 400 m²" : "—"}</p>
+      <div class="row"><button class="btn primary big" onclick="Onb.valide1()" ${sel.length ? "" : "disabled"}>C'est bien celle-ci</button><button class="btn" onclick="Onb.retour1()">Changer d'adresse</button></div>`;
+  },
+  tape(v) { S.onb.adresse = v; const s = document.getElementById("sugg"); s.innerHTML = v.length >= 3 ? `<div class="sug" onclick="Onb.choisit()"><b>14 rue des Tilleuls</b><div class="small muted">44300 Nantes · Loire-Atlantique</div></div>` : ""; },
+  choisit() { S.onb.adresse = "14 rue des Tilleuls, 44300 Nantes"; S.onb.adresseOk = true; save(); route(); },
+  retour1() { S.onb.adresseOk = false; save(); route(); },
+  parc(p) { const a = S.onb.parcelles; const i = a.indexOf(p); if (i >= 0) a.splice(i, 1); else a.push(p); a.sort(); save(); route(); },
+  valide1() { S.logement.parcelles = S.onb.parcelles.slice(); S.etape = 2; S.onb.cherche = false; save(); route(); },
+
+  /* --- écran 2 --- */
+  e2() {
+    const o = S.onb;
+    if (!o.cherche) return `<h1>Un instant.</h1><p class="lead" id="cherche">VIDOM cherche le cadastre…</p><div class="progress"><i style="width:40%"></i></div><p class="tiny faint" style="margin-top:14px">Pendant que vous confirmiez, VIDOM cherche en silence tout ce que l'adresse seule permet.</p>`;
+    const cas = o.cas;
+    const bandeau = `<div class="notice">Vérifiez en une minute ce que VIDOM a trouvé. Vous restez seul maître de la mémoire de votre logement.</div>`;
+    const autres = `<div class="row" style="margin:14px 0 4px"><span class="small muted">Voir les deux autres cas réels :</span><button class="pill ${cas === "tilleuls" ? "on" : ""}" onclick="Onb.cas('tilleuls')">Maison des Tilleuls</button><button class="pill ${cas === "ancienne" ? "on" : ""}" onclick="Onb.cas('ancienne')">Maison ancienne</button><button class="pill ${cas === "immeuble" ? "on" : ""}" onclick="Onb.cas('immeuble')">Immeuble</button></div>`;
+    if (cas === "ancienne") return `<h1>Ce que VIDOM a déjà trouvé</h1>${bandeau}
+      <div class="found"><b>Nous avons trouvé votre parcelle et vos risques.</b><div class="muted" style="margin-top:4px">Pour le reste, votre maison ne figure dans aucune base publique : sa mémoire commencera par vos documents.</div></div>
+      <div class="found"><div class="split"><span>Parcelle ZC 118 — 1 730 m², à désigner sur la carte</span><span class="src">cadastre</span></div></div>
+      <div class="found"><div class="split"><span>Inondation et mouvements de terrain : existants à votre adresse</span><span class="src">Géorisques</span></div></div>
+      ${autres}<div class="row"><button class="btn primary big" onclick="Onb.valide2()">Continuer</button></div>`;
+    if (cas === "immeuble") return `<h1>Ce que VIDOM a déjà trouvé</h1>${bandeau}
+      <div class="found"><b>Cette adresse est une copropriété.</b><div class="muted" style="margin-top:4px">Immatriculation AB1-234-567 · règlement du 4 mars 1966 · 42 lots · syndic non déclaré au registre.</div><div class="src">registre national des copropriétés</div></div>
+      <div class="found"><b>Six diagnostics énergétiques existent à cette adresse. Lequel est le vôtre ?</b>${["2019 · 32 m² · 2ᵉ étage · D", "2021 · 45 m² · 4ᵉ étage · E", "2022 · 38 m² · 1ᵉʳ étage · D", "2023 · 41 m² · 3ᵉ étage · C", "2024 · 36 m² · 5ᵉ étage · D", "2025 · 44 m² · rez-de-chaussée · F"].map(t => `<div class="opt"><span>${t}</span><span class="tag">C'est le mien</span></div>`).join("")}<div class="src">observatoire DPE de l'ADEME</div></div>
+      <div class="found"><b>Quarante ventes sur cette parcelle. Laquelle est la vôtre ?</b><div class="muted small" style="margin-top:4px">Avec vos numéros de lot, VIDOM retrouve exactement votre appartement — et jamais ceux des voisins. Photographiez votre dernier appel de fonds à l'étape suivante.</div></div>
+      ${autres}<div class="row"><button class="btn primary big" onclick="Onb.valide2()">Continuer</button></div>`;
+    return `<h1>Ce que VIDOM a déjà trouvé</h1>${bandeau}
+      <h3 style="margin-top:14px">Intégré sans question</h3>
+      ${DATA.trouves.map(t => `<div class="found"><div class="split"><span>${h(t.t)}</span><span class="src">${h(t.src)}</span></div></div>`).join("")}
+      <h3 style="margin-top:18px">Deux diagnostics énergétiques existent à cette adresse. Lequel est le vôtre ?</h3>
+      ${DATA.choixDPE.map((c, i) => `<div class="opt ${o.dpe === i ? "on" : ""}" onclick="Onb.pick('dpe',${i})"><span>${h(c.t)}</span><span class="tag">${o.dpe === i ? "C'est exact" : "Choisir"}</span></div>`).join("")}<div class="src small faint" style="margin-top:4px">observatoire DPE de l'ADEME · 12 mai 2024</div>
+      <h3 style="margin-top:18px">Trois ventes sur ces parcelles. Laquelle est la vôtre ?</h3>
+      ${DATA.choixVentes.map((c, i) => `<div class="opt ${o.vente === i ? "on" : ""}" onclick="Onb.pick('vente',${i})"><span>${h(c.t)}</span><span class="tag">${o.vente === i ? "C'est exact" : "Choisir"}</span></div>`).join("")}<div class="src small faint" style="margin-top:4px">demandes de valeurs foncières · le prix payé ne s'affiche pas</div>
+      <h3 style="margin-top:18px">Une autorisation de travaux à cette adresse depuis 2005</h3>
+      <div class="opt on"><span>Déclaration préalable · abri de jardin · 3 avril 2017 · accordée</span><span class="tag">Celle-ci me concerne</span></div>
+      ${autres}
+      <div class="row" style="margin-top:8px"><button class="btn primary big" onclick="Onb.valide2()">Continuer</button><button class="btn" onclick="Onb.corriger()">Corriger quelque chose</button></div>`;
+  },
+  cas(c) { S.onb.cas = c; save(); route(); },
+  pick(k, i) { S.onb[k] = i; save(); route(); },
+  corriger() { modal(`<h2>Corriger</h2><p class="muted">Tout ce que VIDOM intègre reste corrigible dans la fiche du logement. Vous pourrez y modifier la surface, l'année, la classe énergétique et les parcelles à tout moment.</p><button class="btn primary" onclick="closeModal()">Compris</button>`); },
+  valide2() { S.onb.cas = "tilleuls"; S.etape = 3; save(); route(); },
+
+  /* --- écran 3 --- */
+  e3() {
+    const o = S.onb, a = o.annexes, L = S.logement;
+    const q = (k, t) => `<div class="opt"><span>${t}</span><span class="row"><button class="pill ${a[k] === true ? "on" : ""}" onclick="Onb.rep('${k}',true)">Oui</button><button class="pill ${a[k] === false ? "on" : ""}" onclick="Onb.rep('${k}',false)">Non</button></span></div>`;
+    return `<h1>Votre logement, précisément</h1><p class="lead">Trois questions, seulement celles que l'adresse ne peut pas trancher.</p>
+      ${q("parking", "Avez-vous un parking, une cave, une annexe ?")}${a.parking === true ? `<div class="notice small">Un abri de jardin est déclaré à cette adresse (2017) : il est rattaché à votre logement.</div>` : ""}
+      ${q("lots", "Avez-vous réuni plusieurs lots ?")}
+      ${q("autorisation", "Avez-vous fait des travaux avec une autorisation (permis, déclaration préalable) ?")}${a.autorisation === true ? `<div class="notice small">Déclaration préalable du 3 avril 2017 retrouvée : abri de jardin, 18 m². Rattachée au logement.</div>` : ""}
+      <div class="card" style="margin-top:16px"><h3>Le plus simple pour finir</h3><p class="sub">Photographiez votre dernier appel de fonds, votre taxe foncière ou votre acte d'achat. VIDOM y lira vos numéros de lot et vos parcelles.</p>
+        ${o.photo ? `<img class="photo" src="${o.photo}" alt="Document photographié"><div class="notice">VIDOM a lu : <b>avis de taxe foncière 2025</b> · identifiant fiscal du local ${h(L.identifiantFiscal)} · parcelles AB 214 et AB 215 · valeur locative confirmée. Rien n'est enregistré sans votre accord : <button class="btn sm primary" onclick="toast('Conservé dans la mémoire du logement')">Conserver</button></div>` : `<label class="btn primary">${I.camera} Photographier un document<input type="file" accept="image/*,application/pdf" capture="environment" class="sr" onchange="Onb.photo(this)"></label> <span class="small muted">ou plus tard, rien ne bloque</span>`}
+      </div>
+      <div class="card"><h3>La carte d'identité du logement</h3>
+        <dl class="kv"><dt>Nom</dt><dd><input class="input" style="max-width:280px" value="${h(L.nom)}" onchange="S.logement.nom=this.value;save()"></dd><dt>Adresse</dt><dd>${h(L.adresse)}, ${h(L.cp)} ${h(L.ville)}</dd><dt>Parcelles</dt><dd>${L.parcelles.join(", ")}</dd><dt>Année</dt><dd>${L.annee}</dd><dt>Surface</dt><dd>${L.surface} m²</dd><dt>Classe énergétique</dt><dd>${L.dpe.classe} · DPE du ${fdate(L.dpe.date)} (${L.dpe.methode})</dd></dl>
+      </div>
+      <div class="card"><h3>La boîte aux lettres de la maison</h3><p class="sub">Tout ce qui est envoyé à cette adresse arrive dans la boîte d'arrivée de votre logement. Rien n'y entre sans votre accord.</p>
+        <div class="row" style="align-items:flex-start"><canvas id="qr" class="qr" aria-label="Code QR de l'adresse de dépôt"></canvas><div><b class="num" style="word-break:break-all">${h(L.adresseDepot)}</b><div class="actions"><button class="btn sm" onclick="A.partager()">Partager</button><button class="btn sm" onclick="A.copier()">Copier</button><button class="btn sm" onclick="A.regenerer()">Régénérer</button></div></div></div>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="btn primary big" onclick="Onb.valide3()">Continuer</button></div>`;
+  },
+  rep(k, v) { S.onb.annexes[k] = v; save(); route(); },
+  photo(inp) { const f = inp.files && inp.files[0]; if (!f) return; if (f.type === "application/pdf") { S.onb.photo = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><rect width="600" height="200" fill="#EFE6D8"/><text x="300" y="110" text-anchor="middle" font-family="sans-serif" font-size="22" fill="#50575E">Document PDF reçu</text></svg>'); save(); route(); return; } lirePhoto(f, d => { S.onb.photo = d; save(); route(); }); },
+  valide3() { S.etape = 4; save(); route(); },
+
+  /* --- écran 4 --- */
+  e4() {
+    const manques = [
+      { id: "m1", t: "Le diagnostic de performance énergétique complet", qui: "Diagnostic Loire (diagnostiqueur)", mail: "contact@diagnostic-loire.fr", delai: 14 },
+      { id: "m2", t: "La facture de la pompe à chaleur avec l'attestation d'aide", qui: "Thermic Ouest (installateur)", mail: "sav@thermic-ouest.fr", delai: 7 },
+      { id: "m3", t: "L'attestation d'assurance de l'année", qui: "Maif (assureur)", mail: "", espace: true, delai: 7 },
+      { id: "m4", t: "Les plans et les annexes de l'acte", qui: "Me Bertrand (notaire)", mail: "etude.bertrand@notaires.fr", delai: 30 }
+    ];
+    const faites = S.onb.demandes || [];
+    return `<h1>Ce qui manque, et à qui le demander</h1><p class="lead">Une liste courte, déduite de ce qui a été trouvé. VIDOM prépare le message ; vous le relisez et l'envoyez vous-même, depuis votre messagerie.</p>
+      ${manques.map(m => `<div class="opt"><div><b>${h(m.t)}</b><div class="small muted">${h(m.qui)}${m.espace ? " — ce professionnel répond dans son propre espace en ligne : pensez à y récupérer les documents et à les déposer ici" : ""}</div></div>${faites.includes(m.id) ? `<span class="state valide">Demandé</span>` : `<button class="btn sm primary" onclick="Onb.demander('${m.id}','${h(m.t)}','${h(m.qui)}','${m.mail}',${m.delai})">Demander</button>`}</div>`).join("")}
+      <p class="small muted" style="margin-top:10px">Chaque demande envoyée apparaît ensuite dans « À faire », avec sa date et le délai attendu.</p>
+      <div class="row" style="margin-top:14px"><button class="btn primary big" onclick="Onb.fin()">Entrer dans ma maison</button></div>`;
+  },
+  demander(id, t, qui, mail, delai) {
+    const L = S.logement;
+    const corps = `Bonjour,\n\nJe tiens la mémoire de mon logement, ${L.adresse} à ${L.ville}. Pourriez-vous m'adresser ${t.charAt(0).toLowerCase() + t.slice(1)} ?\n\nMerci de mettre en copie l'adresse du logement, ${L.adresseDepot}, sur l'ensemble des échanges de ce dossier : chaque document y sera conservé.\n\nAvec mes remerciements,\n${L.gardien}`;
+    modal(`<h2>Votre message à ${h(qui)}</h2><p class="muted small">Relisez-le, puis envoyez-le depuis votre propre messagerie — celle que ce professionnel connaît déjà.</p>
+      <label class="f"><span>À</span><input class="input" value="${h(mail || "(ce professionnel n'a pas d'adresse de courriel : à déposer dans son espace en ligne)")}"></label>
+      <label class="f"><span>Message</span><textarea class="input" style="min-height:190px">${h(corps)}</textarea></label>
+      <div class="row"><button class="btn primary" onclick="Onb.envoye('${id}','${h(qui)}','${h(t)}',${delai})">Envoyer depuis ma messagerie</button><button class="btn" onclick="closeModal()">Plus tard</button></div>`);
+  },
+  envoye(id, qui, t, delai) {
+    S.onb.demandes = S.onb.demandes || []; S.onb.demandes.push(id);
+    S.demandes.push({ id: uid("q"), tiers: qui, objet: t, d: today(), delai: addDays(today(), delai), statut: "sans réponse" });
+    S.metrics.demandes++; S.journal.push({ d: today(), t: "Demande préparée pour " + qui + " — envoyée depuis votre messagerie" });
+    closeModal(); toast("Message ouvert dans votre messagerie. La réponse arrivera dans la boîte d'arrivée."); save(); route();
+  },
+  fin() { S.cree = true; save(); location.hash = "#/accueil"; route(); }
+};
+/* ================= ACTIONS COMMUNES ================= */
+const A = {
+  tipVu(id) { if (!S.tips.vus.includes(id)) S.tips.vus.push(id); save(); renderTip(); },
+  copier() { const t = S.logement.adresseDepot; if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast("Adresse copiée")).catch(() => toast(t)); else toast(t); },
+  partager() {
+    const L = S.logement;
+    const txt = `Bonjour, pourriez-vous désormais mettre ${L.adresseDepot} en copie lors de l'envoi des documents concernant ce logement ? Merci.`;
+    modal(`<h2>Partager l'adresse de la maison</h2><p class="muted">Donnez-la à un artisan, un notaire, un assureur. Ce qu'ils enverront arrivera dans la boîte d'arrivée, et rien n'entrera sans votre accord.</p>
+      <div class="row" style="align-items:flex-start;margin:8px 0 12px"><canvas id="qr2" class="qr"></canvas><div><b class="num" style="word-break:break-all">${h(L.adresseDepot)}</b><div class="small muted" style="margin-top:6px">Le code QR mène à la même adresse.</div></div></div>
+      <label class="f"><span>Demander la mise en copie — message tout fait</span><textarea class="input">${h(txt)}</textarea></label>
+      <div class="row"><button class="btn primary" onclick="A.copier();closeModal()">Copier l'adresse</button><button class="btn" onclick="toast('Message ouvert dans votre messagerie');closeModal()">Envoyer la demande</button><a class="btn" href="#/etiquette" onclick="closeModal()">Imprimer la carte de la maison</a></div>`);
+    setTimeout(() => { const c = document.getElementById("qr2"); if (c) drawQR(c, L.adresseDepot); }, 20);
+    S.journal.push({ d: today(), t: "Adresse de dépôt partagée" }); save();
+  },
+  regenerer() {
+    modal(`<h2>Changer l'adresse de dépôt ?</h2><p class="muted">L'ancienne adresse cessera de fonctionner. Les professionnels qui l'ont devront recevoir la nouvelle. Votre réglage de transfert, lui, ne change pas : il utilise une adresse séparée qui ne circule jamais.</p><div class="row"><button class="btn terra" onclick="A.regenOk()">Changer d'adresse</button><button class="btn" onclick="closeModal()">Garder l'actuelle</button></div>`);
+  },
+  regenOk() { const al = "abcdefghjkmnpqrstuvwxyz23456789"; let s = ""; for (let i = 0; i < 3; i++) s += al[Math.floor(Math.random() * al.length)]; S.logement.adresseDepot = "maison-des-tilleuls-" + s + "@depot.vidom.fr"; S.journal.push({ d: today(), t: "Adresse de dépôt régénérée ; l'ancienne ne sera jamais réattribuée" }); closeModal(); toast("Nouvelle adresse : " + S.logement.adresseDepot); save(); route(); },
+  recevoir() {
+    modal(`<h2>Recevoir un document</h2><p class="muted">Trois façons, un seul endroit d'arrivée : la boîte d'arrivée de votre logement.</p>
+      <div class="opt" onclick="closeModal();A.partager()"><div><b>Par courriel</b><div class="small muted">Un professionnel écrit à ${h(S.logement.adresseDepot)}</div></div><span class="tag">Partager</span></div>
+      <div class="opt" onclick="closeModal();location.hash='#/etiquette'"><div><b>Par le code QR</b><div class="small muted">La carte de la maison, à coller sur le tableau électrique</div></div><span class="tag">Imprimer</span></div>
+      <div class="opt" onclick="closeModal();A.ajouter()"><div><b>Vous-même</b><div class="small muted">Prendre une photo ou importer un fichier</div></div><span class="tag">Ajouter</span></div>`);
+  },
+  ajouter() {
+    modal(`<h2>Ajouter à la mémoire de la maison</h2>
+      <label class="opt" style="cursor:pointer"><div><b>Prendre une photo</b><div class="small muted">Un appareil, une étiquette, une facture : VIDOM reconnaît et range.</div></div><span class="tag">${I.camera}</span><input type="file" accept="image/*" capture="environment" class="sr" onchange="A.photoPrise(this,null)"></label>
+      <label class="opt" style="cursor:pointer"><div><b>Importer un document</b><div class="small muted">Un fichier déjà sur cet appareil.</div></div><span class="tag">Fichier</span><input type="file" accept="image/*,application/pdf" class="sr" onchange="A.photoPrise(this,null)"></label>
+      <div class="opt" onclick="closeModal();location.hash='#/professionnels'"><div><b>Demander à un professionnel</b><div class="small muted">Un document manquant, une intervention, un devis.</div></div><span class="tag">Professionnels</span></div>
+      <div class="opt" onclick="closeModal();location.hash='#/memoire'"><div><b>Ajouter un souvenir</b><div class="small muted">Un moment de la vie de la maison — une plantation, une fin de chantier.</div></div><span class="tag">Souvenir</span></div>`);
+  },
+  photoPrise(inp, pieceId) {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    closeModal(); toast("Photo prise. VIDOM regarde…");
+    const go = (data) => { const r = DATA.recos[(S.simul + S.docs.length) % DATA.recos.length]; S.simul++; setTimeout(() => A.propose(r, data, pieceId), 900); };
+    if (f.type === "application/pdf") go(null); else lirePhoto(f, go);
+  },
+  propose(r, img, pieceId) {
+    const pc = pieceId || r.piece;
+    const body = r.kind === "equipement"
+      ? `<p class="muted">VIDOM a reconnu un équipement. Vérifiez, puis conservez — ou corrigez.</p>
+         ${img ? `<img class="photo" src="${img}" alt="">` : ""}
+         <dl class="kv" style="margin-top:10px"><dt>Équipement</dt><dd>${h(r.titre)}</dd><dt>Marque</dt><dd>${h(r.marque)}</dd><dt>Modèle</dt><dd>${h(r.modele)}</dd><dt>Référence</dt><dd class="num">${h(r.ref)}</dd><dt>Pièce</dt><dd>${h(piece(pc).nom)}</dd></dl>
+         <div class="notice"><b>À partir de la référence, VIDOM a retrouvé :</b><br>${h(r.notice)}<br>Service après-vente : ${h(r.sav)}<div class="tiny faint">Source : site du fabricant · proposé, jamais imposé</div></div>`
+      : `<p class="muted">VIDOM a reconnu un document. Vérifiez, puis conservez — ou corrigez.</p>
+         ${img ? `<img class="photo" src="${img}" alt="">` : ""}
+         <dl class="kv" style="margin-top:10px"><dt>Type</dt><dd>${TYPES[r.type]}</dd><dt>Titre</dt><dd>${h(r.titre)}</dd><dt>Fournisseur</dt><dd>${h(r.four)}</dd><dt>Date</dt><dd>${fdate(r.date)}</dd><dt>Montant</dt><dd>${eur(r.montant)}</dd><dt>Référence lue</dt><dd class="num">${h(r.ref)}</dd><dt>Pièce</dt><dd>${h(piece(pc).nom)}</dd></dl>
+         <div class="notice"><b>À partir de la référence lue sur ce document, VIDOM a retrouvé :</b><br>${h(r.notice)}<br>Service après-vente : ${h(r.sav)}<div class="tiny faint">Source : site du fabricant · proposé, jamais imposé</div></div>`;
+    modal(`<h2>${r.kind === "equipement" ? "Un équipement reconnu" : "Un document reconnu"}</h2>${body}
+      <div class="row" style="margin-top:12px"><button class="btn primary" onclick='A.conserve(${JSON.stringify(r).replace(/'/g, "&#39;")},"${pc}",${img ? "true" : "false"})'>Conserver</button><button class="btn" onclick="A.corrige()">Corriger</button><button class="btn ghost" onclick="closeModal()">Ne pas garder</button></div>`, { noX: false });
+    S._img = img;
+  },
+  corrige() { modal(`<h2>Corriger</h2><p class="muted">Dans la version test, chaque champ reconnu se modifie ici avant d'être conservé. Dans cette démonstration, la correction est simulée.</p><button class="btn primary" onclick="closeModal();toast('Correction enregistrée')">Compris</button>`); },
+  conserve(r, pc, hasImg) {
+    const img = hasImg ? S._img : null;
+    if (r.kind === "equipement") {
+      const id = uid("e");
+      S.equipements.push({ id, nom: r.titre, marque: r.marque, modele: r.modele, ref: r.ref, serie: "", piece: pc, cat: r.cat, install: today(), par: "", garantie: addDays(today(), 730), entretien: "", prochain: "", etat: "bon", notes: "Reconnu sur photo.", notice: true, sav: r.sav, cout: null, photo: img });
+      S.docs.push({ id: uid("d"), type: "photo", titre: "Photo — " + r.titre, date: today(), four: S.logement.gardien, montant: null, cible: id, source: "photo", statut: "valide", img });
+      S.docs.push({ id: uid("d"), type: "notice", titre: r.notice.replace(/ retrouvée.*$/, " (retrouvée)"), date: today(), four: r.marque, montant: null, cible: id, source: "web", statut: "valide" });
+      S.events.push({ d: today(), t: r.titre + " ajouté à la mémoire (" + piece(pc).nom + ")", k: "install", eq: id });
+      S.metrics.docs += 2;
+    } else {
+      const id = uid("d");
+      S.docs.push({ id, type: r.type, titre: r.titre, date: r.date, four: r.four, montant: r.montant, cible: pc, source: "photo", statut: "valide", img });
+      S.docs.push({ id: uid("d"), type: "notice", titre: r.notice.replace(/ retrouvée.*$/, " (retrouvée)"), date: today(), four: r.four, montant: null, cible: pc, source: "web", statut: "valide" });
+      S.events.push({ d: today(), t: TYPES[r.type] + " ajoutée : " + r.titre, k: "info" });
+      S.metrics.docs += 2;
+    }
+    const ps = S.pieces[pc] = S.pieces[pc] || { objets: [], photos: 0 }; ps.photos = (ps.photos || 0) + 1; if (!ps.objets.includes(r.titre)) ps.objets.push(r.titre);
+    S._img = null; closeModal(); toast("Conservé. Notice et service après-vente rattachés."); save(); route();
+  },
+  avis(ecran) {
+    const m = S.metrics;
+    const corps = `Bonjour,\n\nMon avis sur l'écran « ${ecran} » :\n\n\n\nMes mesures : ${m.docs} documents déposés, ${m.jours.length} jours d'activité, ${m.demandes} demandes envoyées.`;
+    modal(`<h2>Donner mon avis</h2><p class="muted small">Le message part vers contact@vidom.fr depuis votre messagerie. Vos trois mesures y sont jointes si vous le souhaitez.</p><textarea class="input" id="avistxt" style="min-height:160px">${h(corps)}</textarea><div class="row" style="margin-top:8px"><a class="btn primary" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Avis sur VIDOM — " + ecran)}&body=${encodeURIComponent(corps)}" onclick="closeModal()">Envoyer depuis ma messagerie</a><button class="btn" onclick="closeModal()">Fermer</button></div>`);
+  }
+};
+
+/* ================= VUES 1 ================= */
+V.accueil = () => {
+  const L = S.logement, inbox = S.inbox.filter(i => i.statut === "propose"), rap = S.rappels.slice(0, 3);
+  const dern = S.events.slice().sort((a, b) => b.d.localeCompare(a.d)).slice(0, 4);
+  const vieux = S.equipements.filter(e => e.etat === "a_remplacer" || e.etat === "moyen");
+  const nDocs = S.docs.filter(d => d.statut !== "refuse").length;
+  return `<div class="page">
+    <div class="page-h"><div><h1>${h(L.nom)}</h1><p>${h(L.adresse)}, ${h(L.cp)} ${h(L.ville)} · maison de ${L.annee} · ${L.surface} m² · gardienne : ${h(L.gardien)}</p></div><a class="btn" href="#/memoire">${I.coeur} La maison raconte</a></div>
+    <div class="grid3" style="margin-bottom:16px">
+      <div class="stat"><b>${nDocs}</b><span>documents conservés</span></div>
+      <div class="stat"><b>${S.equipements.filter(e => !e.deposee).length}</b><span>équipements connus</span></div>
+      <div class="stat"><b>${S.pros.length}</b><span>professionnels du logement</span></div>
+    </div>
+    <div class="grid2">
+      <div>
+        ${inbox.length ? `<div class="card"><div class="split"><h3>Boîte d'arrivée</h3><a class="btn sm" href="#/boite">Tout voir</a></div><p class="sub">${inbox.length} document${inbox.length > 1 ? "s" : ""} à confirmer. Rien n'entre sans vous.</p>${inbox.slice(0, 2).map(i => `<div class="doc" onclick="location.hash='#/boite'" style="cursor:pointer"><div class="thumb">${TYPES[i.reco.type]}</div><div><span class="state propose">Proposé</span><b>${h(i.titre)}</b><span class="l">${fdate(i.date)} · ${h(i.exp)}</span></div></div>`).join("")}</div>` : `<div class="card"><h3>Boîte d'arrivée</h3><p class="sub">Rien en attente. Ce qui arrive par l'adresse de la maison apparaîtra ici.</p></div>`}
+        <div class="card"><div class="split"><h3>Ce qui vient de se passer</h3><a class="btn sm" href="#/chronologie">Chronologie</a></div><ul class="tl">${dern.map(e => `<li class="${e.wow ? "wow" : ""}">${h(e.t)}<span class="d">${fdate(e.d)}</span></li>`).join("")}</ul></div>
+      </div>
+      <div>
+        <div class="card"><div class="split"><h3>À faire</h3><a class="btn sm" href="#/afaire">Tout voir</a></div>${rap.map(r => `<div class="opt" onclick="location.hash='#/afaire'"><div><b>${h(r.t)}</b><div class="small muted">${fmois(r.d)}</div></div></div>`).join("")}</div>
+        <div class="card"><h3>Équipements à surveiller</h3><p class="sub">${vieux.length ? "" : "Tout est en bon état."}</p>${vieux.map(e => `<div class="opt" onclick="location.hash='#/equipements/${e.id}'"><span>${h(e.nom)}</span><span class="state ${e.etat === "a_remplacer" ? "attention" : ""}">${ETATS[e.etat]}</span></div>`).join("")}</div>
+        <div class="card"><h3>La boîte aux lettres de la maison</h3><p class="sub num" style="word-break:break-all">${h(L.adresseDepot)}</p><div class="row"><button class="btn sm" onclick="A.partager()">Partager</button><button class="btn sm" onclick="A.copier()">Copier</button></div></div>
+      </div>
+    </div></div>`;
+};
+
+V.memoire = () => {
+  const L = S.logement;
+  const wow = S.events.filter(e => e.wow || e.k === "achat" || e.k === "construction");
+  const ans = new Date().getFullYear() - L.annee;
+  return `<div class="page">
+    <div class="page-h"><div><h1>La maison raconte</h1><p>${ans} ans d'histoire, réunis au même endroit.</p></div><button class="btn" onclick="A.souvenir()">${I.arbre} Ajouter un souvenir</button></div>
+    <div class="grid2">
+      <div class="card"><h3>Le livre du logement</h3><p class="sub">Gratuit, toujours. Il s'écrit tout seul à partir de ce que vous conservez.</p>
+        <p>La Maison des Tilleuls a été construite en ${L.annee}, sur deux parcelles au bout de la rue. Elle a connu au moins deux familles. Marie et Julien Lefort l'ont achetée le ${fdate(L.acquisition)} et y ont planté un tilleul dès le printemps suivant.</p>
+        <p>Ses grands chantiers : les fenêtres en 2016, l'électricité remise aux normes en 2019, la pompe à chaleur qui a remplacé la chaudière d'origine en 2022, la toiture refaite en 2023 — garantie jusqu'en 2033. Une tempête, en novembre 2023, a laissé une trace dans ses tuiles et un dossier clos dans sa mémoire.</p>
+        <p>Aujourd'hui, ${S.equipements.filter(e => !e.deposee).length} équipements y sont connus, ${S.docs.filter(d => d.statut !== "refuse").length} documents conservés, et ${S.pros.length} professionnels savent y revenir.</p>
+        <div class="actions"><a class="btn" href="#/transmission">Voir le livre feuilletable</a><a class="btn" href="#/chronologie">La chronologie complète</a></div>
+      </div>
+      <div class="card"><h3>Les moments qui comptent</h3><p class="sub">La mémoire d'un logement ne se limite pas à son entretien.</p><ul class="tl">${wow.sort((a, b) => b.d.localeCompare(a.d)).map(e => `<li class="${e.wow ? "wow" : ""}">${h(e.t)}<span class="d">${fdate(e.d)}</span></li>`).join("")}</ul></div>
+    </div></div>`;
+};
+A.souvenir = () => modal(`<h2>Ajouter un souvenir</h2><p class="muted">Un moment de la vie de la maison — une fin de chantier, un arbre planté, un anniversaire.</p><label class="f"><span>Ce qui s'est passé</span><input class="input" id="svt" placeholder="Par exemple : première flambée dans le poêle"></label><label class="f"><span>Quand</span><input class="input" id="svd" type="date" value="${today()}"></label><label class="btn">${I.camera} Ajouter une photo<input type="file" accept="image/*" class="sr" onchange="toast('Photo ajoutée au souvenir')"></label><div class="row" style="margin-top:10px"><button class="btn primary" onclick="A.souvenirOk()">Conserver</button><button class="btn" onclick="closeModal()">Annuler</button></div>`);
+A.souvenirOk = () => { const t = document.getElementById("svt").value.trim(); const d = document.getElementById("svd").value || today(); if (!t) { toast("Dites-nous ce qui s'est passé"); return; } S.events.push({ d, t, k: "wow", wow: true }); S.metrics.docs++; closeModal(); toast("Souvenir conservé"); save(); route(); };
+
+V.chronologie = (param) => {
+  const f = param || "";
+  const evs = S.events.filter(e => !f || e.eq === f).sort((a, b) => b.d.localeCompare(a.d));
+  const byYear = {}; evs.forEach(e => { const y = e.d.slice(0, 4); (byYear[y] = byYear[y] || []).push(e); });
+  const eqs = S.equipements.filter(e => S.events.some(v => v.eq === e.id));
+  return `<div class="page"><div class="page-h"><div><h1>Chronologie</h1><p>Construite automatiquement à partir des documents, des travaux et des équipements.</p></div></div>
+    <div class="row" style="margin-bottom:12px"><a class="pill ${!f ? "on" : ""}" href="#/chronologie">Tout</a>${eqs.map(e => `<a class="pill ${f === e.id ? "on" : ""}" href="#/chronologie/${e.id}">${h(e.nom)}</a>`).join("")}</div>
+    <div class="card"><ul class="tl">${Object.keys(byYear).sort((a, b) => b - a).map(y => `<li class="year" style="list-style:none">${y}</li>` + byYear[y].map(e => `<li class="${e.wow ? "wow" : ""}">${h(e.t)}${e.eq ? ` <a class="tag" href="#/equipements/${e.eq}">${h(eq(e.eq) ? eq(e.eq).nom : "")}</a>` : ""}<span class="d">${fdate(e.d)}</span></li>`).join("")).join("")}</ul></div></div>`;
+};
+
+V.fiche = () => {
+  const L = S.logement;
+  return `<div class="page"><div class="page-h"><div><h1>Fiche du logement</h1><p>La carte d'identité permanente de la maison. Tout ce qui a été trouvé automatiquement reste corrigible ici.</p></div></div>
+    <div class="grid2">
+      <div>
+        <div class="card"><h3>Identité</h3>
+          <dl class="kv"><dt>Nom</dt><dd><input class="input" style="max-width:260px" value="${h(L.nom)}" onchange="S.logement.nom=this.value;save();toast('Nom modifié');route()"></dd><dt>Adresse</dt><dd>${h(L.adresse)}, ${h(L.cp)} ${h(L.ville)}</dd><dt>Type</dt><dd>Maison individuelle avec jardin</dd><dt>Année</dt><dd>${L.annee} <span class="tag">cadastre</span></dd><dt>Surface</dt><dd>${L.surface} m² <span class="tag">DPE 2024</span></dd><dt>Parcelles</dt><dd>${L.parcelles.join(", ")} · 812 m² <span class="tag">cadastre</span></dd><dt>Identifiant fiscal du local</dt><dd class="num">${h(L.identifiantFiscal)} <span class="tag">taxe foncière</span></dd><dt>Altitude</dt><dd>${L.altitude} m <span class="tag">IGN</span></dd><dt>Date d'entrée</dt><dd>${fdate(L.acquisition)} <span class="tag">acte</span></dd><dt>Date de sortie</dt><dd class="faint">se remplira à la transmission</dd></dl>
+          <div class="actions"><button class="btn sm" onclick="A.corrige()">Corriger une information</button></div>
+        </div>
+        <div class="card"><h3>Énergie</h3><dl class="kv"><dt>Classe énergétique</dt><dd><b>${L.dpe.classe}</b> · climat ${L.dpe.climat}</dd><dt>Date du DPE</dt><dd>${fdate(L.dpe.date)}</dd><dt>Méthode</dt><dd>${h(L.dpe.methode)} <span class="tiny faint">— un DPE de 2023 et un de 2026 ne se comparent pas</span></dd><dt>Établi par</dt><dd>Diagnostic Loire</dd></dl></div>
+        <div class="card"><h3>Le terrain</h3><dl class="kv">${L.risques.map(r => `<dt>${h(r.n)}</dt><dd>${h(r.v)} <span class="tag">Géorisques</span></dd>`).join("")}</dl></div>
+      </div>
+      <div>
+        <div class="card"><h3>La boîte aux lettres de la maison</h3><p class="sub">Tout ce qui est envoyé à cette adresse arrive dans la boîte d'arrivée. Rien n'y entre sans votre accord.</p>
+          <div class="row" style="align-items:flex-start"><canvas id="qr" class="qr"></canvas><div><b class="num" style="word-break:break-all">${h(L.adresseDepot)}</b><div class="actions"><button class="btn sm" onclick="A.partager()">Partager</button><button class="btn sm" onclick="A.copier()">Copier</button><button class="btn sm" onclick="A.regenerer()">Régénérer</button></div></div></div>
+          <div class="notice small" style="margin-top:12px">Une seconde adresse, de transfert, existe pour votre propre messagerie. Elle ne circule jamais et n'est pas affichée ici.</div>
+        </div>
+        <div class="card"><h3>Les expéditeurs de la maison</h3><p class="sub">Ce qu'ils envoient est proposé, jamais imposé.</p>${S.expediteurs.confiance.map(e => `<div class="opt"><span class="num">${h(e)}</span><span class="state valide">de confiance</span></div>`).join("")}${S.expediteurs.exclus.map(e => `<div class="opt"><span class="num">${h(e)}</span><span class="state refuse">exclu</span></div>`).join("")}<div class="small faint" style="margin-top:8px">Exclus pour tout le monde, non modifiables : banques, impôts, santé, employeur.</div></div>
+        <div class="card"><h3>Vue du ciel</h3><div class="map" style="height:180px"><svg viewBox="0 0 600 300"><rect width="600" height="300" fill="#8fa78f"/><rect x="0" y="230" width="600" height="70" fill="#b9b3a6"/><polygon points="270,30 430,28 435,225 275,225" class="parc sel"/><polygon points="440,28 570,35 565,225 440,225" class="parc sel"/><rect x="300" y="110" width="95" height="70" fill="#d8c8b2" stroke="#fff"/><text x="300" y="55" class="lbl">AB 214</text><text x="465" y="60" class="lbl">AB 215</text></svg></div><div class="tiny faint" style="margin-top:6px">IGN — orthophotographie (dessin de démonstration)</div></div>
+      </div>
+    </div></div>`;
+};
+V.fiche.after = () => { const c = document.getElementById("qr"); if (c) drawQR(c, S.logement.adresseDepot); };
+
+/* ---------- pièces ---------- */
+V.pieces = (param) => {
+  if (param) return V.piece(param);
+  const done = DATA.pieces.filter(p => S.pieces[p.id] && S.pieces[p.id].fait).length;
+  const rythme = S.rythme;
+  return `<div class="page"><div class="page-h"><div><h1>Pièces et espaces</h1><p>Entrez dans une pièce, et photographiez ce qui s'y trouve. Un jeu de recherche, pas un interrogatoire.</p></div></div>
+    ${rythme ? "" : `<div class="card" style="margin-bottom:14px"><h3>À quel rythme ?</h3><p class="sub">VIDOM ne vous impose jamais un long parcours d'un bloc.</p><div class="row"><button class="btn primary" onclick="S.rythme='maintenant';save();route()">Maintenant, pièce après pièce</button><button class="btn" onclick="S.rythme='fil';save();route()">Au fil du temps</button><button class="btn" onclick="S.rythme='plustard';save();route();toast('Vous retrouverez les pièces ici quand vous voudrez')">Plus tard</button></div></div>`}
+    <div class="split" style="margin-bottom:10px"><span class="muted">${done} pièce${done > 1 ? "s" : ""} sur ${DATA.pieces.length} parcourue${done > 1 ? "s" : ""}</span><span class="progress" style="width:160px"><i style="width:${Math.round(done / DATA.pieces.length * 100)}%"></i></span></div>
+    <div class="plan">${DATA.pieces.map(p => { const st = S.pieces[p.id] || {}; const nEq = S.equipements.filter(e => e.piece === p.id && !e.deposee).length; const nObj = (st.objets || []).length; return `<button class="room ${st.fait ? "done" : ""}" onclick="location.hash='#/pieces/${p.id}'"><b>${h(p.nom)}</b><span class="c">${nEq + nObj} objet${nEq + nObj > 1 ? "s" : ""} trouvé${nEq + nObj > 1 ? "s" : ""}${st.photos ? ` · ${st.photos} photo${st.photos > 1 ? "s" : ""}` : ""}</span></button>`; }).join("")}</div>
+    <p class="tiny faint" style="margin-top:12px">Le plan est simplifié à partir du comptage des pièces. VIDOM ne parle jamais des fondations, des murs ou des matériaux de toiture.</p></div>`;
+};
+V.piece = (id) => {
+  const p = piece(id); if (!p) return V.pieces("");
+  const st = S.pieces[id] = S.pieces[id] || { objets: [], photos: 0 };
+  const eqs = S.equipements.filter(e => e.piece === id && !e.deposee);
+  const docs = S.docs.filter(d => d.cible === id && d.statut !== "refuse");
+  return `<div class="page"><div class="page-h"><div><a class="small" href="#/pieces">← Toutes les pièces</a><h1>${h(p.nom)}</h1><p>${eqs.length + st.objets.length} objet${eqs.length + st.objets.length > 1 ? "s" : ""} trouvé${eqs.length + st.objets.length > 1 ? "s" : ""}</p></div>
+      <label class="btn primary">${I.camera} Photographier<input type="file" accept="image/*" capture="environment" class="sr" onchange="A.photoPrise(this,'${id}')"></label></div>
+    <div class="grid2">
+      <div>
+        <div class="card"><h3>Ce qu'on trouve souvent dans ${p.type === "jardin" ? "un jardin" : p.type === "exterieur" ? "cette partie" : "cette pièce"}</h3><p class="sub">Cochez ce que vous avez. Ce n'est pas une liste à finir.</p>
+          ${p.sugg.map(s => { const on = st.objets.includes(s) || eqs.some(e => e.nom.toLowerCase().includes(s.toLowerCase().split(" ")[0])); return `<label class="check"><input type="checkbox" ${on ? "checked" : ""} onchange="A.coche('${id}','${h(s)}',this.checked)"><span>${h(s)}</span></label>`; }).join("")}
+          <div class="row" style="margin-top:10px"><input class="input" id="libre" placeholder="Autre chose : une cave à vin, un deuxième congélateur…" style="max-width:320px"><button class="btn" onclick="A.libre('${id}')">Ajouter</button></div>
+          <div class="actions"><button class="btn ${st.fait ? "" : "primary"}" onclick="S.pieces['${id}'].fait=${st.fait ? "false" : "true"};save();route();toast('${st.fait ? "Pièce rouverte" : "Pièce parcourue"}')">${st.fait ? "Rouvrir la pièce" : "J'ai fait le tour"}</button></div>
+        </div>
+      </div>
+      <div>
+        <div class="card"><h3>Équipements connus ici</h3>${eqs.length ? eqs.map(e => `<div class="opt" onclick="location.hash='#/equipements/${e.id}'"><div><b>${h(e.nom)}</b><div class="small muted">${h(e.marque)} ${h(e.modele)}</div></div><span class="state ${e.etat === "bon" ? "valide" : "attention"}">${ETATS[e.etat]}</span></div>`).join("") : `<div class="empty"><b>Aucun équipement encore</b>Photographiez un appareil ou son étiquette : VIDOM le reconnaît et va chercher sa notice.</div>`}
+          ${st.objets.filter(o => !eqs.some(e => e.nom === o)).map(o => `<div class="opt"><span>${h(o)}</span><span class="tag">déclaré</span></div>`).join("")}
+        </div>
+        <div class="card"><h3>Documents de cette pièce</h3>${docs.length ? docs.map(d => `<div class="doc" onclick="location.hash='#/documents/${d.id}'" style="cursor:pointer"><div class="thumb">${d.img ? `<img src="${d.img}" alt="">` : TYPES[d.type]}</div><div><b>${h(d.titre)}</b><span class="l">${fdate(d.date)} · ${h(d.four)}</span></div></div>`).join("") : `<div class="empty"><b>Rien encore</b>Une facture, une notice, une photo — tout se rattache à la pièce.</div>`}</div>
+      </div>
+    </div></div>`;
+};
+A.coche = (id, s, on) => { const st = S.pieces[id]; if (on && !st.objets.includes(s)) st.objets.push(s); if (!on) st.objets = st.objets.filter(x => x !== s); save(); };
+A.libre = (id) => { const i = document.getElementById("libre"); const v = i.value.trim(); if (!v) return; S.pieces[id].objets.push(v); save(); route(); toast("« " + v + " » ajouté"); };
+
+/* ---------- boîte d'arrivée ---------- */
+V.boite = () => {
+  const items = S.inbox.slice().sort((a, b) => b.date.localeCompare(a.date));
+  const prop = items.filter(i => i.statut === "propose");
+  const st = { recu: "Reçu", propose: "Proposé", valide: "Validé", refuse: "Refusé" };
+  return `<div class="page"><div class="page-h"><div><h1>Boîte d'arrivée</h1><p>Ce qui arrive par courriel, code QR ou lien. Rien ne passe de « proposé » à « validé » sans un geste de votre main.</p></div><div class="row">${prop.length > 1 ? `<button class="btn" onclick="A.toutGarder()">Tout garder, un par un</button>` : ""}<button class="btn" onclick="A.partager()">Partager l'adresse</button></div></div>
+    ${items.length ? items.map(i => `<div class="card" style="margin-top:0;margin-bottom:10px"><div class="doc" style="border:0;padding:0;margin:0"><div class="thumb">${TYPES[i.reco.type]}</div><div>
+        <div class="row"><span class="state ${i.statut}">${st[i.statut]}</span>${i.doublon ? `<span class="state attention">Doublon possible</span>` : ""}${i.verifie === false ? `<span class="state attention">Expéditeur non vérifié</span>` : ""}</div>
+        <b>${h(i.titre)}</b><span class="l">De ${h(i.exp)} · ${fdate(i.date)} · « ${h(i.objet)} »</span>
+        ${i.statut === "propose" ? `<div class="notice small" style="margin:8px 0">VIDOM propose : <b>${TYPES[i.reco.type]}</b> · ${h(i.reco.four)} · ${fdate(i.reco.date)}${i.reco.montant ? " · " + eur(i.reco.montant) : ""} → <b>${h(nomCible(i.reco.cible))}</b>${i.doublon ? `<br>Ce document ressemble à un document déjà reçu le ${fdate(S.inbox.find(x => x.id === i.doublon).date)}.` : ""}${i.verifie === false ? "<br>Nous n'avons pas pu vérifier l'expéditeur : regardez le document avec prudence." : ""}</div>
+        <div class="actions"><button class="btn primary sm" onclick="A.garder('${i.id}')">Conserver</button><button class="btn sm" onclick="A.jeter('${i.id}')">Refuser</button><button class="btn sm ghost" onclick="A.exclure('${i.id}')">Ne plus rien recevoir de cet expéditeur</button></div>` : i.statut === "valide" ? `<div class="small muted">Conservé le ${fdate(i.le || today())} → ${h(nomCible(i.reco.cible))}</div>` : `<div class="small muted">Refusé — le fichier a été supprimé immédiatement.</div>`}
+      </div></div></div>`).join("") : `<div class="empty"><b>Rien en attente</b>Donnez l'adresse de la maison à un artisan : ce qu'il enverra arrivera ici.</div>`}
+    <p class="tiny faint">Un document proposé et non traité depuis trente jours est supprimé de lui-même. Le corps des courriels n'est jamais conservé — seulement la pièce jointe, l'expéditeur, la date et l'objet.</p></div>`;
+};
+A.garder = (id) => {
+  const i = S.inbox.find(x => x.id === id); if (!i) return;
+  i.statut = "valide"; i.le = today();
+  S.docs.push({ id: uid("d"), type: i.reco.type, titre: i.titre, date: i.reco.date, four: i.reco.four, montant: i.reco.montant, cible: i.reco.cible, source: "courriel", statut: "valide" });
+  S.events.push({ d: today(), t: TYPES[i.reco.type] + " conservée : " + i.titre, k: "info" });
+  S.metrics.docs++; S.journal.push({ d: today(), t: "Document conservé depuis " + i.exp });
+  const dom = "@" + i.exp.split("@")[1];
+  if (i.pro && !S.expediteurs.confiance.includes(dom)) {
+    modal(`<h2>Conservé</h2><p class="muted">Toujours accepter les documents de <b>${h(dom)}</b> ? Ils arriveront toujours ici, proposés — jamais imposés.</p><div class="row"><button class="btn primary" onclick="S.expediteurs.confiance.push('${dom}');save();closeModal();route();toast('Expéditeur de confiance ajouté')">Oui, toujours</button><button class="btn" onclick="closeModal();route()">Pas pour l'instant</button></div>`);
+  } else { toast("Conservé dans la mémoire de la maison"); route(); }
+  if (i.pro && !S.artisanCarte) { S.artisanCarte = i.pro; }
+  save();
+};
+A.jeter = (id) => { const i = S.inbox.find(x => x.id === id); if (!i) return; i.statut = "refuse"; S.journal.push({ d: today(), t: "Document refusé et supprimé (" + i.exp + ")" }); toast("Refusé. Le fichier a été supprimé."); save(); route(); };
+A.exclure = (id) => { const i = S.inbox.find(x => x.id === id); if (!i) return; i.statut = "refuse"; const dom = "@" + i.exp.split("@")[1]; if (!S.expediteurs.exclus.includes(dom)) S.expediteurs.exclus.push(dom); toast("Refusé, et " + dom + " ne passera plus"); save(); route(); };
+A.toutGarder = () => { const p = S.inbox.filter(i => i.statut === "propose"); modal(`<h2>Tout garder ?</h2><p class="muted">VIDOM ne conserve jamais un lot d'un bloc : chaque document vous sera présenté, l'un après l'autre. ${p.length} documents à voir.</p><div class="row"><button class="btn primary" onclick="closeModal();A.garder('${p[0].id}')">Commencer par le premier</button><button class="btn" onclick="closeModal()">Annuler</button></div>`); };
+/* ================= VUES 2 ================= */
+V.equipements = (param) => {
+  if (param) return V.equipement(param);
+  const list = S.equipements.filter(e => !e.deposee), old = S.equipements.filter(e => e.deposee);
+  const cats = [...new Set(list.map(e => e.cat))];
+  return `<div class="page"><div class="page-h"><div><h1>Équipements</h1><p>${list.length} équipements connus, chacun avec sa fiche, ses documents et ses actions.</p></div><label class="btn primary">${I.camera} Photographier un appareil<input type="file" accept="image/*" capture="environment" class="sr" onchange="A.photoPrise(this,null)"></label></div>
+    <div class="card tbl"><table><thead><tr><th>Équipement</th><th>Pièce</th><th>Installé</th><th>Garantie</th><th>État</th></tr></thead><tbody>
+    ${cats.map(c => list.filter(e => e.cat === c).map(e => `<tr class="link" onclick="location.hash='#/equipements/${e.id}'"><td><b>${h(e.nom)}</b><div class="small muted">${h(e.marque)} ${h(e.modele)}</div></td><td>${h(piece(e.piece).nom)}</td><td class="num">${fmois(e.install)}</td><td class="num">${e.garantie ? (e.garantie >= today() ? "jusqu'en " + fmois(e.garantie) : `<span class="faint">échue</span>`) : "—"}</td><td><span class="state ${e.etat === "bon" ? "valide" : "attention"}">${ETATS[e.etat]}</span></td></tr>`).join("")).join("")}
+    </tbody></table></div>
+    ${old.length ? `<div class="card"><h3>Dans l'histoire</h3><p class="sub">Un équipement remplacé n'est jamais effacé.</p>${old.map(e => `<div class="opt" onclick="location.hash='#/equipements/${e.id}'"><span>${h(e.nom)} · ${h(e.marque)} ${h(e.modele)}</span><span class="state">déposé le ${fdate(e.deposee)}</span></div>`).join("")}</div>` : ""}</div>`;
+};
+V.equipement = (id) => {
+  const e = eq(id); if (!e) return V.equipements("");
+  const docs = S.docs.filter(d => d.cible === id && d.statut !== "refuse").sort((a, b) => b.date.localeCompare(a.date));
+  const evs = S.events.filter(v => v.eq === id).sort((a, b) => b.date - a.date);
+  const inst = e.par ? pro(e.par) : null;
+  const gar = e.garantie ? (e.garantie >= today() ? `${e.garantieType ? e.garantieType + ", " : "constructeur, "}jusqu'au ${fdate(e.garantie)}` : `échue le ${fdate(e.garantie)}`) : "non connue";
+  const factures = docs.filter(d => d.montant);
+  return `<div class="page"><div class="page-h"><div><a class="small" href="#/equipements">← Équipements</a><h1>${h(e.nom)}</h1><p>${h(e.marque)} ${h(e.modele)} · ${h(piece(e.piece).nom)} · installé ${fmois(e.install)}${inst ? " par " + h(inst.nom) : ""}${e.deposee ? " · <b>déposé le " + fdate(e.deposee) + "</b>" : ""}</p></div><span class="state ${e.etat === "bon" ? "valide" : "attention"}">${ETATS[e.etat]}</span></div>
+    <div class="grid2">
+      <div>
+        <div class="card">${e.photo ? `<img class="photo" src="${e.photo}" alt="" style="margin-bottom:10px">` : ""}
+          <dl class="kv"><dt>Référence</dt><dd class="num">${h(e.ref) || "—"}</dd><dt>Numéro de série</dt><dd class="num">${h(e.serie) || "—"}</dd><dt>Garantie</dt><dd>${gar}</dd><dt>Dernier entretien</dt><dd>${e.entretien ? fdate(e.entretien) : "aucun enregistré"}</dd><dt>Prochain conseillé</dt><dd>${e.prochain ? fmois(e.prochain) : "—"}</dd><dt>Coût</dt><dd>${eur(e.cout)}</dd>${e.notes ? `<dt>Notes</dt><dd>${h(e.notes)}</dd>` : ""}</dl>
+          ${e.notice || e.sav ? `<div class="notice"><b>Retrouvé à partir de la référence${factures.length ? " lue sur la facture" : ""} :</b><br>${e.notice ? "la notice du fabricant · " : ""}${e.sav ? "service après-vente : " + h(e.sav) : ""}<div class="tiny faint">Source : site du fabricant · vous pouvez corriger</div></div>` : ""}
+          <div class="actions">${e.notice ? `<button class="btn" onclick="A.notice('${id}')">Voir la notice</button>` : ""}${e.sav ? `<button class="btn" onclick="A.sav('${id}')">Contacter le SAV</button>` : ""}${inst ? `<a class="btn" href="#/professionnels/${inst.id}">Recontacter ${h(inst.nom)}</a>` : `<a class="btn" href="#/professionnels/trouver/${id}">Trouver un professionnel</a>`}${!e.deposee ? `<button class="btn warn" onclick="A.probleme('${id}')">J'ai un problème</button>` : ""}<button class="btn ghost sm" onclick="A.corrige()">Corriger</button></div>
+        </div>
+        <div class="card tbl"><h3>Entretiens et interventions</h3>${evs.length ? `<table><thead><tr><th>Date</th><th>Événement</th></tr></thead><tbody>${evs.sort((a, b) => b.d.localeCompare(a.d)).map(v => `<tr><td class="num">${fdate(v.d)}</td><td>${h(v.t)}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">Rien encore.</p>`}</div>
+      </div>
+      <div>
+        <div class="card"><h3>Documents reliés</h3>${docs.length ? docs.map(d => `<div class="doc" onclick="location.hash='#/documents/${d.id}'" style="cursor:pointer"><div class="thumb">${d.img ? `<img src="${d.img}" alt="">` : TYPES[d.type]}</div><div><b>${h(d.titre)}</b><span class="l">${fdate(d.date)} · ${h(d.four)}${d.montant ? " · " + eur(d.montant) : ""}</span></div></div>`).join("") : `<div class="empty"><b>Aucun document</b>Photographiez la facture ou l'étiquette : VIDOM la rattache ici.</div>`}
+          <label class="btn" style="margin-top:10px">${I.camera} Ajouter un document<input type="file" accept="image/*,application/pdf" capture="environment" class="sr" onchange="A.photoPrise(this,'${e.piece}')"></label></div>
+      </div>
+    </div></div>`;
+};
+A.notice = (id) => { const e = eq(id); modal(`<h2>Notice — ${h(e.marque)} ${h(e.modele)}</h2><p class="muted small">Retrouvée à partir de la référence ${h(e.ref)}. Dans la version test, la notice s'ouvre ici en PDF ; dans cette démonstration, elle est représentée.</p><div class="book" style="min-height:220px"><h2>${h(e.marque)}</h2><p class="muted">${h(e.modele)} · Notice d'utilisation et d'entretien</p><p>1. Consignes de sécurité<br>2. Mise en service<br>3. Entretien courant<br>4. En cas de panne<br>5. Garantie</p><div class="pn">page 1 sur 48</div></div><div class="row" style="margin-top:10px"><button class="btn primary" onclick="closeModal();toast('Notice conservée dans les documents')">Conserver dans la mémoire</button><button class="btn" onclick="closeModal()">Fermer</button></div>`); };
+A.sav = (id) => { const e = eq(id); modal(`<h2>Service après-vente</h2><p>${h(e.sav)}</p><p class="muted small">Ayez sous la main : la référence <b class="num">${h(e.ref)}</b>, le numéro de série <b class="num">${h(e.serie) || "non renseigné"}</b>, et la facture du ${e.install ? fdate(e.install) : "—"}.</p><div class="row"><button class="btn primary" onclick="closeModal();toast('Appel préparé')">Appeler</button><button class="btn" onclick="closeModal()">Fermer</button></div>`); };
+A.probleme = (id) => {
+  const e = eq(id); const inst = e.par ? pro(e.par) : null; const enGar = e.garantie && e.garantie >= today();
+  modal(`<h2>Un problème avec ${h(e.nom.toLowerCase())} ?</h2><p class="muted">Voici ce que la maison sait, dans l'ordre utile.</p>
+    ${enGar ? `<div class="notice"><b>Encore sous garantie</b> jusqu'au ${fdate(e.garantie)}. Contactez d'abord ${inst ? h(inst.nom) + ", qui l'a installé" : "le service après-vente"}.</div>` : `<div class="notice terra">La garantie est échue${e.garantie ? " depuis le " + fdate(e.garantie) : ""}.</div>`}
+    <div class="opt" onclick="closeModal();${inst ? `location.hash='#/professionnels/${inst.id}'` : `A.sav('${id}')`}"><div><b>${inst ? "Recontacter " + h(inst.nom) : "Contacter le SAV"}</b><div class="small muted">${inst ? "Connaît déjà l'installation — passe avant un inconnu" : h(e.sav)}</div></div><span class="tag">1</span></div>
+    <div class="opt" onclick="closeModal();location.hash='#/professionnels/trouver/${id}'"><div><b>Trouver un professionnel près de chez vous</b><div class="small muted">VIDOM propose d'abord ceux que la maison connaît</div></div><span class="tag">2</span></div>
+    <div class="opt" onclick="closeModal();A.sinistre('${id}')"><div><b>Déclarer un sinistre à l'assureur</b><div class="small muted">Déclaration pré-remplie avec ce que la maison sait</div></div><span class="tag">3</span></div>
+    ${e.notice ? `<div class="opt" onclick="closeModal();A.notice('${id}')"><div><b>Voir la notice</b><div class="small muted">Chapitre « En cas de panne »</div></div><span class="tag">4</span></div>` : ""}`);
+};
+A.sinistre = (id) => {
+  const e = id ? eq(id) : null; const L = S.logement;
+  const corps = `Bonjour,\n\nJe déclare un sinistre survenu le ${fdate(today())} au ${L.adresse}, ${L.cp} ${L.ville}.\n${e ? `Équipement concerné : ${e.nom} ${e.marque} ${e.modele}, installé le ${fdate(e.install)}${e.entretien ? ", dernier entretien le " + fdate(e.entretien) : ""}${e.garantie && e.garantie >= today() ? ", sous garantie jusqu'au " + fdate(e.garantie) : ""}.\n` : ""}Contrat d'assurance habitation Maif, attestation 2026 jointe.\n\nMerci de mettre en copie ${L.adresseDepot} sur l'ensemble de la correspondance de ce dossier : accusé de réception, expertise, autorisation de travaux, confirmation de paiement.\n\n${L.gardien}`;
+  modal(`<h2>Déclaration de sinistre</h2><p class="muted small">Pré-remplie avec ce que la maison sait. Vous la relisez et l'envoyez vous-même à votre assureur. VIDOM ne décidera jamais que le dossier est clos à votre place.</p><textarea class="input" style="min-height:220px">${h(corps)}</textarea><div class="row" style="margin-top:8px"><button class="btn primary" onclick="A.sinistreOk('${id || ""}')">Envoyer depuis ma messagerie</button><button class="btn" onclick="closeModal()">Annuler</button></div>`);
+};
+A.sinistreOk = (id) => { const e = id ? eq(id) : null; S.events.push({ d: today(), t: "Sinistre déclaré" + (e ? " — " + e.nom : ""), k: "sinistre" }); S.demandes.push({ id: uid("q"), tiers: "Maif (assureur)", objet: "Dossier sinistre" + (e ? " — " + e.nom : ""), d: today(), delai: addDays(today(), 10), statut: "sans réponse", sinistre: true }); S.metrics.demandes++; S.journal.push({ d: today(), t: "Déclaration de sinistre préparée et envoyée depuis votre messagerie" }); closeModal(); toast("Déclaration ouverte dans votre messagerie. Le dossier apparaît dans À faire."); save(); route(); };
+
+/* ---------- travaux ---------- */
+V.travaux = () => {
+  const tr = S.events.filter(e => ["travaux", "reparation", "install", "entretien"].includes(e.k)).sort((a, b) => b.d.localeCompare(a.d));
+  const total = S.docs.filter(d => d.type === "facture" && d.montant && d.date >= "2020-01-01").reduce((s, d) => s + d.montant, 0);
+  const devis = S.docs.filter(d => d.type === "devis" && d.statut !== "refuse");
+  return `<div class="page"><div class="page-h"><div><h1>Travaux</h1><p>Devis, chantiers, factures, garanties obtenues — et le coût réel de la maison dans le temps.</p></div><button class="btn primary" onclick="A.chantier()">Ouvrir un chantier</button></div>
+    <div class="grid3" style="margin-bottom:14px"><div class="stat"><b class="num">${eur(total)}</b><span>de factures depuis 2020</span></div><div class="stat"><b>${tr.filter(e => e.k === "travaux").length}</b><span>chantiers dans l'histoire</span></div><div class="stat"><b>${devis.length}</b><span>devis conservés</span></div></div>
+    <div class="grid2"><div class="card tbl"><h3>Ce qui a été fait</h3><table><thead><tr><th>Date</th><th>Travaux</th><th>Par</th></tr></thead><tbody>${tr.map(e => { const q = e.eq ? eq(e.eq) : null; const p = q && q.par ? pro(q.par) : null; return `<tr class="link" onclick="${q ? `location.hash='#/equipements/${q.id}'` : ""}"><td class="num">${fdate(e.d)}</td><td>${h(e.t)}</td><td>${p ? h(p.nom) : "—"}</td></tr>`; }).join("")}</tbody></table></div>
+    <div><div class="card"><h3>Devis en cours</h3>${S.inbox.filter(i => i.statut === "propose" && i.reco.type === "devis").map(i => `<div class="opt" onclick="location.hash='#/boite'"><div><b>${h(i.titre)}</b><div class="small muted">${eur(i.reco.montant)} · à confirmer dans la boîte d'arrivée</div></div><span class="state propose">Proposé</span></div>`).join("") || `<p class="muted">Aucun devis en attente.</p>`}</div>
+    <div class="card"><h3>Les finances de la maison</h3><p class="sub">Sans remplacer un logiciel comptable.</p><dl class="kv"><dt>Achat</dt><dd class="num">${eur(285000)}</dd><dt>Travaux depuis l'achat</dt><dd class="num">${eur(S.docs.filter(d => d.type === "facture" && d.montant && d.date >= "2015-07-03" && d.montant > 500).reduce((s, d) => s + d.montant, 0))}</dd><dt>Aides reçues</dt><dd class="num">${eur(4000)}</dd><dt>Indemnisation sinistre</dt><dd class="num">${eur(2850)}</dd></dl></div></div></div></div>`;
+};
+A.chantier = () => modal(`<h2>Ouvrir un chantier</h2><label class="f"><span>Quels travaux ?</span><input class="input" id="cht" placeholder="Par exemple : remplacement de la VMC"></label><label class="f"><span>Avec qui ?</span><select class="input" id="chp"><option value="">Je ne sais pas encore — trouver un professionnel</option>${S.pros.map(p => `<option value="${p.id}">${h(p.nom)} — ${h(p.metier)}</option>`).join("")}</select></label><div class="row"><button class="btn primary" onclick="A.chantierOk()">Ouvrir</button><button class="btn" onclick="closeModal()">Annuler</button></div>`);
+A.chantierOk = () => { const t = document.getElementById("cht").value.trim(); const p = document.getElementById("chp").value; if (!t) { toast("Dites quels travaux"); return; } S.events.push({ d: today(), t: "Chantier ouvert : " + t + (p ? " — " + pro(p).nom : ""), k: "travaux" }); if (p) { S.journal.push({ d: today(), t: "Adresse de dépôt transmise à " + pro(p).nom + " avec le premier contact" }); } closeModal(); save(); toast(p ? "Chantier ouvert. L'adresse de la maison est partie avec votre message." : "Chantier ouvert."); if (!p) location.hash = "#/professionnels/trouver"; else route(); };
+
+/* ---------- documents ---------- */
+V.documents = (param) => {
+  if (param) return V.document(param);
+  const f = S._fdoc || "";
+  const docs = S.docs.filter(d => d.statut !== "refuse" && (!f || d.type === f)).sort((a, b) => b.date.localeCompare(a.date));
+  const types = [...new Set(S.docs.map(d => d.type))];
+  return `<div class="page"><div class="page-h"><div><h1>Documents</h1><p>${S.docs.filter(d => d.statut !== "refuse").length} documents, chacun relié à ce qu'il prouve.</p></div><div class="row"><button class="btn" onclick="A.export()">Emporter ma mémoire</button><label class="btn primary">${I.camera} Ajouter<input type="file" accept="image/*,application/pdf" capture="environment" class="sr" onchange="A.photoPrise(this,null)"></label></div></div>
+    <div class="row" style="margin-bottom:12px"><button class="pill ${!f ? "on" : ""}" onclick="S._fdoc='';route()">Tous</button>${types.map(t => `<button class="pill ${f === t ? "on" : ""}" onclick="S._fdoc='${t}';route()">${TYPES[t]}</button>`).join("")}</div>
+    <div class="card tbl"><table><thead><tr><th>Document</th><th>Type</th><th>Date</th><th>Rattaché à</th><th>Montant</th><th>Source</th></tr></thead><tbody>${docs.map(d => `<tr class="link" onclick="location.hash='#/documents/${d.id}'"><td><b>${h(d.titre)}</b><div class="small muted">${h(d.four)}</div></td><td>${TYPES[d.type]}</td><td class="num">${fdate(d.date)}</td><td>${h(nomCible(d.cible))}</td><td class="num">${d.montant ? eur(d.montant) : ""}</td><td class="small muted">${{ main: "déposé", courriel: "courriel", web: "retrouvé", photo: "photo", tiers: "tiers" }[d.source] || d.source}</td></tr>`).join("")}</tbody></table></div></div>`;
+};
+V.document = (id) => {
+  const d = S.docs.find(x => x.id === id); if (!d) return V.documents("");
+  return `<div class="page"><div class="page-h"><div><a class="small" href="#/documents">← Documents</a><h1>${h(d.titre)}</h1><p>${TYPES[d.type]} · ${fdate(d.date)} · ${h(d.four)}</p></div><span class="state valide">Conservé</span></div>
+    <div class="grid2"><div class="card">${d.img ? `<img class="photo" src="${d.img}" alt="" style="max-height:420px">` : `<div class="book" style="min-height:300px"><h2>${TYPES[d.type]}</h2><p class="muted">${h(d.four)} · ${fdate(d.date)}</p><p>${h(d.titre)}</p>${d.montant ? `<p><b>Montant : ${eur(d.montant)}</b></p>` : ""}<div class="pn">document de démonstration</div></div>`}</div>
+    <div><div class="card"><h3>Ce que VIDOM a lu</h3><dl class="kv"><dt>Type</dt><dd>${TYPES[d.type]}</dd><dt>Date</dt><dd>${fdate(d.date)}</dd><dt>Fournisseur</dt><dd>${h(d.four)}</dd><dt>Montant</dt><dd>${eur(d.montant)}</dd><dt>Rattaché à</dt><dd>${d.cible !== "logement" && eq(d.cible) ? `<a href="#/equipements/${d.cible}">${h(nomCible(d.cible))}</a>` : h(nomCible(d.cible))}</dd><dt>Source</dt><dd>${{ main: "déposé par vous", courriel: "reçu par courriel à l'adresse de la maison", web: "retrouvé par VIDOM à partir de la référence", photo: "photographié", tiers: "déposé par un professionnel" }[d.source] || d.source}</dd></dl><div class="actions"><button class="btn sm" onclick="A.corrige()">Corriger</button><button class="btn sm" onclick="toast('Le document d\\'origine n\\'est jamais modifié ; il est archivé, pas supprimé')">Archiver</button></div></div></div></div></div>`;
+};
+A.export = () => {
+  const obj = { logement: S.logement, equipements: S.equipements, documents: S.docs.map(d => Object.assign({}, d, { img: d.img ? "(photo)" : undefined })), evenements: S.events, professionnels: S.pros, rappels: S.rappels, exporteLe: today() };
+  const txt = JSON.stringify(obj, null, 2);
+  modal(`<h2>Emporter ma mémoire</h2><p class="muted">Tout ce que la maison sait, dans un format lisible par n'importe quel outil. C'est à vous, toujours, gratuitement.</p><div class="grid3" style="margin:10px 0"><div class="stat"><b>${S.docs.length}</b><span>documents</span></div><div class="stat"><b>${S.equipements.length}</b><span>équipements</span></div><div class="stat"><b>${S.events.length}</b><span>événements</span></div></div><textarea class="input" style="min-height:140px;font-size:.8em" readonly>${h(txt.slice(0, 1200))}…</textarea><div class="row" style="margin-top:8px"><button class="btn primary" onclick="navigator.clipboard&&navigator.clipboard.writeText(${JSON.stringify(txt).replace(/</g, "\\u003c")});toast('Copié dans le presse-papiers');closeModal()">Copier l'export complet</button><button class="btn" onclick="closeModal()">Fermer</button></div>`);
+  S.journal.push({ d: today(), t: "Export intégral de la mémoire" }); save();
+};
+
+/* ---------- professionnels ---------- */
+V.professionnels = (param) => {
+  if (param && param.startsWith("trouver")) return V.trouver(param.split("/")[1]);
+  if (param) return V.pro(param);
+  return `<div class="page"><div class="page-h"><div><h1>Professionnels du logement</h1><p>Ceux qui sont réellement intervenus ici. Leur présence ne s'achète pas et ne disparaît jamais.</p></div><a class="btn primary" href="#/professionnels/trouver">Trouver un professionnel</a></div>
+    <div class="cards">${S.pros.map(p => `<div class="card" style="margin:0"><div class="split"><h3>${h(p.nom)}</h3><span class="state ${p.statut === "actif" ? "actif" : ""}">${p.statut === "actif" ? "Actif" : "Historique"}</span></div><p class="sub">${h(p.metier)} · ${h(p.ville)}</p><div class="small">${h(p.motif.charAt(0).toUpperCase() + p.motif.slice(1))}<br><span class="muted">Dernière intervention : ${fdate(p.derniere)}</span></div><div class="actions"><a class="btn sm primary" href="#/professionnels/${p.id}">Recontacter</a></div></div>`).join("")}</div>
+    ${S.artisanCarte ? "" : `<div class="notice small" style="margin-top:14px">Quand un professionnel dépose un document, VIDOM lui demande s'il souhaite que sa carte reste mémorisée pour ce logement — jamais à froid. Essayez avec le panneau Simuler, dans le profil.</div>`}</div>`;
+};
+V.pro = (id) => {
+  const p = pro(id); if (!p) return V.professionnels("");
+  const eqs = S.equipements.filter(e => e.par === id); const docs = S.docs.filter(d => d.pro === id && d.statut !== "refuse");
+  return `<div class="page"><div class="page-h"><div><a class="small" href="#/professionnels">← Professionnels</a><h1>${h(p.nom)}</h1><p>${h(p.metier)} · ${h(p.ville)} · ${p.km} km</p></div><span class="state ${p.statut === "actif" ? "actif" : ""}">${p.statut === "actif" ? "Profil actif" : "Historique"}</span></div>
+    <div class="grid2"><div><div class="card"><dl class="kv"><dt>Motif</dt><dd>${h(p.motif)}</dd><dt>Dernière intervention</dt><dd>${fdate(p.derniere)}</dd><dt>Téléphone</dt><dd class="num">${h(p.tel) || "—"}</dd><dt>Courriel</dt><dd>${h(p.mail) || "—"}</dd><dt>SIRET</dt><dd class="num">${h(p.siret) || "non renseigné"}</dd></dl>
+      <div class="actions"><button class="btn primary" onclick="A.contact('${id}','tel')">Appeler</button>${p.mail ? `<button class="btn" onclick="A.contact('${id}','mail')">Écrire</button>` : ""}<button class="btn" onclick="A.demandeDoc('${id}')">Demander un document</button></div>
+      <p class="tiny faint" style="margin-top:10px">Au premier contact, l'adresse de dépôt de la maison part avec votre message : ce que ${h(p.nom)} enverra arrivera dans la boîte d'arrivée.</p></div>
+      <div class="card"><h3>Ce qu'il a fait ici</h3>${eqs.map(e => `<div class="opt" onclick="location.hash='#/equipements/${e.id}'"><span>${h(e.nom)}</span><span class="tag">${fmois(e.install)}</span></div>`).join("") || `<p class="muted">Une intervention ponctuelle.</p>`}</div></div>
+    <div class="card"><h3>Documents</h3>${docs.map(d => `<div class="doc" onclick="location.hash='#/documents/${d.id}'" style="cursor:pointer"><div class="thumb">${TYPES[d.type]}</div><div><b>${h(d.titre)}</b><span class="l">${fdate(d.date)}${d.montant ? " · " + eur(d.montant) : ""}</span></div></div>`).join("") || `<p class="muted">Aucun document.</p>`}</div></div></div>`;
+};
+A.contact = (id, mode) => { const p = pro(id); S.journal.push({ d: today(), t: "Contact avec " + p.nom + " — adresse de dépôt transmise" }); save(); modal(`<h2>${mode === "tel" ? "Appeler" : "Écrire à"} ${h(p.nom)}</h2><p>${mode === "tel" ? `<b class="num">${h(p.tel)}</b>` : `<b>${h(p.mail)}</b>`}</p><p class="muted small">L'adresse de dépôt de la maison, <span class="num">${h(S.logement.adresseDepot)}</span>, est ${mode === "tel" ? "à dicter : elle a été faite pour ça, sans caractère ambigu" : "déjà en copie de votre message"}.</p><div class="row"><button class="btn primary" onclick="closeModal();toast('${mode === "tel" ? "Appel" : "Message"} préparé')">${mode === "tel" ? "Appeler" : "Ouvrir ma messagerie"}</button><button class="btn" onclick="closeModal()">Fermer</button></div>`); };
+A.demandeDoc = (id) => { const p = pro(id); const L = S.logement; modal(`<h2>Demander un document à ${h(p.nom)}</h2><label class="f"><span>Quel document ?</span><input class="input" id="dq" placeholder="Par exemple : l'attestation de garantie de la toiture"></label><label class="f"><span>Message</span><textarea class="input" id="dm" style="min-height:150px">Bonjour,\n\nPourriez-vous m'adresser [le document] concernant ${L.adresse} à ${L.ville} ?\n\nMerci de mettre ${L.adresseDepot} en copie de l'ensemble des échanges de ce dossier.\n\n${L.gardien}</textarea></label><div class="row"><button class="btn primary" onclick="A.demandeOk('${id}')">Envoyer depuis ma messagerie</button><button class="btn" onclick="closeModal()">Annuler</button></div>`); };
+A.demandeOk = (id) => { const p = pro(id); const q = document.getElementById("dq").value.trim() || "un document"; S.demandes.push({ id: uid("q"), tiers: p.nom, objet: q, d: today(), delai: addDays(today(), 14), statut: "sans réponse" }); S.metrics.demandes++; S.journal.push({ d: today(), t: "Demande à " + p.nom + " : " + q }); closeModal(); toast("Demande ouverte dans votre messagerie. Suivie dans À faire."); save(); route(); };
+V.trouver = (eqId) => {
+  const e = eqId ? eq(eqId) : null;
+  const connus = S.pros.slice().sort((a, b) => (a.statut === "actif" ? 0 : 1) - (b.statut === "actif" ? 0 : 1));
+  const autres = [{ nom: "Chauffage Loire Atlantique", metier: "Chauffage", km: 5, actif: true }, { nom: "Ets Morvan", metier: "Plomberie, chauffage", km: 8, actif: true }, { nom: "Dépann'Énergie 44", metier: "Électroménager, dépannage", km: 3, actif: true }, { nom: "Atelier Ligérien", metier: "Menuiserie", km: 11, actif: false }];
+  return `<div class="page"><div class="page-h"><div><a class="small" href="#/professionnels">← Professionnels</a><h1>Trouver un professionnel</h1><p>${e ? "Pour " + h(e.nom.toLowerCase()) + ". " : ""}D'abord ceux que la maison connaît, puis ceux qui sont proches.</p></div></div>
+    <div class="card"><h3>La maison les connaît déjà</h3><p class="sub">Un professionnel qui est déjà venu passe avant un inconnu.</p>${connus.map(p => `<div class="opt" onclick="location.hash='#/professionnels/${p.id}'"><div><b>${h(p.nom)}</b><div class="small muted">${h(p.metier)} · ${h(p.motif)} · ${p.km} km</div></div><span class="state ${p.statut === "actif" ? "actif" : ""}">${p.statut === "actif" ? "Actif" : "Historique"}</span></div>`).join("")}</div>
+    <div class="card"><h3>Près de chez vous</h3><p class="sub">Profils actifs, dans un rayon de 15 km. Aucun classement acheté, aucune commission.</p>${autres.map(p => `<div class="opt" onclick="A.contactNouveau('${h(p.nom)}')"><div><b>${h(p.nom)}</b><div class="small muted">${h(p.metier)} · ${p.km} km</div></div><span class="state ${p.actif ? "actif" : ""}">${p.actif ? "Actif" : "Historique"}</span></div>`).join("")}</div></div>`;
+};
+A.contactNouveau = (nom) => modal(`<h2>${h(nom)}</h2><p class="muted">En le contactant, l'adresse de dépôt de la maison part avec votre message. Ce qu'il enverra en fin d'intervention arrivera dans la boîte d'arrivée — proposé, jamais imposé.</p><div class="row"><button class="btn primary" onclick="S.journal.push({d:today(),t:'Contact avec ${h(nom)} — adresse de dépôt transmise'});save();closeModal();toast('Message préparé, adresse de la maison en copie')">Écrire</button><button class="btn" onclick="closeModal()">Fermer</button></div>`);
+
+/* ---------- à faire ---------- */
+V.afaire = () => {
+  const r = S.rappels.slice().sort((a, b) => a.d.localeCompare(b.d)); const q = S.demandes.filter(d => d.statut === "sans réponse");
+  return `<div class="page"><div class="page-h"><div><h1>À faire</h1><p>Une information importante à la fois. Un seul courriel par mois, en tableau de bord — jamais un par équipement.</p></div></div>
+    <div class="grid2"><div>
+      <div class="card"><h3>Prochaines échéances</h3>${r.length ? r.map(x => `<div class="opt" style="align-items:flex-start"><div><b>${h(x.t)}</b><div class="small muted">${fmois(x.d)}${x.eq && eq(x.eq) ? ` · <a href="#/equipements/${x.eq}">${h(eq(x.eq).nom)}</a>` : ""}</div><div class="small">${h(x.txt)}</div></div><div class="row" style="flex-direction:column;align-items:flex-end">${x.k === "entretien" || x.k === "garantie" ? `<button class="btn sm primary" onclick="A.dejaFait('${x.id}')">Déjà fait ?</button>` : `<button class="btn sm" onclick="A.relancer('${x.id}')">Relancer</button>`}<button class="btn sm ghost" onclick="A.clore('${x.id}')">Clore</button></div></div>`).join("") : `<div class="empty"><b>Rien à faire</b>La maison est à jour.</div>`}</div>
+    </div><div>
+      <div class="card"><h3>Demandes envoyées</h3><p class="sub">VIDOM ne voit pas partir vos courriels ; seule la réponse est visible, dans la boîte d'arrivée.</p>${q.length ? q.map(d => `<div class="opt" style="align-items:flex-start"><div><b>${h(d.objet)}</b><div class="small muted">À ${h(d.tiers)} · envoyée le ${fdate(d.d)} · réponse attendue avant le ${fdate(d.delai)}</div></div><div class="row" style="flex-direction:column;align-items:flex-end"><span class="state ${d.delai < today() ? "attention" : ""}">${d.delai < today() ? "en retard" : "sans réponse"}</span><button class="btn sm ghost" onclick="A.cloreDemande('${d.id}')">Clore</button></div></div>`).join("") : `<p class="muted">Aucune demande en attente.</p>`}</div>
+      <div class="card"><h3>Le courriel du mois</h3><p class="sub">Ce que vous recevrez, une fois par mois, et rien d'autre.</p><div class="book" style="min-height:0;padding:18px 20px;font-size:.92em"><b>Maison des Tilleuls — ${MOIS[new Date().getMonth()]} ${new Date().getFullYear()}</b><p style="margin-top:8px">Ce mois-ci, ${S.metrics.docs || 3} documents ont rejoint la mémoire de la maison. Il en manque encore ${q.length} que vous avez demandés.<br>Prochaine échéance : ${r[0] ? h(r[0].t.toLowerCase()) + ", " + fmois(r[0].d) : "aucune"}.</p><p class="tiny faint">Aucun courriel de VIDOM ne parle d'argent, d'essai ou d'abonnement.</p></div></div>
+    </div></div></div>`;
+};
+A.dejaFait = (id) => { const x = S.rappels.find(r => r.id === id); modal(`<h2>${h(x.t)} — déjà fait ?</h2><p class="muted">Indiquez la date et joignez la facture : le prochain rappel se recale tout seul, sans doublon.</p><label class="f"><span>Fait le</span><input class="input" type="date" id="df" value="${today()}"></label><label class="btn">${I.camera} Joindre la facture<input type="file" accept="image/*,application/pdf" class="sr" onchange="toast('Facture jointe')"></label><div class="row" style="margin-top:10px"><button class="btn primary" onclick="A.dejaFaitOk('${id}')">C'est fait</button><button class="btn" onclick="closeModal()">Annuler</button></div>`); };
+A.dejaFaitOk = (id) => { const x = S.rappels.find(r => r.id === id); const d = document.getElementById("df").value || today(); if (x.eq && eq(x.eq)) { eq(x.eq).entretien = d; eq(x.eq).prochain = addDays(d, 365); } S.events.push({ d, t: x.t + " — fait", k: "entretien", eq: x.eq }); x.d = addDays(d, 365).slice(0, 7) + "-01"; x.txt = "Fait le " + fdate(d) + ". Prochain rappel recalé automatiquement."; S.metrics.docs++; closeModal(); toast("Noté. Prochain rappel : " + fmois(x.d)); save(); route(); };
+A.clore = (id) => { S.rappels = S.rappels.filter(r => r.id !== id); toast("Clos — c'est votre geste, jamais celui de VIDOM"); save(); route(); };
+A.relancer = (id) => { toast("Relance préparée dans votre messagerie"); };
+A.cloreDemande = (id) => { const d = S.demandes.find(x => x.id === id); d.statut = "close"; S.rappels = S.rappels.filter(r => !(r.k === "demande" && d.objet && r.t.includes(d.tiers.split(" ")[0]))); toast("Dossier clos"); save(); route(); };
+
+/* ---------- échanges (hub) ---------- */
+V.echanges = (param) => {
+  if (param === "journal") return V.journal();
+  const T = DATA.tiers; const R = 165;
+  const pos = t => { const a = t.angle * Math.PI / 180; return { x: 50 + Math.cos(a) * 44, y: 50 - Math.sin(a) * 41 }; };
+  const acc = S.acces;
+  return `<div class="page"><div class="page-h"><div><h1>Échanges et accès</h1><p>Le logement au centre, les tiers autour. Chacun voit ce qui le concerne, et rien d'autre.</p></div><a class="btn" href="#/echanges/journal">Qui a vu quoi</a></div>
+    <div class="hubgrid"><div class="card"><div class="hub"><div class="ring"></div><div class="center">Le logement<br>au centre</div>${T.map(t => { const p = pos(t); return `<button class="t ${acc[t.id] && acc[t.id].ouvert ? "open" : ""}" style="left:${p.x}%;top:${p.y}%" onclick="A.tiers('${t.id}')">${h(t.nom)}</button>`; }).join("")}</div></div>
+    <div class="cards tiers2">${T.map(t => `<div class="card" style="margin:0;cursor:pointer" onclick="A.tiers('${t.id}')"><div class="split"><h3 style="font-size:1em">${h(t.nom)}</h3>${acc[t.id] && acc[t.id].ouvert ? `<span class="state actif">ouvert</span>` : ""}</div><div class="small muted">${h(t.motif)}</div><div class="small" style="margin-top:6px">${t.voit.length} éléments visibles · ${t.exclus.length} exclus</div></div>`).join("")}</div></div></div>`;
+};
+A.tiers = (id) => {
+  const t = DATA.tiers.find(x => x.id === id); const a = S.acces[id] || {};
+  modal(`<h2>${h(t.nom)}</h2><p class="muted">${h(t.motif)}</p>
+    <div class="grid2" style="grid-template-columns:1fr 1fr;gap:12px"><div><b class="small">Ce qu'il voit</b>${t.voit.map(v => `<div class="opt" style="padding:5px 8px"><span class="small">${h(v)}</span><span class="state valide">visible</span></div>`).join("")}</div><div><b class="small">Ce qu'il ne voit jamais</b>${t.exclus.map(v => `<div class="opt" style="padding:5px 8px"><span class="small">${h(v)}</span><span class="state refuse">exclu</span></div>`).join("")}</div></div>
+    ${a.ouvert ? `<div class="notice">Accès ouvert jusqu'au ${fdate(a.jusqu)}. Il se refermera de lui-même.</div>` : ""}
+    <div class="row" style="margin-top:12px"><button class="btn" onclick="A.voirComme('${id}')">Voir comme ${h(t.nom.toLowerCase())}</button>${a.ouvert ? `<button class="btn terra" onclick="A.fermer('${id}')">Fermer l'accès</button>` : `<select class="input" id="duree" style="max-width:160px"><option value="30">1 mois</option><option value="90">3 mois</option><option value="180">6 mois</option></select><button class="btn primary" onclick="A.ouvrir('${id}')">Ouvrir l'accès</button>`}</div>`);
+};
+A.ouvrir = (id) => { const d = +document.getElementById("duree").value; S.acces[id] = { ouvert: true, jusqu: addDays(today(), d) }; const t = DATA.tiers.find(x => x.id === id); S.journal.push({ d: today(), t: "Accès ouvert à " + t.nom + " jusqu'au " + fdate(S.acces[id].jusqu) }); closeModal(); toast("Accès ouvert. Il se refermera de lui-même."); save(); route(); };
+A.fermer = (id) => { S.acces[id] = { ouvert: false }; S.journal.push({ d: today(), t: "Accès fermé : " + DATA.tiers.find(x => x.id === id).nom }); closeModal(); toast("Accès fermé"); save(); route(); };
+A.voirComme = (id) => { const t = DATA.tiers.find(x => x.id === id); const L = S.logement; modal(`<h2>Vu par ${h(t.nom.toLowerCase())}</h2><p class="muted small">Exactement ce qu'il verrait, et rien d'autre.</p><div class="book" style="min-height:0"><h2>${h(L.nom)}</h2><p class="muted">${h(L.adresse)}, ${h(L.ville)} · partagé par ${h(L.gardien)}</p>${t.voit.map(v => `<p><b>${h(v)}</b><br><span class="muted small">${v.includes("Chronologie") ? "2016 fenêtres · 2019 électricité · 2022 pompe à chaleur · 2023 toiture" : v.includes("quipement") ? "Pompe à chaleur Daikin (2022), toiture Monier (2023), VMC, ballon…" : v.includes("Garantie") ? "Toiture décennale 2033 · PAC 2027" : v.includes("DPE") || v.includes("Diagnostic") ? "Classe C · 12 mai 2024" : v.includes("Photo") ? "6 photos de chantier" : "…"}</span></p>`).join("")}<div class="pn">accès limité dans le temps · révocable</div></div><div class="row" style="margin-top:10px"><button class="btn" onclick="closeModal()">Fermer</button></div>`); };
+V.journal = () => `<div class="page"><div class="page-h"><div><a class="small" href="#/echanges">← Échanges</a><h1>Qui a vu quoi</h1><p>Chaque partage, chaque consultation, chaque envoi. Réservé à vous.</p></div></div><div class="card tbl"><table><thead><tr><th>Date</th><th>Ce qui s'est passé</th></tr></thead><tbody>${S.journal.slice().reverse().map(j => `<tr><td class="num">${fdate(j.d)}</td><td>${h(j.t)}</td></tr>`).join("")}</tbody></table></div></div>`;
+
+/* ---------- messagerie ---------- */
+V.messagerie = () => `<div class="page"><div class="page-h"><div><h1>Messagerie</h1><p>Posez une question à la mémoire de la maison. Le fil est celui du logement.</p></div><a class="btn" href="mailto:contact@vidom.fr">Nous contacter</a></div>
+  <div class="chat" id="chat">${S.chat.length ? S.chat.map(m => `<div class="msg ${m.me ? "me" : ""}">${h(m.t)}${m.doc ? `<div class="att">${I.doc}<span>${h(m.doc.titre)} · ${fdate(m.doc.date)}</span><a class="btn sm" href="#/documents/${m.doc.id}">Ouvrir</a></div>` : ""}</div>`).join("") : `<div class="msg">Bonjour. Demandez-moi où est une facture, quand la toiture a été refaite, ce qui expire bientôt…</div>`}</div>
+  <div class="chat-in"><input class="input" id="q" placeholder="Où est la facture de la chaudière ?" onkeydown="if(event.key==='Enter')A.ask()"><button class="btn primary" onclick="A.ask()">Envoyer</button></div>
+  <div class="row" style="margin-top:8px">${["Quand la toiture a-t-elle été refaite ?", "Qu'est-ce qui expire bientôt ?", "Combien ont coûté les travaux depuis 2020 ?", "Quel artisan est venu pour la fuite ?"].map(q => `<button class="pill" onclick="document.getElementById('q').value='${h(q)}';A.ask()">${h(q)}</button>`).join("")}</div></div>`;
+A.ask = () => {
+  const i = document.getElementById("q"); const q = i.value.trim(); if (!q) return;
+  S.chat.push({ me: true, t: q });
+  const ql = q.toLowerCase(); const hit = DATA.qa.find(x => x.k.every(k => ql.includes(k))) || DATA.qa.find(x => x.k.some(k => ql.includes(k)));
+  let rep;
+  if (hit) { const doc = hit.doc ? S.docs.find(d => d.titre === hit.doc) : null; rep = { me: false, t: hit.r, doc }; }
+  else rep = { me: false, t: "Je ne trouve pas cela dans la mémoire de la maison. Voulez-vous le demander à un professionnel, ou ajouter un document ?" };
+  setTimeout(() => { S.chat.push(rep); save(); route(); setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 50); }, 500);
+  i.value = ""; save(); route();
+};
+
+/* ---------- transmission et dossiers ---------- */
+V.transmission = (param) => {
+  if (param === "tri") return V.tri();
+  const L = S.logement;
+  const dossiers = [{ id: "vente", t: "Dossier de vente", s: "Prêt à transmettre à l'acquéreur", c: ["Chronologie des travaux", "Fiches des 17 équipements", "Garanties transmissibles", "Diagnostics et DPE", "Plans", "Photos des travaux"] }, { id: "sinistre", t: "Dossier sinistre", s: "Pour l'assureur", c: ["Déclaration", "Photos", "Factures des réparations", "Garanties", "Correspondance du dossier"] }, { id: "succession", t: "Livre de succession", s: "Pour les héritiers — aussi sur papier", c: ["Le livre du logement", "Contrats en cours", "Équipements et artisans", "Documents de propriété", "Ce qui reste à faire"] }];
+  return `<div class="page"><div class="page-h"><div><h1>Transmission</h1><p>Les livres de la maison, et le jour où elle change de mains.</p></div></div>
+    <div class="cards">${dossiers.map(d => `<div class="card" style="margin:0"><h3>${h(d.t)}</h3><p class="sub">${h(d.s)}</p><div class="small">${d.c.join(" · ")}</div><div class="split" style="margin-top:10px"><span><b>19 €</b> <span class="small muted">— gratuit pendant la version test</span></span><button class="btn sm primary" onclick="A.dossier('${d.id}')">Préparer</button></div></div>`).join("")}
+      <div class="card" style="margin:0"><h3>Le livre du logement</h3><p class="sub">Gratuit, toujours.</p><div class="small">L'histoire de la maison, telle qu'elle s'écrit.</div><div class="actions"><button class="btn sm" onclick="A.livre()">Feuilleter</button></div></div>
+      <div class="card" style="margin:0"><h3>Le carnet d'entretien</h3><p class="sub">Gratuit, toujours.</p><div class="small">Chaque équipement, chaque entretien, chaque échéance.</div><div class="actions"><button class="btn sm" onclick="A.carnet()">Feuilleter</button></div></div>
+    </div>
+    <div class="card" style="margin-top:16px"><div class="split"><div><h3>Je quitte ce logement</h3><p class="sub">Vente ou succession. Chaque chose est rangée : reste avec le logement, part avec vous, reste privé. Vous pouvez tout déplacer.</p></div><a class="btn terra" href="#/transmission/tri">Commencer</a></div>${S.transmission && S.transmission.fait ? `<div class="notice">Transmission jouée à blanc le ${fdate(S.transmission.fait)} : tout a été remis en place. Rien n'est parti.</div>` : ""}</div>
+    <div class="card"><h3>Un acquéreur peut aussi demander la mémoire</h3><p class="sub">Il indique l'adresse du logement et comment vous joindre. Vous acceptez ou refusez. Sans votre accord, rien ne se passe.</p><button class="btn sm" onclick="A.acquereur()">Simuler une demande d'acquéreur</button></div></div>`;
+};
+A.dossier = (id) => {
+  const items = { vente: ["Chronologie des travaux (2016–2026)", "Fiches des équipements (17)", "Garantie décennale toiture — 2033", "Garantie pompe à chaleur — 2027", "DPE classe C — 12 mai 2024", "Diagnostic électricité", "Plans (1978)", "Photos toiture avant/après", "Facture pompe à chaleur", "Attestation Consuel"], sinistre: ["Déclaration de sinistre", "Photos du sinistre", "Facture de réparation", "Garantie en cours", "Correspondance reçue"], succession: ["Le livre du logement", "Acte d'achat", "Contrat d'assurance habitation", "Contrat d'entretien PAC", "Équipements et leurs artisans", "Ce qui reste à faire cette année"] }[id];
+  const excl = { vente: ["Prix d'achat", "Factures d'électroménager", "Contrats d'assurance", "Correspondance privée"], sinistre: ["Autres équipements", "Prix d'achat", "Autres sinistres"], succession: ["Correspondance", "Photos privées"] }[id];
+  const st = S.dossiers[id] = S.dossiers[id] || { retire: [] };
+  modal(`<h2>${{ vente: "Dossier de vente", sinistre: "Dossier sinistre", succession: "Livre de succession" }[id]}</h2><p class="muted small">Chaque élément est proposé. Vous validez ou retirez, un par un — rien ne part sans vous.</p>
+    ${items.map((it, i) => `<label class="check"><input type="checkbox" ${st.retire.includes(i) ? "" : "checked"} onchange="(S.dossiers['${id}'].retire=${JSON.stringify(st.retire)}.filter(x=>x!==${i}).concat(this.checked?[]:[${i}]));save()"><span>${h(it)}</span></label>`).join("")}
+    <div class="small faint" style="margin-top:8px">Jamais dans ce dossier : ${excl.join(", ")}.</div>
+    <div class="row" style="margin-top:12px"><button class="btn" onclick="A.feuilleter('${id}')">Feuilleter avant d'envoyer</button><button class="btn primary" onclick="A.envoyer('${id}')">Envoyer</button></div>`);
+};
+A.feuilleter = (id) => { const L = S.logement; const pages = [`<h2>${h(L.nom)}</h2><p class="muted">${h(L.adresse)}, ${h(L.ville)}</p><p>Maison de ${L.annee}, ${L.surface} m², deux parcelles, jardin. Classe énergétique C (DPE du ${fdate(L.dpe.date)}).</p><p>Préparé le ${fdate(today())} par ${h(L.gardien)}.</p>`, `<h2>Chronologie des travaux</h2>${S.events.filter(e => e.k === "travaux").map(e => `<p><b>${fdate(e.d)}</b><br>${h(e.t)}</p>`).join("")}`, `<h2>Équipements et garanties</h2>${S.equipements.filter(e => !e.deposee).slice(0, 8).map(e => `<p><b>${h(e.nom)}</b> — ${h(e.marque)} ${h(e.modele)}, ${fmois(e.install)}${e.garantie && e.garantie >= today() ? ", garanti jusqu'en " + fmois(e.garantie) : ""}</p>`).join("")}`, `<h2>Diagnostics</h2><p>DPE classe C · climat B · 12 mai 2024 · méthode 2021 · Diagnostic Loire.</p><p>Électricité : conforme, 12 mai 2024.</p><p>État des risques : argiles moyen, aucun risque d'inondation.</p>`]; let p = 0; const show = () => modal(`<div class="book">${pages[p]}<div class="pn">page ${p + 1} sur ${pages.length}</div></div><div class="row" style="margin-top:10px;justify-content:center"><button class="btn" ${p === 0 ? "disabled" : ""} onclick="A._pg(-1)">← Précédente</button><button class="btn" ${p === pages.length - 1 ? "disabled" : ""} onclick="A._pg(1)">Suivante →</button><button class="btn primary" onclick="A.envoyer('${id}')">Envoyer</button></div>`); A._pg = (d) => { p += d; show(); }; show(); };
+A.envoyer = (id) => { modal(`<h2>Envoyer le dossier</h2><p class="muted">À qui ? L'accès est limité à ce dossier et se referme de lui-même.</p><label class="f"><span>Destinataire</span><input class="input" id="dest" placeholder="courriel du notaire, de l'assureur, de l'acquéreur…"></label><label class="f"><span>Durée</span><select class="input" id="dd"><option value="30">1 mois</option><option value="90">3 mois</option></select></label><div class="row"><button class="btn primary" onclick="A.envoyerOk('${id}')">Envoyer</button><button class="btn" onclick="closeModal()">Pas maintenant</button></div>`); };
+A.envoyerOk = (id) => { const d = document.getElementById("dest").value.trim() || "destinataire"; S.journal.push({ d: today(), t: "Dossier " + id + " envoyé à " + d + " — accès limité dans le temps" }); S.events.push({ d: today(), t: "Dossier " + id + " préparé et envoyé", k: "info" }); closeModal(); toast("Dossier envoyé à " + d + ". Gratuit pendant la version test."); save(); route(); };
+A.livre = () => A.feuilleter("vente");
+A.carnet = () => { const pages = [`<h2>Carnet d'entretien</h2><p class="muted">${h(S.logement.nom)}</p>${S.equipements.filter(e => e.prochain).map(e => `<p><b>${h(e.nom)}</b><br>dernier : ${e.entretien ? fdate(e.entretien) : "—"} · prochain : ${fmois(e.prochain)}</p>`).join("")}`]; modal(`<div class="book">${pages[0]}<div class="pn">page 1 sur 1</div></div><div class="row" style="margin-top:10px"><button class="btn" onclick="closeModal()">Fermer</button></div>`); };
+A.acquereur = () => modal(`<h2>Un acquéreur demande la mémoire de la maison</h2><p><b>Sophie Marchand</b> indique l'adresse « 14 rue des Tilleuls, Nantes » et votre courriel. Elle souhaite consulter le livre du logement avant l'achat.</p><p class="muted small">Sans votre accord, rien ne se passe. Le délai de réponse n'est pas imposé.</p><div class="row"><button class="btn primary" onclick="closeModal();location.hash='#/transmission/tri';toast('Vous choisirez ce qui reste, ce qui part, ce qui reste privé')">Accepter et trier</button><button class="btn" onclick="closeModal();toast('Refusé. Rien n\\'a été transmis.')">Refuser</button></div>`);
+V.tri = () => {
+  const T = S.transmission && !S.transmission.fait ? S.transmission : (S.transmission = { reste: ["Pompe à chaleur", "Toiture", "VMC", "Ballon thermodynamique", "Portail", "Tableau électrique", "Fenêtres", "Volets", "Adoucisseur", "Lave-vaisselle intégré", "Plans", "Diagnostics", "Garanties", "Chronologie"], part: ["Réfrigérateur", "Lave-linge", "Sèche-linge", "Store banne (si démonté)", "Four", "Détecteurs de fumée"], prive: ["Acte d'achat (prix)", "Correspondance", "Photos de famille", "Contrat d'assurance", "Souvenirs"] });
+  const col = (k, t, s) => `<div class="col"><h4>${t}</h4><div class="tiny faint" style="margin-bottom:6px">${s}</div>${T[k].map((it, i) => `<div class="it"><span>${h(it)}</span><span>${["reste", "part", "prive"].filter(x => x !== k).map(x => `<button title="Déplacer vers ${x}" onclick="A.deplacer('${k}',${i},'${x}')">${{ reste: "🏠", part: "🧳", prive: "🔒" }[x]}</button>`).join("")}</span></div>`).join("")}</div>`;
+  return `<div class="page"><div class="page-h"><div><a class="small" href="#/transmission">← Transmission</a><h1>Je quitte ce logement</h1><p>Les catégories sont pré-remplies. Vous pouvez tout déplacer, objet par objet. La cuisine intégrée reste — mais c'est vous qui le dites.</p></div></div>
+    <div class="sortcol">${col("reste", "Reste avec le logement", "🏠 la mémoire continue avec les prochains gardiens")}${col("part", "Part avec moi", "🧳 vos biens, vos factures à votre nom")}${col("prive", "Reste privé", "🔒 jamais transmis")}</div>
+    <div class="card" style="margin-top:16px"><h3>Puis, à la signature</h3><p class="sub">Le nouveau gardien devient propriétaire actuel ; vous passez dans l'histoire. L'adresse de dépôt reste attachée à la maison. La boîte d'arrivée est vidée : le suivant ne voit jamais ce que vous n'aviez pas trié.</p><div class="row"><button class="btn terra" onclick="A.transmettre()">Jouer la transmission à blanc</button><span class="small muted">Tout se remet en place ensuite. Rien ne part vraiment.</span></div></div></div>`;
+};
+A.deplacer = (from, i, to) => { const T = S.transmission; const it = T[from].splice(i, 1)[0]; T[to].push(it); save(); route(); };
+A.transmettre = () => { const T = S.transmission; modal(`<h2>La mémoire de la Maison des Tilleuls continue avec ses prochains gardiens.</h2><p>Ce que vous emportez reste à vous.</p><dl class="kv"><dt>Reste avec le logement</dt><dd>${T.reste.length} éléments</dd><dt>Part avec vous</dt><dd>${T.part.length} éléments</dd><dt>Reste privé</dt><dd>${T.prive.length} éléments</dd><dt>Adresse de dépôt</dt><dd class="num">${h(S.logement.adresseDepot)} — reste à la maison</dd><dt>Boîte d'arrivée</dt><dd>vidée au transfert</dd><dt>Date de sortie</dt><dd>${fdate(today())}</dd></dl><p class="muted small" style="margin-top:10px">Démonstration à blanc : en fermant, tout revient en place.</p><div class="row"><button class="btn primary" onclick="S.transmission={fait:today()};S.journal.push({d:today(),t:'Transmission jouée à blanc'});save();closeModal();location.hash='#/transmission';route()">Remettre en place</button></div>`, { noX: true }); };
+
+/* ---------- profil ---------- */
+V.profil = () => {
+  const m = S.metrics;
+  return `<div class="page"><div class="page-h"><div><h1>Profil et réglages</h1><p>${h(S.logement.gardien)}, gardienne de la ${h(S.logement.nom)}.</p></div></div>
+    <div class="grid2"><div>
+      <div class="card"><h3>Taille du texte</h3><p class="sub">Une personne de 80 ans doit pouvoir lire sans effort.</p><div class="row">${[["normal", "Normal"], ["grand", "Grand"], ["tres-grand", "Très grand"]].map(([k, l]) => `<button class="pill ${S.texte === k ? "on" : ""}" onclick="S.texte='${k}';document.documentElement.dataset.texte='${k}';save();route()">${l}</button>`).join("")}</div></div>
+      <div class="card"><h3>Mes mesures</h3><p class="sub">Trois chiffres, à joindre à votre avis si vous le souhaitez.</p><div class="grid3"><div class="stat"><b>${m.docs}</b><span>documents déposés</span></div><div class="stat"><b>${m.jours.length}</b><span>jours d'activité</span></div><div class="stat"><b>${m.demandes}</b><span>demandes envoyées</span></div></div><div class="actions"><button class="btn" onclick="A.avis('profil')">Donner mon avis</button></div></div>
+      <div class="card"><h3>Ma mémoire, à moi</h3><div class="actions"><button class="btn" onclick="A.export()">Emporter ma mémoire</button><a class="btn" href="#/etiquette">La carte de la maison (QR)</a><button class="btn warn" onclick="A.reset()">Repartir de zéro</button></div><p class="tiny faint" style="margin-top:8px">Cette démonstration garde tout sur cet appareil. Aucune donnée ne le quitte.</p></div>
+    </div><div>
+      <div class="simul"><h3>Simuler</h3><p class="sub">Pour vivre les échanges avec les tiers, sans attendre qu'ils se produisent.</p>
+        <div class="opt" onclick="Sim.artisan()"><div><b>Un artisan dépose sa facture</b><div class="small muted">Couverture Bretonne, fin de chantier</div></div><span class="tag">→ boîte d'arrivée</span></div>
+        <div class="opt" onclick="Sim.assureur()"><div><b>L'assureur répond</b><div class="small muted">Accusé, puis expertise</div></div><span class="tag">→ boîte d'arrivée</span></div>
+        <div class="opt" onclick="Sim.inconnu()"><div><b>Un courriel inconnu arrive</b><div class="small muted">Expéditeur non vérifié</div></div><span class="tag">→ sas</span></div>
+        <div class="opt" onclick="Sim.garantie()"><div><b>Une garantie expire demain</b><div class="small muted">Le portail</div></div><span class="tag">→ à faire</span></div>
+        <div class="opt" onclick="A.acquereur()"><div><b>Un acquéreur demande la mémoire</b><div class="small muted">Sophie Marchand</div></div><span class="tag">→ transmission</span></div>
+        <div class="opt" onclick="Sim.carte()"><div><b>L'artisan accepte que sa carte reste</b><div class="small muted">Consentement demandé au dépôt, jamais à froid</div></div><span class="tag">→ professionnels</span></div>
+      </div>
+      <div class="card"><h3>Le premier jour</h3><p class="sub">Trois indications, une seule fois.</p><button class="btn sm" onclick="S.tips.vus=[];save();renderTip();toast('Indications réaffichées')">Revoir les indications</button></div>
+    </div></div></div>`;
+};
+A.reset = () => modal(`<h2>Repartir de zéro ?</h2><p class="muted">Tout ce que vous avez ajouté sur cet appareil sera effacé et la démonstration reprendra au premier écran.</p><div class="row"><button class="btn terra" onclick="localStorage.removeItem(KEY);location.hash='';location.reload()">Effacer et recommencer</button><button class="btn" onclick="closeModal()">Garder</button></div>`);
+
+const Sim = {
+  artisan() { S.inbox.push({ id: uid("i"), titre: "Facture et attestation de garantie — Couverture Bretonne", exp: "compta@couverture-bretonne.fr", objet: "Fin de chantier — facture n° 2026-131", date: today(), statut: "propose", reco: { type: "facture", date: today(), four: "Couverture Bretonne", montant: 1240, cible: "toiture" }, verifie: true, pro: "cb" }); S.journal.push({ d: today(), t: "Document reçu de compta@couverture-bretonne.fr" }); save(); toast("Un document vient d'arriver dans la boîte d'arrivée"); location.hash = "#/boite"; route(); },
+  assureur() { S.inbox.push({ id: uid("i"), titre: "Accusé de réception — dossier sinistre", exp: "sinistres@maif.fr", objet: "Votre déclaration du " + fdate(today()), date: today(), statut: "propose", reco: { type: "courrier", date: today(), four: "Maif", montant: null, cible: "logement" }, verifie: true }); S.inbox.push({ id: uid("i"), titre: "Rapport d'expertise", exp: "expert@cabinet-ouest.fr", objet: "Expertise du " + fdate(today()), date: today(), statut: "propose", reco: { type: "courrier", date: today(), four: "Cabinet Expertise Ouest", montant: null, cible: "logement" }, verifie: true }); S.journal.push({ d: today(), t: "Deux documents reçus (assureur, expert)" }); save(); toast("L'assureur a répondu : deux documents dans la boîte d'arrivée. Le dossier n'est pas clos pour autant — c'est votre geste."); location.hash = "#/boite"; route(); },
+  inconnu() { S.inbox.push({ id: uid("i"), titre: "Devis toiture — offre spéciale", exp: "promo@toitures-express.biz", objet: "Votre toiture à -40 %", date: today(), statut: "propose", reco: { type: "devis", date: today(), four: "toitures-express.biz", montant: 4900, cible: "toiture" }, verifie: false }); save(); toast("Un courriel d'un expéditeur inconnu est arrivé — regardez-le avec prudence"); location.hash = "#/boite"; route(); },
+  garantie() { const r = S.rappels.find(x => x.id === "r2"); if (r) { r.d = addDays(today(), 1); r.txt = "Demain. Si le moteur montre une faiblesse, c'est le dernier moment pour faire jouer la garantie."; } else S.rappels.push({ id: "r2", t: "La garantie du portail expire demain", d: addDays(today(), 1), eq: "portail", k: "garantie", txt: "Dernier moment pour faire jouer la garantie." }); save(); toast("Une échéance s'approche — dans À faire, sans compteur rouge"); location.hash = "#/afaire"; route(); },
+  carte() { modal(`<h2>Ce que voit l'artisan, au moment du dépôt</h2><div class="book" style="min-height:0"><p class="muted small">Couverture Bretonne vient de déposer une facture pour la Maison des Tilleuls.</p><p><b>Voulez-vous que votre carte de visite reste mémorisée pour ce logement ?</b></p><p class="small">Gratuit. Le gardien vous retrouvera en premier le jour où il aura besoin de vous. Votre carte n'est partagée avec personne d'autre.</p><div class="row"><span class="btn primary sm">Oui, la garder</span><span class="btn sm">Non</span></div></div><p class="muted small" style="margin-top:8px">Connue d'un seul logement, la carte reste gratuite. Présente dans plusieurs (même SIRET), elle devient un profil actif — gratuit pendant la première année.</p><div class="row"><button class="btn primary" onclick="S.artisanCarte='cb';S.journal.push({d:today(),t:'Couverture Bretonne a accepté que sa carte reste mémorisée'});save();closeModal();toast('Carte mémorisée');location.hash='#/professionnels/cb'">L'artisan accepte</button><button class="btn" onclick="closeModal()">Fermer</button></div>`); }
+};
+
+/* ---------- étiquette imprimable ---------- */
+V.etiquette = () => `<div class="page"><div class="page-h"><div><a class="small" href="#/fiche">← Fiche du logement</a><h1>La carte de la maison</h1><p>À coller sur le tableau électrique. L'artisan la trouve en fin de chantier — et le propriétaire suivant aussi, dans trente ans.</p></div><button class="btn primary" onclick="window.print()">Imprimer</button></div>
+  <div class="book" style="text-align:center;max-width:420px"><div style="display:flex;justify-content:center;gap:8px;align-items:center;font-weight:700;font-size:1.3em;color:var(--sauge-f)">${I.logo.replace('viewBox', 'width="28" height="28" viewBox')} vidom</div><p class="muted" style="margin-top:6px">${h(S.logement.nom)}</p><canvas id="qr" class="qr" style="width:180px;height:180px;margin:10px auto;display:block"></canvas><p><b class="num">${h(S.logement.adresseDepot)}</b></p><p class="small muted">Vous intervenez dans ce logement ? Envoyez votre facture et votre garantie à cette adresse, ou scannez le code. Le gardien confirmera.</p></div>
+  <div class="print-only"><h2>${h(S.logement.nom)}</h2><p>${h(S.logement.adresseDepot)}</p><p>Vous intervenez dans ce logement ? Envoyez votre facture et votre garantie à cette adresse.</p></div></div>`;
+V.etiquette.after = () => { const c = document.getElementById("qr"); if (c) drawQR(c, S.logement.adresseDepot); };
+
+/* ---------- cadenas ---------- */
+const lockView = (titre, texte, quand) => () => `<div class="page"><div class="page-h"><div><h1>${titre}</h1></div></div><div class="lockbox">${I.lock}<div><b>Dans une version ultérieure.</b><p style="margin-top:6px">${texte}</p><p class="small muted">${quand}</p></div></div></div>`;
+V.consommation = lockView("Consommation", "Avec votre accord, VIDOM suivra la consommation d'électricité et de gaz de la maison, au pas mensuel — jamais la courbe de charge — pour montrer l'effet réel des travaux. La consommation appartient à celui qui habite ; elle ne se transmet jamais.", "Après la version test, une fois le contrat Enedis et GRDF en place.");
+V.locataire = lockView("Locataire", "Un locataire aura sa propre mémoire, personnelle et portable, qui le suit d'un logement à l'autre. Une facture à son nom rejoint son dossier ; au nom du propriétaire, la mémoire du logement.", "Le mécanisme est à l'étude.");
+V.preremplissage = lockView("Pré-remplissage riche", "À partir de l'adresse, VIDOM ira plus loin : ventes passées par numéro de lot, registre des copropriétés, hauteur et niveaux du bâtiment. Toujours en silence, toujours corrigible, jamais les voisins.", "Ces sources demandent leur propre base de données.");
+
+/* ---------- démarrage ---------- */
+document.getElementById("root") || (() => { const r = document.createElement("div"); r.id = "root"; document.body.appendChild(r); })();
+document.getElementById("toasts") || (() => { const t = document.createElement("div"); t.className = "toasts"; t.id = "toasts"; document.body.appendChild(t); })();
+route();
+</script>
+</body></html>
