@@ -1,0 +1,326 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La page du tiers VIDOM</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+:root{
+  --sauge:#5F7A6A;--sauge-f:#4A6255;--sauge-c:#E4EBE6;--sauge-cc:#F0F4F1;
+  --ivoire:#F6F3ED;--ivoire-f:#EEE9DF;--blanc:#FFFDF9;
+  --bois:#D8C8B2;--bois-c:#EFE6D8;--sable:#B5B0A5;--ardoise:#50575E;--encre:#2F3439;
+  --terra:#C9775B;--terra-c:#F4E3DB;--terra-f:#A85F45;
+  --r:6px;--r2:8px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ardoise);color:var(--encre);font-family:"Source Sans 3",system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;padding:0 16px 40px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,h4{margin:0;font-weight:600;line-height:1.2;text-wrap:balance}
+p{margin:0 0 .6em}
+.muted{color:var(--ardoise)}.faint{color:var(--sable)}
+.small{font-size:.9em}.tiny{font-size:.8em}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--terra);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* ---------- bandeau de simulation (côté Murielle) ---------- */
+.sim{max-width:1180px;margin:0 auto;color:#fff;padding:14px 0 12px;display:flex;flex-wrap:wrap;gap:14px 26px;align-items:flex-end}
+.sim .lbl{display:block;font-size:.72em;letter-spacing:.08em;text-transform:uppercase;color:#D8C8B2;margin-bottom:4px}
+.sim .title{flex:1 1 100%;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sim .title strong{font-size:1.15em}
+.sim .title span{color:#D8C8B2}
+.seg{display:inline-flex;border:1px solid rgba(255,255,255,.35);border-radius:var(--r);overflow:hidden}
+.seg button{background:transparent;color:#fff;border:0;padding:6px 12px;border-right:1px solid rgba(255,255,255,.25)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--terra);color:#fff}
+.sim .chk{display:flex;align-items:center;gap:8px;padding-bottom:6px}
+.sim input[type=checkbox]{width:16px;height:16px;accent-color:var(--terra)}
+
+/* ---------- deux colonnes ---------- */
+.stage{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+.stage.solo{grid-template-columns:minmax(0,1fr)}
+@media (max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- la fenêtre du tiers ---------- */
+.win{background:var(--ivoire);border-radius:10px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.28)}
+.bar{background:#E9E4DA;padding:8px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bois)}
+.bar .dots{display:flex;gap:5px}.bar .dots i{width:10px;height:10px;border-radius:50%;background:var(--sable);display:block}
+.url{flex:1;background:var(--blanc);border:1px solid var(--bois);border-radius:20px;padding:4px 14px;font-size:.9em;color:var(--ardoise);display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden}
+.url b{color:var(--encre);font-weight:600}
+.url .lock{color:var(--sauge-f)}
+.url .code{color:var(--terra-f);font-weight:600;letter-spacing:.02em}
+
+.head{background:var(--sauge-f);color:#fff;padding:22px 28px 20px}
+.head .brand{font-size:.78em;letter-spacing:.14em;text-transform:uppercase;color:#D8C8B2;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.head h1{font-size:1.7em;font-weight:700}
+.head .sub{margin-top:6px;color:#E4EBE6}
+.head .meta{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.82em;background:rgba(255,255,255,.14);color:#fff}
+.pill.terra{background:var(--terra);color:#fff}
+
+.page{padding:22px 28px 26px;display:grid;gap:18px}
+@media (max-width:600px){.page{padding:16px 16px 22px}.head{padding:18px 16px}}
+.sec{background:var(--blanc);border:1px solid var(--bois);border-radius:var(--r2)}
+.sec>h2{font-size:1.02em;padding:10px 14px;border-bottom:1px solid var(--bois-c);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sec>h2 .cnt{font-weight:400;color:var(--sable);font-size:.85em}
+.rows{display:grid}
+.row{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:9px 14px;border-bottom:1px solid var(--ivoire-f)}
+.row:last-child{border-bottom:0}
+.row .d{color:var(--ardoise);font-size:.9em;white-space:nowrap}
+.row .t b{font-weight:600}
+.row .t .s{display:block;color:var(--ardoise);font-size:.9em}
+@media (max-width:520px){.row{grid-template-columns:minmax(0,1fr) auto}.row .d{grid-column:1 / -1;order:-1}}
+.btn{background:var(--blanc);border:1px solid var(--bois);border-radius:var(--r);padding:5px 11px;font-size:.88em;white-space:nowrap}
+.btn:hover{background:var(--sauge-cc);border-color:var(--sauge)}
+.btn.primary{background:var(--sauge-f);color:#fff;border-color:var(--sauge-f)}
+.btn.primary:hover{background:var(--sauge)}
+.btn.big{padding:10px 16px;font-size:1em}
+
+.eqs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1px;background:var(--ivoire-f)}
+.eq{background:var(--blanc);padding:12px 14px}
+.eq b{display:block}
+.eq .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:.88em;margin-top:6px}
+.eq .kv span:nth-child(odd){color:var(--sable)}
+.gar{display:inline-block;margin-top:8px;padding:2px 8px;border-radius:4px;font-size:.8em;background:var(--sauge-c);color:var(--sauge-f)}
+.gar.bientot{background:var(--terra-c);color:var(--terra-f)}
+
+.dpe{display:flex;align-items:center;gap:16px;padding:12px 14px}
+.dpe .cl{width:56px;height:56px;border-radius:6px;display:grid;place-items:center;font-size:1.7em;font-weight:700;color:#fff;background:#B7C43C}
+.dpe .cl.b{background:#7DB343}.dpe .cl.small{width:40px;height:40px;font-size:1.1em}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:12px 14px}
+.ph{aspect-ratio:4/3;max-width:100%;border-radius:var(--r);background:linear-gradient(160deg,var(--bois-c),var(--bois));display:flex;align-items:flex-end;padding:8px;font-size:.8em;color:var(--encre)}
+.ph.ciel{background:linear-gradient(160deg,#dfe7ea,#b9c9cf)}
+.fiche{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 18px;padding:12px 14px;font-size:.92em}
+.fiche div span{display:block;color:var(--sable);font-size:.82em}
+
+.depot{border:2px dashed var(--sauge);background:var(--sauge-cc);border-radius:var(--r2);padding:18px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.foot{border-top:1px solid var(--bois);padding-top:14px;color:var(--ardoise);font-size:.9em;display:grid;gap:4px}
+.foot b{color:var(--encre)}
+
+/* écrans d'état */
+.state{padding:60px 28px;text-align:center;display:grid;gap:12px;justify-items:center}
+.state h2{font-size:1.4em}
+.state .form{display:grid;gap:10px;width:min(100%,360px);text-align:left;margin-top:10px}
+.state label{font-size:.85em;color:var(--ardoise)}
+.state input{width:100%;padding:9px 12px;border:1px solid var(--bois);border-radius:var(--r);background:var(--blanc)}
+.state input.code{letter-spacing:.5em;font-size:1.3em;text-align:center;font-variant-numeric:tabular-nums}
+
+/* ---------- côté gardien ---------- */
+.gard{background:var(--blanc);border-radius:10px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.28);position:sticky;top:16px}
+.gard .gh{background:var(--sauge-c);padding:12px 16px;border-bottom:1px solid var(--bois)}
+.gard .gh h2{font-size:1em}
+.gard .gh p{margin:2px 0 0;font-size:.85em;color:var(--ardoise)}
+.jl{list-style:none;margin:0;padding:6px 0;max-height:70vh;overflow:auto}
+.jl li{padding:9px 16px;border-bottom:1px solid var(--ivoire-f);display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;font-size:.92em}
+.jl li:last-child{border-bottom:0}
+.jl .when{color:var(--ardoise);font-size:.85em;white-space:nowrap;padding-top:2px;font-variant-numeric:tabular-nums}
+.jl .who{font-weight:600}
+.jl .dev{color:var(--sable);font-size:.85em;display:block}
+.jl li.new{background:var(--terra-c)}
+.jl li .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--sauge);vertical-align:middle}
+.jl li.new .dot{background:var(--terra)}
+.gard .gf{padding:10px 16px;border-top:1px solid var(--bois);font-size:.85em;color:var(--ardoise)}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--encre);color:#fff;padding:9px 16px;border-radius:var(--r2);font-size:.92em;opacity:0;transition:opacity .25s;pointer-events:none;max-width:calc(100% - 32px)}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
+<div class="sim">
+  <div class="title"><strong>Simulation</strong><span>ce que le tiers a sous les yeux quand il ouvre le lien que Marie lui a envoyé. Rien ici n'est l'application de Marie : c'est une page à part, faite pour lui.</span></div>
+  <div><span class="lbl">Qui ouvre le lien</span>
+    <div class="seg" id="segTiers" role="group" aria-label="Tiers">
+      <button data-t="agent" aria-pressed="true">Agent immobilier</button>
+      <button data-t="artisan" aria-pressed="false">Artisan</button>
+      <button data-t="assureur" aria-pressed="false">Assureur</button>
+      <button data-t="notaire" aria-pressed="false">Notaire</button>
+    </div>
+  </div>
+  <div><span class="lbl">État de l'accès</span>
+    <div class="seg" id="segEtat" role="group" aria-label="État">
+      <button data-e="actif" aria-pressed="true">Ouvert</button>
+      <button data-e="code" aria-pressed="false">Ouvert, avec vérification</button>
+      <button data-e="termine" aria-pressed="false">Terminé</button>
+    </div>
+  </div>
+  <label class="chk"><input type="checkbox" id="chkGard" checked> Montrer ce que Marie voit de son côté</label>
+</div>
+
+<div class="stage" id="stage">
+  <div class="win" id="win">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url" id="url"></div></div>
+    <div id="view"></div>
+  </div>
+  <aside class="gard" id="gard">
+    <div class="gh"><h2>Côté Marie, dans VIDOM</h2><p>Journal de cet accès, rubrique Partage. Chaque ouverture et chaque téléchargement s'y inscrit.</p></div>
+    <ul class="jl" id="journal"></ul>
+    <div class="gf">Marie reçoit aussi une ligne dans son courriel mensuel : « Votre agent immobilier a consulté la mémoire 3 fois ce mois-ci ».</div>
+  </aside>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const L = { nom: "Maison des Tilleuls", adresse: "14 rue des Tilleuls, 44300 Nantes", gardien: "Marie Lefort", annee: 1978, surface: 128, parcelles: "AB 214, AB 215", fiscal: "4402 1 0123 456" };
+
+const TIERS = {
+  agent: {
+    nom: "Agent immobilier", qui: "Paul Renaud", org: "Agence Loire Immobilier", mail: "p.renaud@loire-immobilier.fr", code: "7Kd3xQm9wRtA",
+    ouvert: "8 sept. 2026", jusqu: "10 déc. 2026", duree: "3 mois (mandat)", motif: "Mise en vente",
+    absents: "Les factures d'énergie, le contrat d'assurance, le prix d'acquisition et les documents privés ne figurent pas sur cette page.",
+    sections: ["chrono", "equip", "garanties", "dpe", "photos"],
+    journal: [
+      { q: "8 sept., 17:05", who: "Marie Lefort", t: "a ouvert l'accès jusqu'au 10 déc. 2026 (3 mois) et envoyé le lien à p.renaud@loire-immobilier.fr depuis sa messagerie" },
+      { q: "9 sept., 09:41", who: "Paul Renaud", t: "a ouvert la page", dev: "Agence Loire Immobilier · ordinateur, Nantes" },
+      { q: "9 sept., 09:44", who: "Paul Renaud", t: "a téléchargé « Diagnostic de performance énergétique — classe C »" },
+      { q: "10 sept., 08:12", who: "Paul Renaud", t: "a ouvert la page", dev: "téléphone" }
+    ]
+  },
+  artisan: {
+    nom: "Artisan", qui: "Thermic Ouest", org: "chauffage, ventilation", mail: "sav@thermic-ouest.fr", code: "b8Nq2VzLp4Hs",
+    ouvert: "6 sept. 2026", jusqu: "6 oct. 2026", duree: "1 mois (chantier)", motif: "Remplacement de la VMC",
+    absents: "Les documents financiers, les autres équipements de la maison, les photos privées et l'assurance ne figurent pas sur cette page.",
+    sections: ["equipArt", "interv", "plans", "depot"],
+    journal: [
+      { q: "6 sept., 18:20", who: "Marie Lefort", t: "a ouvert l'accès jusqu'au 6 oct. 2026 (1 mois) et montré le code QR à Thermic Ouest" },
+      { q: "7 sept., 07:58", who: "Thermic Ouest", t: "a ouvert la page", dev: "téléphone, sur place" },
+      { q: "7 sept., 07:59", who: "Thermic Ouest", t: "a consulté la fiche « VMC simple flux Aldes »" }
+    ]
+  },
+  assureur: {
+    nom: "Assureur", qui: "Maif", org: "gestion de sinistre", mail: "sinistres@maif.fr", code: "Xr5TmW2kJ9pD",
+    ouvert: "4 sept. 2026", jusqu: "4 nov. 2026", duree: "2 mois (dossier)", motif: "Déclaration de sinistre — toiture",
+    absents: "L'historique complet de la maison, le prix d'acquisition et les autres sinistres ne figurent pas sur cette page.",
+    sections: ["equipAss", "docsSin", "factRep", "entretien"],
+    journal: [
+      { q: "4 sept., 11:30", who: "Marie Lefort", t: "a ouvert l'accès jusqu'au 4 nov. 2026 et joint le lien à sa déclaration, envoyée depuis sa messagerie" },
+      { q: "5 sept., 14:02", who: "Maif", t: "a ouvert la page", dev: "ordinateur" },
+      { q: "5 sept., 14:06", who: "Maif", t: "a téléchargé « Rapport d'expertise — tempête Ciarán » et « Facture démoussage »" }
+    ]
+  },
+  notaire: {
+    nom: "Notaire", qui: "Me Bertrand", org: "office notarial, Nantes", mail: "etude@bertrand-notaires.fr", code: "Q2vLn8KdR6tY",
+    ouvert: "2 sept. 2026", jusqu: "2 mars 2027", duree: "6 mois (vente)", motif: "Vente — constitution du dossier",
+    absents: "Les factures d'électroménager, les photos intérieures, les contrats d'assurance et le détail du coût d'achat ne figurent pas sur cette page.",
+    sections: ["fiche", "acte", "diags", "plans", "chrono", "garanties"],
+    journal: [
+      { q: "2 sept., 16:48", who: "Marie Lefort", t: "a ouvert l'accès jusqu'au 2 mars 2027 (6 mois) et envoyé le lien à etude@bertrand-notaires.fr" },
+      { q: "3 sept., 10:15", who: "Me Bertrand", t: "a ouvert la page", dev: "ordinateur, Nantes" },
+      { q: "3 sept., 10:21", who: "Me Bertrand", t: "a téléchargé « Plans de la maison » et « État des risques et pollutions »" }
+    ]
+  }
+};
+
+const h = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const dl = (titre) => `<button class="btn" onclick="tele('${h(titre).replace(/'/g, "\\'")}')">Télécharger</button>`;
+const row = (d, t, s, act) => `<div class="row"><span class="d">${d}</span><span class="t"><b>${h(t)}</b>${s ? `<span class="s">${h(s)}</span>` : ""}</span>${act || "<span></span>"}</div>`;
+const sec = (titre, cnt, body) => `<section class="sec"><h2>${titre}${cnt ? `<span class="cnt">${cnt}</span>` : ""}</h2>${body}</section>`;
+const eq = (nom, kv, gar, bientot) => `<div class="eq"><b>${nom}</b><div class="kv">${kv.map(([k, v]) => `<span>${k}</span><span>${v}</span>`).join("")}</div>${gar ? `<span class="gar${bientot ? " bientot" : ""}">${gar}</span>` : ""}</div>`;
+
+const SEC = {
+  chrono: () => sec("Chronologie des rénovations", "5 étapes", `<div class="rows">
+    ${row("avr. 2016", "Fenêtres et volets remplacés", "Tryba")}
+    ${row("mars 2019", "Tableau électrique remis aux normes", "Élec'Atlantique")}
+    ${row("mars 2022", "Pompe à chaleur air/eau installée", "Thermic Ouest — remplace la chaudière gaz d'origine")}
+    ${row("juin 2023", "Toiture entièrement refaite", "Couverture Bretonne — garantie décennale")}
+    ${row("déc. 2024", "Portail motorisé posé", "")}</div>`),
+  equip: () => sec("Fiches équipement", "5 équipements", `<div class="eqs">
+    ${eq("Pompe à chaleur air/eau", [["Marque", "Daikin Altherma 3 H HT"], ["Posée", "15 mars 2022"], ["Par", "Thermic Ouest"], ["Entretenue", "2 avr. 2026"]], "Sous garantie jusqu'au 14 mars 2027")}
+    ${eq("Toiture en tuiles", [["Modèle", "Monier Romane Évolution"], ["Refaite", "20 juin 2023"], ["Par", "Couverture Bretonne"], ["Démoussée", "10 oct. 2025"]], "Décennale jusqu'au 19 juin 2033")}
+    ${eq("Ballon thermodynamique", [["Marque", "Atlantic Calypso VS 200"], ["Posé", "15 mars 2022"], ["Par", "Thermic Ouest"]], "Sous garantie jusqu'au 14 mars 2027")}
+    ${eq("VMC simple flux", [["Marque", "Aldes EasyHOME Auto"], ["Posée", "1er sept. 2016"], ["État", "moyen — remplacement à l'étude"]], "")}
+    ${eq("Portail motorisé", [["Marque", "Somfy Ixengo L 3S"], ["Posé", "10 déc. 2024"]], "Garantie jusqu'au 9 déc. 2026", true)}</div>`),
+  garanties: () => sec("Garanties actives", "3 en cours", `<div class="rows">
+    ${row("→ 2033", "Toiture — garantie décennale", "Couverture Bretonne, jusqu'au 19 juin 2033", dl("Attestation décennale toiture"))}
+    ${row("→ 2027", "Pompe à chaleur et ballon — garantie constructeur", "Daikin et Atlantic, jusqu'au 14 mars 2027", dl("Garantie constructeur Daikin 5 ans"))}
+    ${row("→ déc. 2026", "Portail motorisé — garantie Somfy", "jusqu'au 9 décembre 2026")}</div>`),
+  dpe: () => sec("DPE et diagnostics", "12 mai 2024", `<div class="dpe"><div class="cl">C</div><div><b>Diagnostic de performance énergétique — classe C</b><div class="small muted">Classe climat B · Diagnostic Loire · méthode 2021 · valable jusqu'en mai 2034</div></div>${dl("Diagnostic de performance énergétique — classe C")}</div>
+    <div class="rows">${row("12 mai 2024", "Diagnostic électricité", "Diagnostic Loire", dl("Diagnostic électricité"))}${row("12 mai 2024", "État des risques et pollutions (ERP)", "Diagnostic Loire", dl("État des risques et pollutions"))}</div>`),
+  photos: () => sec("Photos des travaux", "4 photos", `<div class="photos"><div class="ph ciel">Toiture, fin de chantier · juin 2023</div><div class="ph">Pompe à chaleur, unité extérieure · mars 2022</div><div class="ph">Tableau électrique · mars 2019</div><div class="ph ciel">Portail · déc. 2024</div></div>`),
+
+  equipArt: () => sec("Équipements concernés par le chantier", "2", `<div class="eqs">
+    ${eq("VMC simple flux — à remplacer", [["Marque", "Aldes EasyHOME Auto"], ["Référence", "11033052"], ["N° de série", "AL-2214-77"], ["Posée", "1er sept. 2016"], ["Emplacement", "Chaufferie"], ["Dernier nettoyage", "1er mars 2024"]], "")}
+    ${eq("Pompe à chaleur air/eau", [["Marque", "Daikin Altherma 3 H HT"], ["Référence", "EPRA16DW1"], ["Emplacement", "Chaufferie"], ["Posée par", "vous, le 15 mars 2022"]], "Sous garantie jusqu'au 14 mars 2027")}</div>`),
+  interv: () => sec("Interventions passées dans la chaufferie", "3", `<div class="rows">
+    ${row("2 avr. 2026", "Entretien annuel de la pompe à chaleur", "Thermic Ouest")}
+    ${row("1er mars 2024", "Nettoyage des bouches de VMC", "")}
+    ${row("15 mars 2022", "Pose de la pompe à chaleur, dépose de la chaudière gaz Bosch", "Thermic Ouest")}</div>`),
+  plans: () => sec("Plans utiles", "1 document", `<div class="rows">${row("1978", "Plans de la maison (rez-de-chaussée et étage)", "Architecte Rouaud", dl("Plans de la maison"))}</div>`),
+  depot: () => `<div class="depot"><b>Déposer un document pour cette maison</b><span class="small muted">Devis, facture, garantie, photo. Marie le recevra dans sa boîte d'arrivée et le confirmera elle-même.</span><button class="btn primary big" onclick="depot()">Prendre en photo ou choisir un fichier</button></div>`,
+
+  equipAss: () => sec("Équipement sinistré", "", `<div class="eqs">${eq("Toiture en tuiles", [["Modèle", "Monier Romane Évolution"], ["Refaite", "20 juin 2023"], ["Par", "Couverture Bretonne"], ["Garantie", "décennale jusqu'au 19 juin 2033"], ["Dernier entretien", "démoussage, 10 oct. 2025"]], "")}</div>`),
+  docsSin: () => sec("Documents du sinistre", "2", `<div class="rows">
+    ${row("4 sept. 2026", "Déclaration de sinistre — infiltration après l'orage du 2 septembre", "Marie Lefort", dl("Déclaration de sinistre"))}
+    ${row("6 sept. 2026", "Photos des dégâts (plafond de la chambre 2, sous-toiture)", "6 photos", dl("Photos des dégâts"))}</div>`),
+  factRep: () => sec("Factures des réparations", "1", `<div class="rows">${row("8 sept. 2026", "Devis reprise d'étanchéité et remplacement de 40 tuiles", "Couverture Bretonne · 1 860 €", dl("Devis Couverture Bretonne"))}</div>`),
+  entretien: () => sec("Dernier entretien de la toiture", "", `<div class="rows">${row("10 oct. 2025", "Démoussage complet", "Couverture Bretonne · 320 €", dl("Facture démoussage"))}</div>`),
+
+  fiche: () => sec("Fiche du logement", "", `<div class="fiche"><div><span>Adresse</span>${L.adresse}</div><div><span>Parcelles cadastrales</span>${L.parcelles}</div><div><span>Identifiant fiscal du local</span>${L.fiscal}</div><div><span>Année de construction</span>${L.annee}</div><div><span>Surface</span>${L.surface} m²</div><div><span>Type</span>Maison individuelle, jardin</div></div>`),
+  acte: () => sec("Acte d'achat", "", `<div class="rows">${row("3 juil. 2015", "Acte d'achat — Maison des Tilleuls", "Me Bertrand · acquéreurs : Marie et Julien Lefort", dl("Acte d'achat"))}</div>`),
+  diags: () => sec("Diagnostics", "3", `<div class="dpe"><div class="cl small">C</div><div><b>DPE — classe C, climat B</b><div class="small muted">Diagnostic Loire, 12 mai 2024</div></div>${dl("Diagnostic de performance énergétique — classe C")}</div><div class="rows">${row("12 mai 2024", "Diagnostic électricité", "Diagnostic Loire", dl("Diagnostic électricité"))}${row("12 mai 2024", "État des risques et pollutions (ERP)", "Diagnostic Loire", dl("État des risques et pollutions"))}</div>`)
+};
+
+let S = { t: "agent", e: "actif", journal: {} };
+for (const k in TIERS) S.journal[k] = TIERS[k].journal.map(j => Object.assign({}, j));
+
+function nowLabel() {
+  const d = new Date();
+  const m = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."][d.getMonth()];
+  return `${d.getDate()} ${m}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+function log(t, dev) {
+  S.journal[S.t].push({ q: nowLabel(), who: TIERS[S.t].qui, t, dev, nouveau: true });
+  renderJournal();
+}
+function tele(titre) { log(`a téléchargé « ${titre} »`, "à l'instant, depuis cette page"); toast("Téléchargé. Marie en est informée."); }
+function depot() { log("a déposé un document : « Devis VMC double flux — 3 480 € »", "en attente de confirmation par Marie"); toast("Reçu. Marie le confirmera dans sa boîte d'arrivée."); }
+function ouvre() { log("a ouvert la page", "à l'instant"); }
+function verif() { S.e = "actif"; document.querySelectorAll("#segEtat button").forEach(b => b.setAttribute("aria-pressed", b.dataset.e === "actif")); render(); log("a confirmé son adresse de courriel par le code reçu", "");  }
+
+function renderURL() { document.getElementById("url").innerHTML = `<span class="lock">🔒</span><b>vidom.fr</b>/p/<span class="code">${TIERS[S.t].code}</span>`; }
+
+function renderView() {
+  const T = TIERS[S.t]; const v = document.getElementById("view");
+  if (S.e === "termine") {
+    v.innerHTML = `<div class="head"><div class="brand"><span>VIDOM · mémoire du logement</span></div><h1>Cet accès est terminé</h1><div class="sub">Il avait été ouvert par ${L.gardien} jusqu'au ${T.jusqu}.</div></div>
+      <div class="state"><p class="muted" style="max-width:420px">Ce lien ne mène plus à rien. Si vous avez encore besoin d'un document, demandez à ${L.gardien} de rouvrir un accès : vous recevrez un nouveau lien.</p></div>`;
+    return;
+  }
+  if (S.e === "code") {
+    v.innerHTML = `<div class="head"><div class="brand"><span>VIDOM · mémoire du logement</span></div><h1>${L.nom}</h1><div class="sub">${L.gardien} vous a ouvert un accès. Avant de l'afficher, confirmons que c'est bien vous.</div></div>
+      <div class="state"><h2>Un code vient de vous être envoyé</h2><p class="muted" style="max-width:420px">Nous l'avons adressé à <b>${T.mail}</b>, l'adresse à laquelle ${L.gardien} a envoyé ce lien. Il est valable dix minutes.</p>
+      <div class="form"><label for="codeIn">Code à six chiffres</label><input class="code" id="codeIn" inputmode="numeric" maxlength="6" placeholder="······" value="482 917"><button class="btn primary big" onclick="verif()">Afficher la page</button><span class="tiny faint">Dans cette simulation, n'importe quel code fonctionne.</span></div></div>`;
+    return;
+  }
+  v.innerHTML = `<div class="head"><div class="brand"><span>VIDOM · mémoire du logement</span><span>page partagée · lecture seule</span></div>
+      <h1>${L.nom}</h1><div class="sub">${L.adresse} · partagée par <b>${L.gardien}</b> avec ${T.qui}${T.org ? ", " + T.org : ""}</div>
+      <div class="meta"><span class="pill terra">Accès ouvert jusqu'au ${T.jusqu}</span><span class="pill">${T.motif}</span><span class="pill">${T.duree}</span></div></div>
+    <div class="page">${T.sections.map(k => SEC[k]()).join("")}
+      <div class="foot"><b>Ce que vous ne voyez pas n'est pas masqué : il n'a pas été transmis.</b><span>${T.absents}</span><span>Chaque ouverture de cette page et chaque téléchargement sont signalés à ${L.gardien}. L'accès se refermera de lui-même le ${T.jusqu} ; ${L.gardien} peut le fermer avant.</span></div></div>`;
+}
+
+function renderJournal() {
+  const ul = document.getElementById("journal");
+  ul.innerHTML = S.journal[S.t].map(j => `<li class="${j.nouveau ? "new" : ""}"><span class="when">${h(j.q)}</span><span><span class="dot"></span><span class="who">${h(j.who)}</span> ${h(j.t)}${j.dev ? `<span class="dev">${h(j.dev)}</span>` : ""}</span></li>`).join("");
+  ul.scrollTop = ul.scrollHeight;
+}
+
+function render() { renderURL(); renderView(); renderJournal(); }
+
+let tt; function toast(m) { const t = document.getElementById("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("on"), 2400); }
+
+document.getElementById("segTiers").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  S.t = b.dataset.t; document.querySelectorAll("#segTiers button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  render(); if (S.e === "actif") ouvre();
+});
+document.getElementById("segEtat").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  S.e = b.dataset.e; document.querySelectorAll("#segEtat button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  render(); if (S.e === "termine") log("a essayé d'ouvrir la page après la fin de l'accès — rien n'a été montré", "");
+});
+document.getElementById("chkGard").addEventListener("change", (ev) => {
+  document.getElementById("gard").hidden = !ev.target.checked;
+  document.getElementById("stage").classList.toggle("solo", !ev.target.checked);
+});
+render();
+</script>
+
+</body></html>

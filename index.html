@@ -31,6 +31,44 @@ p{margin:0 0 .6em}
 .sr{position:absolute;left:-9999px}
 [hidden]{display:none!important}
 
+/* ---------- la page du tiers (ouverte par le lien) ---------- */
+.modal.wide{max-width:880px;padding:12px 14px 16px}
+.tp-bar{background:#E9E4DA;padding:7px 10px;display:flex;align-items:center;gap:10px;border:1px solid var(--bois);border-radius:8px 8px 0 0;margin-right:26px}
+.tp-dots{display:flex;gap:5px}.tp-dots i{width:9px;height:9px;border-radius:50%;background:var(--sable);display:block}
+.tp-url{flex:1;background:var(--blanc);border:1px solid var(--bois);border-radius:20px;padding:3px 12px;font-size:.9em;color:var(--ardoise);white-space:nowrap;overflow:hidden}
+.tp-url b{color:var(--encre)}.tp-code{color:var(--terra-f);font-weight:600}
+.tp-head{background:var(--sauge-f);color:#fff;padding:18px 22px 16px;margin-right:26px}
+.tp-brand{font-size:.76em;letter-spacing:.12em;text-transform:uppercase;color:#D8C8B2;margin-bottom:8px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tp-head h2{color:#fff;font-size:1.5em;margin:0}
+.tp-sub{margin-top:4px;color:#E4EBE6}.tp-sub b{color:#fff}
+.tp-meta{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.tp-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.82em;background:rgba(255,255,255,.14);color:#fff}
+.tp-pill.terra{background:var(--terra)}
+.tp-page{background:var(--ivoire);padding:16px 22px 20px;margin-right:26px;display:grid;gap:14px;border-radius:0 0 8px 8px}
+.tp-sec{background:var(--blanc);border:1px solid var(--bois);border-radius:var(--r2)}
+.tp-sec>h3{font-size:1em;padding:9px 14px;border-bottom:1px solid var(--bois-c);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tp-cnt{font-weight:400;color:var(--sable);font-size:.85em}
+.tp-row{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--ivoire-f)}
+.tp-row:last-child{border-bottom:0}
+.tp-d{color:var(--ardoise);font-size:.9em;white-space:nowrap}
+.tp-t b{font-weight:600}.tp-s{display:block;color:var(--ardoise);font-size:.9em}
+.tp-vide{padding:12px 14px;color:var(--sable);margin:0}
+.tp-eqs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.tp-eq{background:var(--blanc);padding:11px 14px;border-right:1px solid var(--ivoire-f);border-bottom:1px solid var(--ivoire-f)}.tp-eq b{display:block}
+.tp-kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:.88em;margin-top:5px}.tp-kv span:nth-child(odd){color:var(--sable)}
+.tp-gar{display:inline-block;margin-top:8px;padding:2px 8px;border-radius:4px;font-size:.8em;background:var(--sauge-c);color:var(--sauge-f)}
+.tp-gar.bientot{background:var(--terra-c);color:var(--terra-f)}
+.tp-dpe{display:flex;align-items:center;gap:14px;padding:12px 14px;border-bottom:1px solid var(--ivoire-f)}
+.tp-cl{width:50px;height:50px;border-radius:6px;display:grid;place-items:center;font-size:1.5em;font-weight:700;color:#fff;background:#B7C43C;flex:none}
+.tp-fiche{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px 18px;padding:12px 14px;font-size:.92em}
+.tp-fiche div span{display:block;color:var(--sable);font-size:.82em}
+.tp-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;padding:12px 14px}
+.tp-ph{aspect-ratio:4/3;border-radius:var(--r);background:linear-gradient(160deg,var(--bois-c),var(--bois));display:flex;align-items:flex-end;padding:8px;font-size:.8em}
+.tp-depot{border:2px dashed var(--sauge);background:var(--sauge-cc);border-radius:var(--r2);padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.tp-foot{border-top:1px solid var(--bois);padding-top:12px;color:var(--ardoise);font-size:.9em;display:grid;gap:4px}
+.tp-foot b{color:var(--encre)}
+@media (max-width:560px){.tp-row{grid-template-columns:minmax(0,1fr) auto}.tp-d{grid-column:1 / -1}.tp-head,.tp-page{padding-left:14px;padding-right:14px}}
+
 /* ---------- shell ---------- */
 #root.app{display:grid;grid-template-columns:var(--nav) 1fr;min-height:100vh}
 .nav{background:var(--sauge-f);color:#fff;padding:14px 10px 80px;position:sticky;top:0;height:100vh;overflow:auto}
@@ -620,7 +658,7 @@ function toast(t) { const box = document.getElementById("toasts"); const d = doc
 function modal(html, opts = {}) {
   closeModal();
   const o = document.createElement("div"); o.className = "overlay"; o.id = "overlay";
-  o.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${opts.noX ? "" : '<button class="x" aria-label="Fermer" onclick="closeModal()">×</button>'}${html}</div>`;
+  o.innerHTML = `<div class="modal${opts.wide ? " wide" : ""}" role="dialog" aria-modal="true">${opts.noX ? "" : '<button class="x" aria-label="Fermer" onclick="closeModal()">×</button>'}${html}</div>`;
   o.addEventListener("click", e => { if (e.target === o && !opts.noX) closeModal(); });
   document.body.appendChild(o);
   const f = o.querySelector("input,button:not(.x),textarea"); if (f) setTimeout(() => f.focus(), 30);
@@ -1268,9 +1306,62 @@ A.tiers = (id) => {
     ${a.ouvert ? `<div class="notice">Accès ouvert jusqu'au ${fdate(a.jusqu)}. Il se refermera de lui-même.</div>` : ""}
     <div class="row" style="margin-top:12px"><button class="btn" onclick="A.voirComme('${id}')">Voir comme ${h(t.nom.toLowerCase())}</button>${a.ouvert ? `<button class="btn terra" onclick="A.fermer('${id}')">Fermer l'accès</button>` : `<select class="input" id="duree" style="max-width:160px">${t.mandat ? `<option value="365">1 an (mandat)</option><option value="730">2 ans</option><option value="1095">3 ans</option>` : `<option value="30">1 mois</option><option value="90">3 mois</option><option value="180">6 mois</option>`}</select><button class="btn primary" onclick="A.ouvrir('${id}')">Ouvrir l'accès</button>`}</div>`);
 };
-A.ouvrir = (id) => { const d = +document.getElementById("duree").value; S.acces[id] = { ouvert: true, jusqu: addDays(today(), d) }; const t = DATA.tiers.find(x => x.id === id); S.journal.push({ d: today(), t: "Accès ouvert à " + t.nom + " jusqu'au " + fdate(S.acces[id].jusqu) }); closeModal(); toast("Accès ouvert. Il se refermera de lui-même."); save(); route(); };
+A.ouvrir = (id) => { const d = +document.getElementById("duree").value; S.acces[id] = { ouvert: true, jusqu: addDays(today(), d) }; const t = DATA.tiers.find(x => x.id === id); S.journal.push({ d: today(), t: "Accès ouvert à " + t.nom + " jusqu'au " + fdate(S.acces[id].jusqu) }); toast("Accès ouvert. Il se refermera de lui-même."); save(); route(); A.voirComme(id); };
 A.fermer = (id) => { S.acces[id] = { ouvert: false }; S.journal.push({ d: today(), t: "Accès fermé : " + DATA.tiers.find(x => x.id === id).nom }); closeModal(); toast("Accès fermé"); save(); route(); };
-A.voirComme = (id) => { const t = DATA.tiers.find(x => x.id === id); const L = S.logement; modal(`<h2>Vu par ${h(t.nom.toLowerCase())}</h2><p class="muted small">Exactement ce qu'il verrait, et rien d'autre.</p><div class="book" style="min-height:0"><h2>${h(L.nom)}</h2><p class="muted">${h(L.adresse)}, ${h(L.ville)} · partagé par ${h(L.gardien)}</p>${t.voit.map(v => `<p><b>${h(v)}</b><br><span class="muted small">${v.includes("Chronologie") ? "2016 fenêtres · 2019 électricité · 2022 pompe à chaleur · 2023 toiture" : v.includes("quipement") ? "Pompe à chaleur Daikin (2022), toiture Monier (2023), VMC, ballon…" : v.includes("Garantie") ? "Toiture décennale 2033 · PAC 2027" : v.includes("DPE") || v.includes("Diagnostic") ? "Classe C · 12 mai 2024" : v.includes("Photo") ? "6 photos de chantier" : "…"}</span></p>`).join("")}<div class="pn">accès limité dans le temps · révocable</div></div><div class="row" style="margin-top:10px"><button class="btn" onclick="closeModal()">Fermer</button></div>`); };
+/* ---------- la page du tiers : ce qu'il ouvre avec le lien reçu ---------- */
+const TCODE = { notaire: "Q2vLn8KdR6tY", agent: "7Kd3xQm9wRtA", gestionnaire: "Hs4Pw9LmB2xK", artisan: "b8Nq2VzLp4Hs", assureur: "Xr5TmW2kJ9pD", acquereur: "Mz3Kv7RqT8nL", heritier: "Wp6Jx2NcF9dR", banque: "Ct9Ln4VbK2sM", diagnostiqueur: "Ry7Fm3PkD5wQ" };
+const TQUI = { notaire: "Me Bertrand, notaire", agent: "Paul Renaud, Agence Loire Immobilier", gestionnaire: "Cabinet Gestion Loire", artisan: "Thermic Ouest", assureur: "Maif, service sinistres", acquereur: "Claire et Nicolas Morel", heritier: "Camille Lefort", banque: "Crédit Mutuel, agence Nantes Est", diagnostiqueur: "Diagnostic Loire" };
+function heure() { const d = new Date(); return d.getHours() + " h " + String(d.getMinutes()).padStart(2, "0"); }
+const TP = (() => {
+  const L = () => S.logement;
+  const docsOf = (f) => S.docs.filter(d => d.statut !== "refuse" && f(d));
+  const eqs = (f) => S.equipements.filter(e => !e.deposee && (!f || f(e)));
+  const proNom = (id) => { const p = S.pros.find(x => x.id === id); return p ? p.nom : (id || ""); };
+  const sec = (titre, cnt, body) => `<section class="tp-sec"><h3>${titre}${cnt !== undefined ? `<span class="tp-cnt">${cnt}</span>` : ""}</h3>${body}</section>`;
+  const dl = (d) => `<button class="btn" onclick="A.tele('${h(d.titre).replace(/'/g, "\\'")}')">Télécharger</button>`;
+  const row = (date, titre, sous, act) => `<div class="tp-row"><span class="tp-d num">${fdate(date)}</span><span class="tp-t"><b>${h(titre)}</b>${sous ? `<span class="tp-s">${h(sous)}</span>` : ""}</span>${act || "<span></span>"}</div>`;
+  const vide = (m) => `<p class="tp-vide">${m}</p>`;
+  const listeDocs = (titre, arr, montants) => sec(titre, arr.length, arr.length ? `<div>${arr.map(d => row(d.date, d.titre, (d.four || "") + (montants && d.montant ? " · " + d.montant.toLocaleString("fr-FR") + " €" : ""), dl(d))).join("")}</div>` : vide("Rien pour l'instant."));
+  const chrono = (titre, kinds) => { const ev = S.events.filter(e => kinds.includes(e.k)).sort((a, b) => a.d.localeCompare(b.d)); return sec(titre, ev.length, ev.length ? `<div>${ev.map(e => row(e.d, e.t, "")).join("")}</div>` : vide("Aucun événement.")); };
+  const cartes = (titre, arr) => sec(titre, arr.length, arr.length ? `<div class="tp-eqs">${arr.map(e => { const g = e.garantie && e.garantie >= today(); const bientot = g && e.garantie <= addDays(today(), 120); return `<div class="tp-eq"><b>${h(e.nom)}</b><div class="tp-kv"><span>Marque</span><span>${h([e.marque, e.modele].filter(Boolean).join(" "))}</span>${e.install ? `<span>Posé</span><span>${fdate(e.install)}</span>` : ""}${e.par ? `<span>Par</span><span>${h(proNom(e.par))}</span>` : ""}${e.entretien ? `<span>Entretenu</span><span>${fdate(e.entretien)}</span>` : ""}<span>État</span><span>${ETATS[e.etat] || e.etat}</span></div>${g ? `<span class="tp-gar${bientot ? " bientot" : ""}">${e.garantieType === "décennale" ? "Décennale" : "Sous garantie"} jusqu'au ${fdate(e.garantie)}</span>` : ""}</div>`; }).join("")}</div>` : vide("Aucun équipement."));
+  const garanties = () => { const arr = eqs(e => e.garantie && e.garantie >= today()); return sec("Garanties actives", arr.length, arr.length ? `<div>${arr.map(e => row(e.garantie, e.nom + " — " + (e.garantieType === "décennale" ? "garantie décennale" : "garantie constructeur"), "jusqu'au " + fdate(e.garantie) + (e.par ? " · " + proNom(e.par) : ""))).join("")}</div>` : vide("Aucune garantie en cours.")); };
+  const dpe = () => { const d = L().dpe || {}; const doc = docsOf(x => x.type === "diagnostic"); return sec("DPE et diagnostics", doc.length, `<div class="tp-dpe"><div class="tp-cl">${h(d.classe || "?")}</div><div><b>Diagnostic de performance énergétique — classe ${h(d.classe || "inconnue")}</b><div class="small muted">Classe climat ${h(d.climat || "—")} · ${fdate(d.date)}</div></div></div><div>${doc.map(x => row(x.date, x.titre, x.four, dl(x))).join("")}</div>`); };
+  const fiche = () => { const l = L(); return sec("Fiche du logement", undefined, `<div class="tp-fiche"><div><span>Adresse</span>${h(l.adresse)}, ${h(l.cp || "")} ${h(l.ville)}</div><div><span>Parcelles</span>${(l.parcelles || []).join(", ") || "—"}</div><div><span>Identifiant fiscal du local</span>${h(l.identifiantFiscal || "—")}</div><div><span>Construction</span>${l.annee || "—"}</div><div><span>Surface</span>${l.surface ? l.surface + " m²" : "—"}</div><div><span>Type</span>${l.type === "maison" ? "Maison" : "Appartement"}${l.jardin ? ", jardin" : ""}</div></div>`); };
+  const photos = (titre, arr) => sec(titre, arr.length, arr.length ? `<div class="tp-photos">${arr.map(d => `<div class="tp-ph">${h(d.titre)} · ${fdate(d.date)}</div>`).join("")}</div>` : vide("Aucune photo."));
+  const pros = () => sec("Artisans du logement", S.pros.length, `<div>${S.pros.map(p => row(p.derniere, p.nom, p.metier + " — " + p.motif)).join("")}</div>`);
+  const depot = (txt, actions) => `<div class="tp-depot"><b>${txt}</b><span class="small muted">Ce que vous déposez arrive dans la boîte d'arrivée de ${h(L().gardien)}, qui le confirme elle-même.</span><div class="row" style="justify-content:center">${actions}</div></div>`;
+  const isChauff = e => ["Chauffage", "Ventilation", "Eau chaude"].includes(e.cat);
+  const photoTravaux = () => docsOf(d => d.type === "photo" && d.cible !== "logement" && d.cible !== "jardin" && !d.wow);
+  const sinistreDocs = () => docsOf(d => /sinistre|expertise|indemnisation|tempête/i.test(d.titre));
+  return {
+    notaire: () => fiche() + listeDocs("Acte d'achat", docsOf(d => d.type === "acte"), false) + dpe() + listeDocs("Plans", docsOf(d => d.type === "plan")) + chrono("Chronologie des travaux", ["construction", "travaux", "install"]) + garanties(),
+    agent: () => chrono("Chronologie des rénovations", ["travaux", "install"]) + cartes("Fiches équipement", eqs(e => e.cat !== "Électroménager")) + garanties() + dpe() + photos("Photos des travaux", photoTravaux()),
+    gestionnaire: () => fiche() + cartes("Équipements", eqs()) + chrono("Interventions et travaux", ["travaux", "reparation", "entretien", "install"]) + sec("États des lieux d'entrée et de sortie", 0, vide("Aucun état des lieux déposé pour l'instant. Vous pouvez déposer le prochain ci-dessous.")) + pros() + sec("Documents de la location", 0, vide("Rien pour l'instant.")) + depot("Vous agissez au nom du logement pendant votre mandat", `<button class="btn primary" onclick="A.depotTiers('gestionnaire')">Déposer un document</button><button class="btn" onclick="toast('Demande préparée : elle partira chez cet artisan avec l’adresse de dépôt du logement.')">Solliciter un artisan</button><button class="btn" onclick="toast('Intervention ouverte dans la mémoire du logement.')">Ouvrir une intervention</button>`),
+    artisan: () => cartes("Équipements concernés par le chantier", eqs(isChauff)) + (() => { const ids = eqs(isChauff).map(e => e.id); const ev = S.events.filter(e => e.eq && ids.includes(e.eq)); return sec("Interventions passées", ev.length, ev.length ? `<div>${ev.map(e => row(e.d, e.t, "")).join("")}</div>` : vide("Aucune intervention connue.")); })() + listeDocs("Plans utiles au chantier", docsOf(d => d.type === "plan")) + depot("Déposer un document pour cette maison", `<button class="btn primary" onclick="A.depotTiers('artisan')">Prendre en photo ou choisir un fichier</button>`),
+    assureur: () => cartes("Équipement sinistré", eqs(e => e.id === "toiture")) + listeDocs("Documents du sinistre", sinistreDocs()) + listeDocs("Factures des réparations", docsOf(d => d.type === "facture" && d.cible === "toiture"), true) + (() => { const t = S.equipements.find(e => e.id === "toiture"); return sec("Dernier entretien", undefined, t && t.entretien ? `<div>${row(t.entretien, "Démoussage et vérification de la toiture", proNom(t.par))}</div>` : vide("Aucun entretien connu.")); })(),
+    acquereur: () => fiche() + chrono("Chronologie du logement", ["construction", "travaux", "install", "entretien", "controle", "wow"]) + cartes("Équipements", eqs()) + garanties(),
+    heritier: () => fiche() + listeDocs("Livre de succession — acte et autorisations", docsOf(d => d.type === "acte" || d.type === "permis")) + listeDocs("Contrats en cours", docsOf(d => d.type === "contrat" || d.type === "assurance")) + cartes("Équipements", eqs()) + pros(),
+    banque: () => dpe() + chrono("Historique des travaux", ["travaux", "install"]),
+    diagnostiqueur: () => fiche() + listeDocs("Diagnostics précédents", docsOf(d => d.type === "diagnostic")) + cartes("Équipements de chauffage", eqs(isChauff))
+  };
+})();
+A.voirComme = (id) => {
+  const t = DATA.tiers.find(x => x.id === id); const a = S.acces[id] || {}; const L = S.logement; A._tp = id;
+  if (a.ouvert) { S.journal.push({ d: today(), t: t.nom + " (" + TQUI[id] + ") a ouvert la page partagée à " + heure() }); save(); }
+  modal(`<div class="tp-bar"><span class="tp-dots"><i></i><i></i><i></i></span><span class="tp-url">🔒 <b>vidom.fr</b>/p/<span class="tp-code">${TCODE[id]}</span></span></div>
+    <div class="tp-head"><div class="tp-brand"><span>VIDOM · mémoire du logement</span><span>page partagée · ${t.mandat ? "avec droit d'agir" : "lecture seule"}</span></div><h2>${h(L.nom)}</h2><div class="tp-sub">${h(L.adresse)}, ${h(L.ville)} · partagée par <b>${h(L.gardien)}</b> avec ${h(TQUI[id])}</div>
+    <div class="tp-meta">${a.ouvert ? `<span class="tp-pill terra">Accès ouvert jusqu'au ${fdate(a.jusqu)}</span>` : `<span class="tp-pill">Aperçu : l'accès n'est pas encore ouvert</span>`}<span class="tp-pill">${h(t.motif)}</span></div></div>
+    <div class="tp-page">${TP[id] ? TP[id]() : ""}<div class="tp-foot"><b>Ce que vous ne voyez pas n'est pas masqué : il n'a pas été transmis.</b><span>Ne figurent pas sur cette page : ${t.exclus.map(x => h(x.toLowerCase())).join(", ")}.</span><span>Chaque ouverture de cette page et chaque téléchargement sont signalés à ${h(L.gardien)}.${a.ouvert ? " L'accès se refermera de lui-même le " + fdate(a.jusqu) + " ; " + h(L.gardien) + " peut le fermer avant." : ""}</span></div></div>
+    <div class="row" style="margin-top:12px;justify-content:space-between"><span class="small muted">Vous regardez par-dessus l'épaule de ${h(t.nom.toLowerCase())} : c'est la page qu'ouvre le lien reçu. Le journal de Partage en garde la trace.</span><button class="btn" onclick="A.tiers('${id}')">Revenir</button></div>`, { wide: true });
+  setTimeout(() => { const m = document.querySelector(".modal.wide"); if (m) m.scrollTop = 0; }, 60);
+};
+A.tele = (titre) => { const id = A._tp; const nom = id ? TQUI[id] : "un tiers"; S.journal.push({ d: today(), t: nom + " a téléchargé « " + titre + " » à " + heure() }); save(); toast("Téléchargé. " + S.logement.gardien + " en est informée."); };
+A.depotTiers = (id) => {
+  const art = id === "artisan"; const titre = art ? "Facture fin de chantier — Thermic Ouest" : "Rapport mensuel de gestion";
+  S.inbox.push({ id: "i" + Date.now(), titre, exp: "page partagée · " + TQUI[id], objet: titre, date: today(), statut: "propose", reco: { type: art ? "facture" : "courrier", date: today(), four: TQUI[id], montant: art ? 3480 : null, cible: art ? "vmc" : "logement" }, verifie: true, pro: art ? "to" : "" });
+  S.journal.push({ d: today(), t: TQUI[id] + " a déposé « " + titre + " » depuis la page partagée à " + heure() }); save();
+  toast("Reçu. " + S.logement.gardien + " le confirmera dans sa boîte d'arrivée.");
+};
 V.journal = () => `<div class="page"><div class="page-h"><div><a class="small" href="#/echanges">← Échanges</a><h1>Qui a vu quoi</h1><p>Chaque partage, chaque consultation, chaque envoi. Réservé à vous.</p></div></div><div class="card tbl"><table><thead><tr><th>Date</th><th>Ce qui s'est passé</th></tr></thead><tbody>${S.journal.slice().reverse().map(j => `<tr><td class="num">${fdate(j.d)}</td><td>${h(j.t)}</td></tr>`).join("")}</tbody></table></div></div>`;
 
 /* ---------- messagerie ---------- */
