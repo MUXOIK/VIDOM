@@ -610,7 +610,7 @@ function Layout(name, inner) {
   </div>
   <nav class="tabbar">
     <a href="#/accueil" class="${name === "accueil" ? "on" : ""}">${I.maison}Accueil</a>
-    <a href="#/memoire" class="${["memoire", "chronologie", "fiche", "pieces", "boite", "equipements", "documents"].includes(name) ? "on" : ""}">${I.coeur}Mémoire</a>
+    <a href="#/menu" class="${["menu", "memoire", "chronologie", "fiche", "pieces", "boite", "equipements", "documents", "travaux", "professionnels", "echanges", "messagerie", "transmission"].includes(name) ? "on" : ""}">${I.coeur}Mémoire${nInbox ? `<span class="badge alert">${nInbox}</span>` : ""}</a>
     <a href="#" class="plus" onclick="A.ajouter();return false"><span class="c">${I.plus}</span>Ajouter</a>
     <a href="#/afaire" class="${name === "afaire" ? "on" : ""}">${I.cloche}À faire${nAfaire ? `<span class="badge alert">${nAfaire}</span>` : ""}</a>
     <a href="#/profil" class="${name === "profil" ? "on" : ""}">${I.profil}Profil</a>
@@ -987,7 +987,7 @@ V.boite = () => {
   const items = S.inbox.slice().sort((a, b) => b.date.localeCompare(a.date));
   const prop = items.filter(i => i.statut === "propose");
   const st = { recu: "Reçu", propose: "Proposé", valide: "Validé", refuse: "Refusé" };
-  return `<div class="page"><div class="page-h"><div><h1>Boîte d'arrivée</h1><p>Ce qui arrive par courriel, code QR ou lien. Rien ne passe de « proposé » à « validé » sans un geste de votre main.</p></div><div class="row">${prop.length > 1 ? `<button class="btn" onclick="A.toutGarder()">Tout garder, un par un</button>` : ""}<button class="btn" onclick="A.partager()">Partager l'adresse</button></div></div>
+  return `<div class="page"><div class="page-h"><div><h1>Boîte d'arrivée — le sas</h1><p>Ce qui est arrivé à l'adresse de la maison, par courriel, code QR ou lien, attend ici. Rien n'entre dans la mémoire sans un geste de votre main : Conserver, ou Refuser.</p></div><div class="row">${prop.length > 1 ? `<button class="btn" onclick="A.toutGarder()">Tout garder, un par un</button>` : ""}<button class="btn" onclick="A.partager()">Partager l'adresse</button></div></div>
     ${items.length ? items.map(i => `<div class="card" style="margin-top:0;margin-bottom:10px"><div class="doc" style="border:0;padding:0;margin:0"><div class="thumb">${TYPES[i.reco.type]}</div><div>
         <div class="row"><span class="state ${i.statut}">${st[i.statut]}</span>${i.doublon ? `<span class="state attention">Doublon possible</span>` : ""}${i.verifie === false ? `<span class="state attention">Expéditeur non vérifié</span>` : ""}</div>
         <b>${h(i.titre)}</b><span class="l">De ${h(i.exp)} · ${fdate(i.date)} · « ${h(i.objet)} »</span>
@@ -1260,6 +1260,28 @@ V.etiquette = () => `<div class="page"><div class="page-h"><div><a class="small"
   <div class="book" style="text-align:center;max-width:420px"><div style="display:flex;justify-content:center;gap:8px;align-items:center;font-weight:700;font-size:1.3em;color:var(--sauge-f)">${I.logo.replace('viewBox', 'width="28" height="28" viewBox')} vidom</div><p class="muted" style="margin-top:6px">${h(S.logement.nom)}</p><canvas id="qr" class="qr" style="width:180px;height:180px;margin:10px auto;display:block"></canvas><p><b class="num">${h(S.logement.adresseDepot)}</b></p><p class="small muted">Vous intervenez dans ce logement ? Envoyez votre facture et votre garantie à cette adresse, ou scannez le code. Le gardien confirmera.</p></div>
   <div class="print-only"><h2>${h(S.logement.nom)}</h2><p>${h(S.logement.adresseDepot)}</p><p>Vous intervenez dans ce logement ? Envoyez votre facture et votre garantie à cette adresse.</p></div></div>`;
 V.etiquette.after = () => { const c = document.getElementById("qr"); if (c) drawQR(c, S.logement.adresseDepot); };
+
+/* ---------- sommaire (téléphone) ---------- */
+V.menu = () => {
+  const nInbox = S.inbox.filter(i => i.statut === "propose").length;
+  const nDocs = S.docs.filter(d => d.statut !== "refuse").length, nEq = S.equipements.filter(e => !e.deposee).length;
+  const it = (go, ico, t, s, b, alert) => `<a class="opt" href="#/${go}" style="text-decoration:none;color:inherit"><div class="row" style="gap:10px"><span style="width:20px;height:20px;color:var(--sauge-f)">${I[ico]}</span><div><b>${t}</b><div class="small muted">${s}</div></div></div>${b ? `<span class="badge ${alert ? "alert" : ""}" style="background:${alert ? "var(--terra)" : "var(--bois-c)"};color:${alert ? "#fff" : "var(--ardoise)"}">${b}</span>` : ""}</a>`;
+  return `<div class="page"><div class="page-h"><div><h1>La mémoire de la maison</h1><p>Toutes les sections, au même endroit.</p></div></div>
+    ${it("boite", "boite", "Boîte d'arrivée — le sas", "Ce qui est arrivé par l'adresse de la maison. Vous décidez ce qui entre.", nInbox, true)}
+    ${it("pieces", "pieces", "Pièces et espaces", "Photographier, pièce après pièce", "")}
+    ${it("equipements", "equip", "Équipements", "Fiches, notices, SAV, garanties", nEq)}
+    ${it("documents", "doc", "Documents", "Tout ce qui est conservé", nDocs)}
+    ${it("chronologie", "horloge", "Chronologie", "La maison raconte son histoire", "")}
+    ${it("memoire", "coeur", "Mémoire", "Le livre du logement, les moments qui comptent", "")}
+    ${it("fiche", "fiche", "Fiche du logement", "Identité, adresse de dépôt, expéditeurs", "")}
+    ${it("travaux", "travaux", "Travaux", "Chantiers, devis, finances", "")}
+    ${it("professionnels", "pros", "Professionnels", "Ceux qui connaissent la maison", "")}
+    ${it("echanges", "echanges", "Échanges et accès", "Le logement au centre, les tiers autour", "")}
+    ${it("messagerie", "chat", "Messagerie", "Poser une question à la maison", "")}
+    ${it("transmission", "cle", "Transmission", "Les livres, et le jour où la maison change de mains", "")}
+    <div class="grp" style="color:var(--sable);margin-top:16px">À venir</div>
+    ${it("consommation", "lock", "Consommation", "Dans une version ultérieure", "")}${it("locataire", "lock", "Locataire", "Dans une version ultérieure", "")}</div>`;
+};
 
 /* ---------- cadenas ---------- */
 const lockView = (titre, texte, quand) => () => `<div class="page"><div class="page-h"><div><h1>${titre}</h1></div></div><div class="lockbox">${I.lock}<div><b>Dans une version ultérieure.</b><p style="margin-top:6px">${texte}</p><p class="small muted">${quand}</p></div></div></div>`;
