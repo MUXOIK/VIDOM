@@ -367,16 +367,26 @@ function reconnaitre(file,pieceId,dataUrl){
   Object.assign(rec,it);
   return rec;
 }
+function equipParLie(lie){ // retrouve l'équipement visé par un document, par identifiant ou par nom (au cas où il a été renommé)
+  if(!lie)return null;
+  return S.equipements.find(x=>x.id===lie)||S.equipements.find(x=>slug(x.nom)===slug(lie));
+}
+function docsLies(e){ // les documents reliés à cet équipement, par identifiant ou par nom
+  return S.docs.filter(d=>d.lie&&(d.lie===e.id||slug(d.lie)===slug(e.nom)));
+}
 function ranger(rec){ // C'est bien ça
   const nees=[];
   if(rec.k==="equip"){
     const e={id:rec.id,piece:rec.pieceId,nom:rec.nom,marque:rec.marque,modele:rec.modele,ref:rec.ref,achat:rec.achat,garantie:rec.garantie,installateur:rec.installateur||"",notice:rec.notice,sav:rec.sav,etat:rec.etat,entretien:!!rec.entretien,img:rec.img,date:rec.date,entretiens:rec.entretien?[{d:rec.achat,par:rec.installateur}]:[]};
     S.equipements.push(e);
+    // les documents déjà rangés qui le visaient par son nom (arrivés avant lui) se relient à lui pour de bon
+    S.docs.forEach(d=>{if(d.lie&&d.lie!==e.id&&slug(d.lie)===slug(e.nom))d.lie=e.id});
     if(rec.installateur)connaitrePro(rec.installateur,`Installation : ${rec.nom.toLowerCase()}`,rec.achat);
     if(rec.entretien)S.rappels.push({id:uid(),t:`L'entretien annuel de ${lc(rec.nom)} est à faire ce mois-ci.`,equip:e.id,pro:rec.installateur||"",du:today(),fait:false});
     if(rec.garantie&&joursDepuis(rec.garantie)<0&&joursDepuis(rec.garantie)>-200)S.rappels.push({id:uid(),t:`La garantie de ${lc(rec.nom)} ${rec.marque} expire le ${dateFr(rec.garantie)}.`,equip:e.id,du:rec.garantie,fait:false,info:true});
   }else if(rec.k==="doc"){
-    const d={id:rec.id,piece:rec.pieceId,type:rec.type,titre:rec.titre,date:rec.date,fournisseur:rec.fournisseur,montant:rec.montant,lie:rec.lie||"",travaux:rec.travaux||"",garantie:rec.garantie||"",img:rec.img,recu:rec.recu||"photo",dateRecu:rec.date0||rec.date};
+    const cible=rec.lie?equipParLie(rec.lie):null; // si l'équipement existe déjà, on relie par identifiant tout de suite
+    const d={id:rec.id,piece:rec.pieceId,type:rec.type,titre:rec.titre,date:rec.date,fournisseur:rec.fournisseur,montant:rec.montant,lie:cible?cible.id:(rec.lie||""),travaux:rec.travaux||"",garantie:rec.garantie||"",img:rec.img,recu:rec.recu||"photo",dateRecu:rec.date0||rec.date};
     S.docs.push(d);
     if(rec.fournisseur&&RESERVE.pros[rec.fournisseur])connaitrePro(rec.fournisseur,rec.travaux?rec.travaux:(rec.type==="facture"?"Facture reçue":"Document reçu"),rec.date);
     if(rec.travaux){let t=S.travaux.find(t=>t.titre===rec.travaux);if(!t){t={id:uid(),titre:rec.travaux,par:rec.fournisseur,date:rec.date,montant:0,docs:[]};S.travaux.push(t)}t.docs.push(d.id);if(rec.type==="facture")t.montant=rec.montant;if(rec.date>t.date)t.date=rec.date}
@@ -600,7 +610,7 @@ V.compte=()=>`<div class="view center fadein" style="gap:18px">
 </div>`;
 function compteOk(){S.compte.email=document.getElementById("email").value.trim();S.etape="adresse";save();render()}
 function mdpOublie(){const m=document.getElementById("email")?.value||"";modal(`<h2>Mot de passe oublié</h2><p class="muted">VIDOM vous envoie un courriel avec un lien pour en choisir un nouveau.</p><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em2" type="email" value="${h(m)}"></label><button class="btn primary big" onclick="closeModal();toast('Courriel envoyé (simulé). Regardez votre boîte.')">Envoyer le lien</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
-function dejaCompte(){modal(`<h2>Se connecter</h2><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em3" type="email" placeholder="vous@exemple.fr"></label><label class="f"><span>Votre mot de passe</span><input class="input" id="mdp3" type="password"></label><button class="btn primary big" onclick="S.compte.email=document.getElementById('em3').value.trim();closeModal();S.etape='adresse';save();render()">Continuer</button><button class="btn ghost" onclick="closeModal()">Annuler</button><p class="small faint">Dans cette maquette, la connexion est simulée : rien ne quitte votre appareil.</p>`)}
+function dejaCompte(){modal(`<h2>Se connecter</h2><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em3" type="email" placeholder="vous@exemple.fr"></label><label class="f"><span>Votre mot de passe</span><input class="input" id="mdp3" type="password"></label><button class="btn primary big" onclick="S.compte.email=document.getElementById('em3').value.trim();closeModal();S.etape='adresse';save();render()">Continuer</button><button class="btn ghost" onclick="closeModal()">Annuler</button><p class="small faint">Dans cette maquette de démonstration, la connexion ne retrouve rien : chaque appareil garde sa propre mémoire, y compris s'il s'agit du même courriel. Vous allez donc recréer une maison ici. Dans la version réelle, un même compte retrouvera la même maison partout.</p>`)}
 
 V.adresse=()=>{
   const c=S.comptage;
@@ -863,7 +873,7 @@ function vEquipements(){
 }
 V.equipement=id=>{
   const e=S.equipements.find(x=>x.id===id);if(!e)return vEquipements();
-  const docs=S.docs.filter(d=>d.lie===e.nom||d.lie===e.id);
+  const docs=docsLies(e);
   return `<div class="view" style="gap:12px">
     ${e.img?`<div class="photo" style="min-height:130px"><img src="${e.img}" alt=""></div>`:""}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(e.nom)}</h1><p class="muted">${h(e.marque)} ${h(e.modele)} · ${h(nomPiece(e.piece))}</p></div>
@@ -879,17 +889,28 @@ function probleme(id){const e=S.equipements.find(x=>x.id===id);const garanti=e.g
 function sinistre(id){const e=S.equipements.find(x=>x.id===id);const ass=S.docs.find(d=>d.type==="contrat");modal(`<h2>Déclaration de sinistre</h2><p class="muted">VIDOM prépare le dossier avec ce que la maison sait. Vous relisez, vous envoyez.</p><div class="book"><p class="b">${h(S.logement.nom)} — ${h(S.logement.adresse)}, ${h(S.logement.cp)} ${h(S.logement.ville)}</p><p class="small muted">${ass?"Contrat : "+h(ass.fournisseur)+", attestation du "+dateFr(ass.date):"Attestation d'assurance : à photographier"}</p><p style="margin-top:8px"><b>Équipement concerné :</b> ${h(e.nom)} ${h(e.marque)} ${h(e.modele)}, ${e.achat?"acheté le "+dateFr(e.achat):""}${e.installateur?", installé par "+h(e.installateur):""}.</p><p><b>Pièces jointes :</b> facture d'achat, photos, ${e.notice?"notice":""}.</p></div><div class="row"><a class="btn primary grow" href="mailto:?subject=${encodeURIComponent("Déclaration de sinistre — "+S.logement.adresse)}" onclick="closeModal();filAjouter({type:'info',t:'Déclaration de sinistre préparée pour '+'${h(lc(e.nom))}'+'. Envoyée depuis votre messagerie.',ico:'envoi',fait:true});render()">${I.envoi} Envoyer</a><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
 
 function vDocuments(){
-  const TYPES={acte:"Acte",diagnostic:"Diagnostics",facture:"Factures",devis:"Devis",notice:"Notices",contrat:"Contrats et attestations",impot:"Impôts",plan:"Plans",autre:"Autres"};
-  const par={};S.docs.forEach(d=>{(par[d.type]=par[d.type]||[]).push(d)});
+  const vue=S.reglages.docsPar||"type";
+  const ligne=d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""} · ${d.piece==="maison"?"la maison":h(nomPiece(d.piece))}</span></span>${I.fleche}</a>`;
+  let corps;
+  if(vue==="enseigne"){
+    const par={};S.docs.forEach(d=>{const k=d.fournisseur||"Sans enseigne connue";(par[k]=par[k]||[]).push(d)});
+    const noms=Object.keys(par).sort((a,b)=>a==="Sans enseigne connue"?1:b==="Sans enseigne connue"?-1:a.localeCompare(b));
+    corps=noms.map(n=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(n)}</p>${par[n].sort((a,b)=>b.date.localeCompare(a.date)).map(ligne).join("")}</div>`).join("");
+  }else{
+    const TYPES={acte:"Acte",diagnostic:"Diagnostics",facture:"Factures",devis:"Devis",notice:"Notices",contrat:"Contrats et attestations",impot:"Impôts",plan:"Plans",autre:"Autres"};
+    const par={};S.docs.forEach(d=>{(par[d.type]=par[d.type]||[]).push(d)});
+    corps=Object.keys(TYPES).filter(t=>par[t]).map(t=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${TYPES[t]}</p>${par[t].sort((a,b)=>b.date.localeCompare(a.date)).map(ligne).join("")}</div>`).join("");
+  }
   return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Documents</h1>
-    ${Object.keys(TYPES).filter(t=>par[t]).map(t=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${TYPES[t]}</p>${par[t].sort((a,b)=>b.date.localeCompare(a.date)).map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""} · ${d.piece==="maison"?"la maison":h(nomPiece(d.piece))}</span></span>${I.fleche}</a>`).join("")}</div>`).join("")}
+    ${S.docs.length?`<div class="row">${[["type","Par type"],["enseigne","Par enseigne"]].map(([k,n])=>`<button class="chip btn-chip ${vue===k?"on":""}" onclick="S.reglages.docsPar='${k}';save();render()">${n}</button>`).join("")}</div>`:""}
+    ${corps}
     <div class="row"><label class="btn grow file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter</button></div>
   </div>`;
 }
-V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();const t=S.travaux.find(t=>t.docs.includes(d.id));
+V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();const t=S.travaux.find(t=>t.docs.includes(d.id));const eqLie=d.lie?equipParLie(d.lie):null;
   return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:160px"><img src="${d.img}" alt=""></div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">${h(d.titre)}</h1><p class="muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</p></div>
-    <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd></dl></div>
+    <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd></dl></div>
     <div class="row wrap">${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Corriger</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
   </div>`};
 function retirerDoc(id){modal(`<h2>Retirer ce document ?</h2><p class="muted">Il disparaît vraiment de la mémoire de la maison.</p><div class="row"><button class="btn terra grow" onclick="S.docs=S.docs.filter(d=>d.id!=='${id}');closeModal();save();route('#/carte/documents');toast('Retiré')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
@@ -1065,7 +1086,7 @@ function render(){
   const dv=document.querySelector(".pane.right")||window;
   if(render.lastRoute!==location.hash){window.scrollTo(0,0);render.lastRoute=location.hash}
 }
-function ajouterDesk(){modal(`<h2>Photographier</h2><div class="stack"><label class="btn primary big file">${I.camera} Avec la caméra de l'ordinateur<input type="file" accept="image/*" capture="environment" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="qr" style="width:96px;height:96px">${qrSvg(location.href.split("#")[0])}</div><span class="small muted">Continuez sur votre téléphone : ouvrez ce code, la maison vous y attend. Ce que vous photographierez là-bas se retrouvera ici.</span></div></div><button class="btn" onclick="closeModal()">Fermer</button>`)}
+function ajouterDesk(){modal(`<h2>Photographier</h2><div class="stack"><label class="btn primary big file">${I.camera} Avec la caméra de l'ordinateur<input type="file" accept="image/*" capture="environment" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="qr" style="width:96px;height:96px">${qrSvg(location.href.split("#")[0])}</div><span class="small muted">Pour voir les écrans du téléphone, ouvrez ce code avec l'appareil photo de votre téléphone. Dans cette maquette de démonstration, chaque appareil garde sa propre mémoire : ce que vous ajoutez ici ne s'y retrouve pas encore. Ce sera vrai dans la version réelle, connectée.</span></div></div><button class="btn" onclick="closeModal()">Fermer</button>`)}
 function route(hsh){if(hsh&&location.hash!==hsh){location.hash=hsh}else render()}
 window.addEventListener("hashchange",render);
 window.addEventListener("resize",()=>{clearTimeout(render.rt);render.rt=setTimeout(render,120)});
