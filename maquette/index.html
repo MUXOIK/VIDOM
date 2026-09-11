@@ -1,0 +1,1087 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VIDOM — la mémoire de votre logement</title>
+<meta name="description" content="VIDOM construit avec vous la mémoire de votre logement.">
+<meta name="theme-color" content="#F6F3ED">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="VIDOM">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%235F7A6A'/%3E%3Cpath d='M14 30l18-14 18 14' fill='none' stroke='%23FFFDF9' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M19 29v18h26V29' fill='none' stroke='%23FFFDF9' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M28 47v-10h8v10' fill='none' stroke='%23FFFDF9' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%235F7A6A'/%3E%3Cpath d='M14 30l18-14 18 14' fill='none' stroke='%23FFFDF9' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M19 29v18h26V29' fill='none' stroke='%23FFFDF9' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M28 47v-10h8v10' fill='none' stroke='%23FFFDF9' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --sauge:#5F7A6A;--sauge-f:#4A6255;--sauge-c:#E4EBE6;--sauge-cc:#F0F4F1;
+  --ivoire:#F6F3ED;--blanc:#FFFDF9;--bois:#D8C8B2;--bois-c:#EFE6D8;--sable:#B5B0A5;
+  --ardoise:#50575E;--encre:#2F3439;--terra:#C9775B;--terra-c:#F4E3DB;--terra-f:#A85F45;
+  --fs:17px;--r:12px;--r2:16px;
+}
+html[data-texte="grand"]{--fs:19px}
+html[data-texte="tres-grand"]{--fs:21px}
+@media (min-width:1024px){:root{--fs:16px}html[data-texte="grand"]{--fs:18px}html[data-texte="tres-grand"]{--fs:20px}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ivoire);color:var(--encre);font-family:"Source Sans 3","Segoe UI",system-ui,-apple-system,sans-serif;font-size:var(--fs);line-height:1.4;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+a{color:var(--sauge-f)}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.15;text-wrap:balance}
+h1{font-size:1.65em}h2{font-size:1.3em}h3{font-size:1.1em}
+p{margin:0}
+.muted{color:var(--ardoise)}.faint{color:var(--sable)}.small{font-size:.85em}.b{font-weight:600}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--terra);outline-offset:2px}
+[hidden]{display:none!important}
+.sr{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+svg.i{width:20px;height:20px;flex:0 0 auto}
+
+/* ---------- squelette ---------- */
+#app{min-height:100%;display:flex;flex-direction:column}
+.col{width:100%;max-width:600px;margin:0 auto;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(14px + env(safe-area-inset-top)) 20px 8px}
+.top .t{font-size:.8em;color:var(--ardoise);font-weight:600;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw}
+.top .back{display:inline-flex;align-items:center;gap:6px;color:var(--sauge-f);font-weight:600;min-height:44px}
+.view{flex:1 1 auto;display:flex;flex-direction:column;gap:14px;padding:6px 18px 24px}
+.view.center{justify-content:center;padding-bottom:120px}
+.nav{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:var(--blanc);border-top:1px solid var(--bois-c)}
+.nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;text-decoration:none;color:var(--ardoise);font-size:.8em;font-weight:500;border-radius:var(--r)}
+.nav a svg{width:24px;height:24px}
+.nav a.on{color:var(--sauge-f);background:var(--sauge-cc)}
+.nav a.cam{color:var(--blanc);background:var(--sauge)}
+.nav a.cam.on{background:var(--sauge-f)}
+
+/* ---------- ordinateur ---------- */
+.desk{display:none}
+@media (min-width:1024px){
+  body.app .col{display:none}
+  body.app .desk{display:grid;grid-template-columns:420px minmax(0,1fr);gap:32px;max-width:1280px;margin:0 auto;padding:0 32px;min-height:100vh}
+  .desk .pane{display:flex;flex-direction:column;min-height:100vh}
+  .desk .pane.left{position:sticky;top:0;max-height:100vh;overflow:auto;padding-bottom:24px}
+  .desk .pane .view{padding:6px 4px 32px}
+  .desk .topbar{position:sticky;top:0;z-index:5;background:var(--ivoire);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 4px 8px}
+  .desk .topbar .t{font-size:.8em;color:var(--ardoise);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+  .desk .topbar .actions{display:flex;gap:8px;align-items:center}
+  .nav{display:none}
+}
+
+/* ---------- composants ---------- */
+.card{background:var(--blanc);border:1px solid var(--bois-c);border-radius:var(--r2);padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.card.soft{background:var(--sauge-cc);border-color:var(--sauge-c)}
+.card.attn{border-color:var(--terra);background:var(--terra-c)}
+.card.dash{border-style:dashed;background:transparent;color:var(--sable)}
+a.card{text-decoration:none;color:inherit}
+.row{display:flex;gap:10px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.split{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stack{display:flex;flex-direction:column;gap:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:var(--r);border:1px solid var(--bois);background:var(--blanc);color:var(--encre);font-size:.95em;font-weight:600;text-decoration:none;text-align:center;line-height:1.2}
+.btn:hover{border-color:var(--sauge)}
+.btn.primary{background:var(--sauge);border-color:var(--sauge);color:var(--blanc)}
+.btn.primary:hover{background:var(--sauge-f)}
+.btn.terra{background:var(--terra);border-color:var(--terra);color:var(--blanc)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--sauge-f)}
+.btn.big{min-height:56px;font-size:1.05em;border-radius:14px}
+.btn.sm{min-height:36px;padding:0 12px;font-size:.85em}
+.btn.grow{flex:1 1 auto}
+.btn svg{width:20px;height:20px}
+.btn.file{position:relative;overflow:hidden}
+.btn.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--sauge-c);color:var(--sauge-f);font-size:.8em;font-weight:600;white-space:nowrap}
+.chip.terra{background:var(--terra-c);color:var(--terra-f)}
+.chip.neutre{background:var(--bois-c);color:var(--ardoise)}
+.chip.btn-chip{border:1px solid var(--bois);background:var(--blanc);color:var(--ardoise);font-weight:500;font-size:.9em;padding:8px 14px;cursor:pointer}
+.chip.btn-chip.on{background:var(--sauge-c);border-color:var(--sauge);color:var(--sauge-f)}
+.input{min-height:54px;border-radius:14px;border:1.5px solid var(--bois);background:var(--blanc);padding:0 16px;font-size:1.05em;display:flex;align-items:center;width:100%;color:var(--encre)}
+.input:focus{border-color:var(--sauge);outline:none}
+textarea.input{min-height:90px;padding:12px 16px;resize:vertical}
+label.f{display:flex;flex-direction:column;gap:6px}
+label.f>span{font-size:.85em;color:var(--ardoise)}
+.sep{display:flex;align-items:center;gap:10px;color:var(--sable);font-size:.75em;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.sep i{flex:1 1 auto;height:1px;background:var(--sauge-c);display:block}
+.when{font-size:.8em;color:var(--sable);font-weight:500}
+.h{font-size:1.65em;font-weight:600;line-height:1.15}
+.tile{width:40px;height:40px;border-radius:12px;background:var(--sauge-c);color:var(--sauge-f);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.tile svg{width:22px;height:22px}
+.tile.terra{background:var(--terra-c);color:var(--terra-f)}
+.tile.dash{background:transparent;border:1.5px dashed var(--bois);color:var(--sable)}
+.line{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bois-c);text-decoration:none;color:inherit}
+.line:last-child{border-bottom:0}
+.step{display:flex;justify-content:space-between;align-items:center;min-height:50px;border-bottom:1px solid var(--bois-c)}
+.step:last-of-type{border-bottom:0}
+.step .ctl{display:flex;align-items:center}
+.step .ctl button{width:42px;height:42px;border-radius:10px;border:1px solid var(--bois);display:flex;align-items:center;justify-content:center;color:var(--ardoise);font-size:1.4em;background:var(--blanc)}
+.step .ctl b{width:40px;text-align:center;font-size:1.1em}
+.photo{border-radius:var(--r2);background:#E9E4DA;border:1px solid var(--bois);min-height:150px;display:flex;align-items:flex-end;padding:12px;overflow:hidden;position:relative}
+.photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.photo .chip{position:relative;background:var(--blanc);color:var(--ardoise)}
+.bulle{align-self:flex-end;max-width:85%;background:var(--sauge);color:var(--blanc);border-radius:18px 18px 4px 18px;padding:10px 16px}
+.ask{display:flex;gap:8px;align-items:center;position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));background:var(--ivoire);padding:8px 0 4px}
+@media (min-width:1024px){.ask{bottom:0;padding:10px 0 18px}}
+.ask input{flex:1 1 auto}
+.ask button{width:54px;height:54px;border-radius:14px;background:var(--sauge);color:var(--blanc);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.house{display:block;width:100%;max-width:300px;margin:0 auto}
+.house rect{cursor:pointer}
+.plan{width:100%;border-radius:var(--r);border:1px solid var(--bois-c);display:block}
+.mono{font-variant-numeric:tabular-nums;word-break:break-all}
+.qr{width:96px;height:96px;flex:0 0 auto;border-radius:6px;background:var(--blanc);padding:4px;border:1px solid var(--bois-c)}
+.qr svg{width:100%;height:100%;display:block}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--encre);color:var(--blanc);padding:10px 16px;border-radius:999px;font-size:.9em;z-index:50;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.on{opacity:1}
+@media (min-width:1024px){.toast{bottom:32px}}
+.modal-bg{position:fixed;inset:0;background:rgba(47,52,57,.35);display:flex;align-items:flex-end;justify-content:center;z-index:40;padding:0}
+@media (min-width:600px){.modal-bg{align-items:center;padding:24px}}
+.modal{background:var(--ivoire);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:92vh;overflow:auto;padding:20px 20px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+@media (min-width:600px){.modal{border-radius:20px;padding:24px}}
+.drop{position:fixed;inset:0;background:rgba(95,122,106,.18);border:4px dashed var(--sauge);z-index:60;display:flex;align-items:center;justify-content:center;font-size:1.4em;font-weight:600;color:var(--sauge-f);pointer-events:none}
+.fadein{animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.fadein{animation:none}.toast{transition:none}}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.95em}
+.kv dt{color:var(--ardoise)}.kv dd{margin:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.progress{height:6px;border-radius:3px;background:var(--bois-c);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--sauge);border-radius:3px}
+.book{background:var(--blanc);border:1px solid var(--bois);border-radius:8px;padding:18px 20px;box-shadow:2px 2px 0 var(--bois-c)}
+.check{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--bois-c)}
+.check input{width:20px;height:20px;margin-top:2px;accent-color:var(--sauge)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast" role="status"></div>
+<div id="modal"></div>
+<div id="drop" class="drop" hidden>Déposez vos fichiers : VIDOM range.</div>
+<script>
+/* ================= manifeste (installable) ================= */
+(function(){
+  try{
+    const m={name:"VIDOM",short_name:"VIDOM",start_url:location.pathname,display:"standalone",background_color:"#F6F3ED",theme_color:"#F6F3ED",lang:"fr",
+      icons:[{src:"data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='#5F7A6A'/><path d='M14 30l18-14 18 14' fill='none' stroke='#FFFDF9' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/><path d='M19 29v18h26V29' fill='none' stroke='#FFFDF9' stroke-width='4' stroke-linejoin='round'/><path d='M28 47v-10h8v10' fill='none' stroke='#FFFDF9' stroke-width='4' stroke-linejoin='round'/></svg>"),sizes:"any",type:"image/svg+xml",purpose:"any"}]};
+    const l=document.createElement("link");l.rel="manifest";l.href="data:application/manifest+json,"+encodeURIComponent(JSON.stringify(m));document.head.appendChild(l);
+  }catch(e){}
+})();
+</script>
+<script>/* QR Code Generator for JavaScript — (c) 2009 Kazuhiko Arase, licence MIT */
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}(function(){return qrcode});</script>
+<script>
+/* ================= icônes (SVG en ligne) ================= */
+const VS='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
+const I={
+  camera:`<svg class="i" ${VS}><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
+  bulle:`<svg class="i" ${VS}><path d="M4 5h16v11H9l-5 4z"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.4"/><circle cx="12" cy="15.6" r=".4"/></svg>`,
+  maison:`<svg class="i" ${VS}><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>`,
+  check:`<svg class="i" ${VS} stroke-width="2"><path d="M5 12l4 4 10-10"/></svg>`,
+  doc:`<svg class="i" ${VS}><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>`,
+  outil:`<svg class="i" ${VS}><path d="M14 6a4 4 0 0 0 5 5l-9 9-3-3 9-9z"/><path d="M4 20l3-3"/></svg>`,
+  cloche:`<svg class="i" ${VS}><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>`,
+  feuille:`<svg class="i" ${VS}><path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14z"/><path d="M5 19l8-8"/></svg>`,
+  plus:`<svg class="i" ${VS} stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`,
+  moins:`<svg class="i" ${VS} stroke-width="2"><path d="M5 12h14"/></svg>`,
+  gens:`<svg class="i" ${VS}><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5a5 5 0 0 1 6 5"/></svg>`,
+  mail:`<svg class="i" ${VS}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>`,
+  plan:`<svg class="i" ${VS}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h9V3M12 12v9M12 15h9"/></svg>`,
+  fleche:`<svg class="i" ${VS} stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+  retour:`<svg class="i" ${VS} stroke-width="2"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`,
+  reglages:`<svg class="i" ${VS}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>`,
+  travaux:`<svg class="i" ${VS}><path d="M3 21h18"/><path d="M5 21V9l7-5 7 5v12"/><path d="M9 21v-5h6v5"/></svg>`,
+  cle:`<svg class="i" ${VS}><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M13 10l3 3"/></svg>`,
+  cadenas:`<svg class="i" ${VS}><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
+  oeil:`<svg class="i" ${VS}><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  envoi:`<svg class="i" ${VS}><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>`,
+  telechargement:`<svg class="i" ${VS}><path d="M12 3v12M6 11l6 6 6-6"/><path d="M4 21h16"/></svg>`,
+  qr:`<svg class="i" ${VS}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M21 14v7h-4M14 21h1"/></svg>`,
+  echanges:`<svg class="i" ${VS}><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/><path d="M9.5 10.5L5.3 7.1M14.5 10.5l4.2-3.4M9.5 13.5l-4.2 3.4M14.5 13.5l4.2 3.4"/></svg>`,
+  telephone:`<svg class="i" ${VS}><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>`,
+  fichier:`<svg class="i" ${VS}><path d="M4 6h6l2 2h8v11H4z"/></svg>`,
+  croix:`<svg class="i" ${VS} stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+};
+
+/* ================= réserve : la Maison des Tilleuls ================= */
+/* Servie une par une, au fil des photos et des événements. Jamais d'un bloc. */
+const RESERVE={
+  logement:{nom:"Maison des Tilleuls",adresse:"12 rue des Tilleuls",cp:"35400",ville:"Saint-Malo",annee:1962,surface:118,dpe:"C",dpeDate:"12 mai 2024",parcelles:["AB 214"],depot:"maison-des-tilleuls-b3k@depot.vidom.fr"},
+  /* équipements et documents, par type de pièce ; 'maison' = la maison entière */
+  items:[
+    {k:"equip",piece:"cuisine",nom:"Lave-vaisselle",marque:"Bosch",modele:"Série 4 SMS4HTI45E",ref:"SMS4HTI45E",achat:"2023-03-14",garantie:"2027-03-14",installateur:"",notice:true,sav:"09 69 32 15 15",etat:"bon",photo:"Étiquette du lave-vaisselle"},
+    {k:"doc",piece:"cuisine",type:"facture",titre:"Facture Darty — lave-vaisselle Bosch",date:"2023-03-14",fournisseur:"Darty",montant:649,lie:"Lave-vaisselle",photo:"Une facture"},
+    {k:"equip",piece:"cuisine",nom:"Four",marque:"Whirlpool",modele:"AKZ9 6230 IX",ref:"AKZ96230IX",achat:"2019-11-02",garantie:"2021-11-02",notice:true,sav:"09 69 39 78 00",etat:"bon",photo:"La plaque signalétique du four"},
+    {k:"equip",piece:"cuisine",nom:"Plaque à induction",marque:"Sauter",modele:"SPI4664B",ref:"SPI4664B",achat:"2019-11-02",garantie:"2021-11-02",notice:true,sav:"09 69 39 34 34",etat:"bon",photo:"Le dessous de la plaque"},
+    {k:"equip",piece:"cuisine",nom:"Réfrigérateur",marque:"Liebherr",modele:"CNef 4815",ref:"CNEF4815",achat:"2020-06-20",garantie:"2022-06-20",notice:true,sav:"03 88 04 12 00",etat:"bon",photo:"L'étiquette du réfrigérateur"},
+    {k:"equip",piece:"salon",nom:"Poêle à bois",marque:"Invicta",modele:"Chamane 14 kW",ref:"6114-44",achat:"2018-10-05",garantie:"2023-10-05",installateur:"Cheminées Malouines",notice:true,sav:"03 24 27 22 22",etat:"bon",photo:"Le poêle à bois"},
+    {k:"doc",piece:"salon",type:"notice",titre:"Notice du poêle Invicta Chamane",date:"2018-10-05",fournisseur:"Invicta",lie:"Poêle à bois",photo:"La notice du poêle"},
+    {k:"equip",piece:"garage",nom:"Chaudière gaz",marque:"Saunier Duval",modele:"ThemaPlus Condens F25",ref:"F25",achat:"2016-09-12",garantie:"2018-09-12",installateur:"Bertin Chauffage",notice:true,sav:"09 74 75 00 00",etat:"bon",entretien:true,photo:"La chaudière"},
+    {k:"equip",piece:"garage",nom:"Tableau électrique",marque:"Legrand",modele:"Drivia 3 rangées",ref:"401223",achat:"2015-04-20",garantie:"2017-04-20",installateur:"Élec'Émeraude",notice:false,sav:"",etat:"bon",photo:"Le tableau électrique"},
+    {k:"equip",piece:"chambre",nom:"Radiateur électrique",marque:"Atlantic",modele:"Divali 1500 W",ref:"507715",achat:"2021-01-18",garantie:"2023-01-18",notice:true,sav:"02 51 44 18 88",etat:"bon",photo:"L'étiquette du radiateur"},
+    {k:"equip",piece:"chambre",nom:"Volets roulants",marque:"Somfy",modele:"Oximo io",ref:"OXIMO-IO",achat:"2017-05-30",garantie:"2022-05-30",installateur:"Fermetures Malouines",notice:true,sav:"08 20 05 00 55",etat:"bon",photo:"Le moteur du volet"},
+    {k:"equip",piece:"salle de bain",nom:"Chauffe-eau thermodynamique",marque:"Atlantic",modele:"Calypso 200 L",ref:"232511",achat:"2021-07-08",garantie:"2026-07-08",installateur:"Plomberie Le Guen",notice:true,sav:"02 51 44 18 88",etat:"bon",entretien:true,photo:"Le chauffe-eau"},
+    {k:"doc",piece:"salle de bain",type:"facture",titre:"Facture Plomberie Le Guen — chauffe-eau",date:"2021-07-08",fournisseur:"Plomberie Le Guen",montant:2180,lie:"Chauffe-eau thermodynamique",photo:"Une facture de plomberie"},
+    {k:"equip",piece:"buanderie",nom:"Lave-linge",marque:"Miele",modele:"WCA 030",ref:"WCA030",achat:"2022-02-11",garantie:"2024-02-11",notice:true,sav:"09 74 50 10 00",etat:"bon",photo:"L'étiquette du lave-linge"},
+    {k:"doc",piece:"maison",type:"acte",titre:"Acte d'achat de la maison",date:"2015-07-03",fournisseur:"Maître Lefort, notaire",montant:null,photo:"L'acte d'achat"},
+    {k:"doc",piece:"maison",type:"diagnostic",titre:"Diagnostic de performance énergétique — classe C",date:"2024-05-12",fournisseur:"Diagnostic Émeraude",montant:null,photo:"Le diagnostic énergétique"},
+    {k:"doc",piece:"maison",type:"contrat",titre:"Attestation d'assurance habitation",date:"2026-01-05",fournisseur:"MAIF",montant:null,photo:"L'attestation d'assurance"},
+    {k:"doc",piece:"maison",type:"facture",titre:"Facture Couverture Bretonne — réfection de la toiture",date:"2021-05-18",fournisseur:"Couverture Bretonne",montant:8400,travaux:"Réfection de la toiture",garantie:"2031-05-18",photo:"Une facture de couverture"},
+    {k:"doc",piece:"maison",type:"devis",titre:"Devis Couverture Bretonne — toiture",date:"2021-03-02",fournisseur:"Couverture Bretonne",montant:8400,travaux:"Réfection de la toiture",photo:"Un devis"},
+    {k:"doc",piece:"maison",type:"impot",titre:"Taxe foncière 2025",date:"2025-10-15",fournisseur:"Direction générale des finances publiques",montant:1240,photo:"La taxe foncière"},
+    {k:"doc",piece:"maison",type:"facture",titre:"Facture Bertin Chauffage — entretien de la chaudière",date:"2025-09-22",fournisseur:"Bertin Chauffage",montant:135,lie:"Chaudière gaz",photo:"Une facture d'entretien"},
+    {k:"doc",piece:"maison",type:"plan",titre:"Plan de la maison",date:"1962-01-01",fournisseur:"",montant:null,photo:"Le plan de la maison"},
+    {k:"doc",piece:"maison",type:"diagnostic",titre:"Diagnostic électrique",date:"2015-05-04",fournisseur:"Diagnostic Émeraude",montant:null,photo:"Le diagnostic électrique"},
+  ],
+  pros:{
+    "Couverture Bretonne":{metier:"Couvreur",tel:"02 99 40 12 34",mail:"contact@couverture-bretonne.fr",ville:"Saint-Malo"},
+    "Bertin Chauffage":{metier:"Chauffagiste",tel:"02 99 56 78 90",mail:"bertin.chauffage@orange.fr",ville:"Saint-Malo"},
+    "Plomberie Le Guen":{metier:"Plombier",tel:"02 99 81 22 11",mail:"leguen.plomberie@gmail.com",ville:"Cancale"},
+    "Élec'Émeraude":{metier:"Électricien",tel:"02 99 19 45 67",mail:"contact@elec-emeraude.fr",ville:"Saint-Malo"},
+    "Cheminées Malouines":{metier:"Poêliste",tel:"02 99 82 33 44",mail:"contact@cheminees-malouines.fr",ville:"Saint-Malo"},
+    "Fermetures Malouines":{metier:"Menuisier",tel:"02 99 82 55 66",mail:"contact@fermetures-malouines.fr",ville:"Saint-Malo"},
+    "Diagnostic Émeraude":{metier:"Diagnostiqueur",tel:"02 99 20 30 40",mail:"contact@diagnostic-emeraude.fr",ville:"Dinard"},
+  },
+  tiers:[
+    {id:"notaire",nom:"Le notaire",ex:"Maître Lefort",duree:"3 mois",voit:["Acte","Diagnostics","Factures de travaux","Plans"],ico:"cle"},
+    {id:"agent",nom:"L'agent immobilier",ex:"Agence Loire Immobilier",duree:"6 mois",voit:["Fiche du logement","Diagnostics","Travaux","Équipements"],ico:"gens"},
+    {id:"artisan",nom:"Un artisan",ex:"Bertin Chauffage",duree:"1 mois",voit:["L'équipement concerné","Sa notice","Les interventions passées"],ico:"outil"},
+    {id:"assureur",nom:"L'assureur",ex:"MAIF",duree:"2 mois",voit:["Fiche du logement","Équipements","Le dossier sinistre"],ico:"doc"},
+    {id:"acquereur",nom:"Le futur acquéreur",ex:"",duree:"1 mois",voit:["Le dossier de vente"],ico:"maison"},
+    {id:"gestionnaire",nom:"Le gestionnaire locatif",ex:"",duree:"le temps du mandat",voit:["Équipements","Artisans","Travaux","Documents du logement"],ico:"gens"},
+  ],
+  questions:[
+    {id:"toiture",mots:["toiture","toit","couverture"],rep:"En mai 2021, par Couverture Bretonne. La garantie décennale court jusqu'en mai 2031.",doc:"Facture Couverture Bretonne — réfection de la toiture",pro:"Couverture Bretonne"},
+    {id:"notice-four",mots:["notice du four","notice four","mode d'emploi du four"],rep:"La notice du four Whirlpool AKZ9 6230 a été retrouvée à partir de sa référence.",equip:"Four"},
+    {id:"notice-lv",mots:["notice du lave","lave-vaisselle","lave vaisselle"],rep:"Lave-vaisselle Bosch série 4, acheté en mars 2023, garanti jusqu'en mars 2027. Sa notice est dans sa fiche.",equip:"Lave-vaisselle"},
+    {id:"chaudiere",mots:["chaudière","chaudiere","chauffage","entretien"],rep:"Chaudière Saunier Duval ThemaPlus, installée en septembre 2016 par Bertin Chauffage. Dernier entretien : septembre 2025.",equip:"Chaudière gaz",pro:"Bertin Chauffage"},
+    {id:"dpe",mots:["dpe","énergétique","energetique","classe"],rep:"Classe C, diagnostic du 12 mai 2024 par Diagnostic Émeraude.",doc:"Diagnostic de performance énergétique — classe C"},
+    {id:"assurance",mots:["assurance","assureur","maif"],rep:"Assurance habitation MAIF, attestation du 5 janvier 2026.",doc:"Attestation d'assurance habitation"},
+    {id:"achat",mots:["acheté","achat","acte","notaire","quand avons","depuis quand"],rep:"La maison a été achetée le 3 juillet 2015, chez Maître Lefort.",doc:"Acte d'achat de la maison"},
+    {id:"cout",mots:["coûté","coute","coûte","combien","dépensé","depense","travaux"],rep:"Travaux connus : la toiture en 2021 (8 400 €) et le chauffe-eau en 2021 (2 180 €). Soit 10 580 €.",doc:"Facture Couverture Bretonne — réfection de la toiture"},
+    {id:"garantie",mots:["garantie","expire","garanties"],rep:"La prochaine garantie à expirer est celle du chauffe-eau, en juillet 2026 ; puis le lave-vaisselle, en mars 2027.",equip:"Chauffe-eau thermodynamique"},
+    {id:"venu",mots:["qui est venu","artisan","dernier","dernière intervention","intervenu"],rep:"La dernière intervention connue : Bertin Chauffage, pour l'entretien de la chaudière, en septembre 2025.",pro:"Bertin Chauffage"},
+    {id:"surface",mots:["surface","m²","m2","mètres"],rep:"118 m², d'après ce que VIDOM a trouvé à l'adresse. Vous pouvez corriger depuis Ma maison."},
+    {id:"annee",mots:["année","construite","construction","date de construction"],rep:"Construite en 1962, d'après ce que VIDOM a trouvé à l'adresse."},
+    {id:"adresse",mots:["adresse vidom","adresse de la maison","adresse mail","courriel de la maison"],rep:"L'adresse VIDOM de votre logement est dans Ma maison, carte « Adresse VIDOM », avec son QR.",go:"#/adresse-vidom"},
+    {id:"tilleul",mots:["tilleul","arbre","jardin","planté"],rep:"Le tilleul a été planté dans le jardin le 12 septembre 2025."},
+    {id:"plan",mots:["plan"],rep:"Le plan de la maison, s'il a été photographié, est dans Documents. Sinon, vous pouvez le photographier depuis Ma maison.",go:"#/maison"},
+    {id:"taxe",mots:["taxe","foncière","fonciere","impôt","impot"],rep:"Taxe foncière 2025 : 1 240 €, reçue le 15 octobre 2025.",doc:"Taxe foncière 2025"},
+    {id:"electricite",mots:["électri","electri","tableau"],rep:"Le tableau électrique Legrand a été remis aux normes en avril 2015 par Élec'Émeraude. Le diagnostic électrique date de mai 2015.",equip:"Tableau électrique"},
+  ],
+  suggestions:["Quand a-t-on refait la toiture ?","Où est la notice du four ?","Qui est venu pour la chaudière ?","Quel est le DPE ?","Quelles garanties expirent bientôt ?","Combien ont coûté les travaux ?","Quand la maison a-t-elle été achetée ?"],
+};
+
+/* types de pièces proposés le premier jour */
+const TYPES_PIECES=[
+  {type:"cuisine",nom:"Cuisine",def:1},{type:"salon",nom:"Salon",def:1},{type:"chambre",nom:"Chambre",def:2},
+  {type:"salle de bain",nom:"Salle de bain",def:1},{type:"garage",nom:"Garage",def:0},
+];
+const AUTRES_PIECES=[{type:"bureau",nom:"Bureau"},{type:"buanderie",nom:"Buanderie"},{type:"cave",nom:"Cave"},{type:"wc",nom:"WC"},{type:"combles",nom:"Combles"},{type:"jardin",nom:"Jardin"},{type:"entree",nom:"Entrée"},{type:"couloir",nom:"Couloir"}];
+
+/* ================= état ================= */
+const KEY="vidom-maquette-v1";
+const etatInitial=()=>({
+  v:1,cree:false,etape:"bienvenue",compte:{email:""},
+  logement:{nom:"",adresse:"",cp:"",ville:"",annee:null,surface:null,dpe:"",dpeDate:"",depot:""},
+  comptage:{cuisine:1,salon:1,chambre:2,"salle de bain":1},pieces:[],plan:null,
+  equipements:[],docs:[],pros:[],travaux:[],acces:[],journalAcces:[],
+  fil:[],rappels:[],reserveServie:[],nees:["adresse"],
+  questionsPosees:[],dernierJour:"",transmission:null,
+  reglages:{texte:"normal"},expediteursOk:[],
+  lot:null,derniereBatch:null,pieceCourante:null,idc:1,
+});
+let S=null;
+function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+S=load()||etatInitial();
+if(!S.v){S=etatInitial()}
+const uid=()=>"i"+(S.idc++);
+
+/* ================= utilitaires ================= */
+const h=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const MOIS=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today=()=>iso(new Date());
+const now=()=>{const d=new Date();return iso(d)+"T"+pad(d.getHours())+":"+pad(d.getMinutes())};
+function dateFr(s){if(!s)return"";const [y,m,d]=s.slice(0,10).split("-").map(Number);return `${d===1?"1er":d} ${MOIS[m-1]} ${y}`}
+function moisFr(s){const [y,m]=s.slice(0,7).split("-").map(Number);return `${MOIS[m-1]} ${y}`}
+function heure(s){return s&&s.length>10?s.slice(11).replace(":"," h "):""}
+function joursDepuis(s){const a=new Date(s.slice(0,10)),b=new Date(today());return Math.round((b-a)/86400000)}
+function shiftDate(s,jours){const d=new Date(s.slice(0,10));d.setDate(d.getDate()+jours);return iso(d)}
+const euros=n=>n==null?"":new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
+function toast(t){const e=document.getElementById("toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("on"),2600)}
+function modal(html){document.getElementById("modal").innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal fadein" role="dialog">${html}</div></div>`;document.body.style.overflow="hidden"}
+function closeModal(){document.getElementById("modal").innerHTML="";document.body.style.overflow=""}
+const isDesk=()=>window.matchMedia("(min-width:1024px)").matches;
+const slug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+function depotPour(nom){const c=Math.abs([...nom].reduce((a,ch)=>a*31+ch.charCodeAt(0)|0,7)).toString(36).slice(0,3);return `${slug(nom)}-${c}@depot.vidom.fr`}
+</script>
+<script>
+/* ================= pièces ================= */
+function creerPieces(){
+  S.pieces=[];
+  const c=S.comptage;
+  const ordre=[...TYPES_PIECES.map(t=>t.type),...AUTRES_PIECES.map(t=>t.type)];
+  ordre.forEach(type=>{
+    const n=c[type]||0;const def=[...TYPES_PIECES,...AUTRES_PIECES].find(t=>t.type===type);
+    for(let i=1;i<=n;i++){S.pieces.push({id:uid(),type,nom:n>1?`${def.nom} ${i}`:def.nom,photos:[]})}
+  });
+}
+const pieceParId=id=>S.pieces.find(p=>p.id===id);
+const pieceALaLumiere=p=>S.equipements.some(e=>e.piece===p.id)||S.docs.some(d=>d.piece===p.id)||p.photos.length>0;
+const nomPiece=id=>id==="maison"?"la maison entière":(pieceParId(id)?.nom||"la maison");
+function pieceParType(type){ // première pièce de ce type qui n'a pas encore tout reçu
+  const cands=S.pieces.filter(p=>p.type===type);
+  if(!cands.length)return null;
+  return cands.find(p=>!pieceALaLumiere(p))||cands[0];
+}
+
+/* ================= la réserve, servie une par une ================= */
+function prochainItem(pieceId){
+  const type=pieceId==="maison"?"maison":(pieceParId(pieceId)?.type||"maison");
+  const libre=i=>!S.reserveServie.includes(i);
+  let idx=-1;
+  if(type==="maison"){ // sans pièce désignée : d'abord ce qui va dans une pièce existante encore vide, puis la maison entière
+    idx=RESERVE.items.findIndex((it,i)=>libre(i)&&it.piece!=="maison"&&S.pieces.some(p=>p.type===it.piece&&!pieceALaLumiere(p)));
+    if(idx<0)idx=RESERVE.items.findIndex((it,i)=>libre(i)&&it.piece==="maison");
+    if(idx<0)idx=RESERVE.items.findIndex((it,i)=>libre(i)&&S.pieces.some(p=>p.type===it.piece));
+  }else idx=RESERVE.items.findIndex((it,i)=>libre(i)&&it.piece===type);
+  if(idx<0){ // rien pour cette pièce : un document de la maison, puis n'importe quoi
+    idx=RESERVE.items.findIndex((it,i)=>libre(i)&&it.piece==="maison");
+    if(idx<0)idx=RESERVE.items.findIndex((it,i)=>libre(i));
+  }
+  if(idx<0)return null;
+  S.reserveServie.push(idx);
+  const it=JSON.parse(JSON.stringify(RESERVE.items[idx]));
+  // rattachement à une pièce réelle
+  if(it.piece==="maison")it.pieceId="maison";
+  else{const p=(pieceId!=="maison"&&pieceParId(pieceId)?.type===it.piece)?pieceParId(pieceId):pieceParType(it.piece);it.pieceId=p?p.id:"maison"}
+  return it;
+}
+
+/* ================= reconnaissance et rangement ================= */
+function reconnaitre(file,pieceId,dataUrl){
+  const it=prochainItem(pieceId||S.pieceCourante||"maison");
+  const rec={id:uid(),date:now(),img:dataUrl||null,statut:"propose"};
+  if(!it){rec.k="inconnu";rec.titre="Photo non reconnue";return rec}
+  Object.assign(rec,it);
+  return rec;
+}
+function ranger(rec){ // C'est bien ça
+  const nees=[];
+  if(rec.k==="equip"){
+    const e={id:rec.id,piece:rec.pieceId,nom:rec.nom,marque:rec.marque,modele:rec.modele,ref:rec.ref,achat:rec.achat,garantie:rec.garantie,installateur:rec.installateur||"",notice:rec.notice,sav:rec.sav,etat:rec.etat,entretien:!!rec.entretien,img:rec.img,date:rec.date,entretiens:rec.entretien?[{d:rec.achat,par:rec.installateur}]:[]};
+    S.equipements.push(e);
+    if(rec.installateur)connaitrePro(rec.installateur,`Installation : ${rec.nom.toLowerCase()}`,rec.achat);
+    if(rec.entretien)S.rappels.push({id:uid(),t:`L'entretien annuel de ${lc(rec.nom)} est à faire ce mois-ci.`,equip:e.id,pro:rec.installateur||"",du:today(),fait:false});
+    if(rec.garantie&&joursDepuis(rec.garantie)<0&&joursDepuis(rec.garantie)>-200)S.rappels.push({id:uid(),t:`La garantie de ${lc(rec.nom)} ${rec.marque} expire le ${dateFr(rec.garantie)}.`,equip:e.id,du:rec.garantie,fait:false,info:true});
+  }else if(rec.k==="doc"){
+    const d={id:rec.id,piece:rec.pieceId,type:rec.type,titre:rec.titre,date:rec.date,fournisseur:rec.fournisseur,montant:rec.montant,lie:rec.lie||"",travaux:rec.travaux||"",garantie:rec.garantie||"",img:rec.img,recu:rec.recu||"photo",dateRecu:rec.date0||rec.date};
+    S.docs.push(d);
+    if(rec.fournisseur&&RESERVE.pros[rec.fournisseur])connaitrePro(rec.fournisseur,rec.travaux?rec.travaux:(rec.type==="facture"?"Facture reçue":"Document reçu"),rec.date);
+    if(rec.travaux){let t=S.travaux.find(t=>t.titre===rec.travaux);if(!t){t={id:uid(),titre:rec.travaux,par:rec.fournisseur,date:rec.date,montant:0,docs:[]};S.travaux.push(t)}t.docs.push(d.id);if(rec.type==="facture")t.montant=rec.montant;if(rec.date>t.date)t.date=rec.date}
+  }
+  if(rec.pieceId&&rec.pieceId!=="maison"&&rec.img){const p=pieceParId(rec.pieceId);if(p&&p.photos.length<6)p.photos.push(rec.img)}
+  else if(rec.pieceId&&rec.pieceId!=="maison"){const p=pieceParId(rec.pieceId);if(p)p.photos.push(null)}
+}
+const lc=s=>s.charAt(0).toLowerCase()+s.slice(1);
+function connaitrePro(nom,motif,date){
+  let p=S.pros.find(p=>p.nom===nom);
+  const ref=RESERVE.pros[nom]||{metier:"Professionnel",tel:"",mail:"",ville:""};
+  if(!p){p={id:uid(),nom,...ref,interventions:[],avis:[]};S.pros.push(p)}
+  if(!p.interventions.some(i=>i.motif===motif&&i.d===date))p.interventions.push({d:date,motif});
+  p.interventions.sort((a,b)=>b.d.localeCompare(a.d));
+  return p;
+}
+
+/* ================= les cartes, et leur naissance ================= */
+const CARTES=[
+  {id:"adresse",nom:"Adresse VIDOM",ico:"mail",quand:"",sub:()=>S.logement.depot,nee:()=>true},
+  {id:"equipements",nom:"Équipements",ico:"outil",quand:"à la première étiquette ou facture d'appareil reconnue",sub:()=>"Notices, garanties, service après-vente",nee:()=>S.equipements.length>0,n:()=>S.equipements.length},
+  {id:"documents",nom:"Documents",ico:"doc",quand:"au premier document gardé",sub:()=>"Tout ce qui est conservé",nee:()=>S.docs.length>0,n:()=>S.docs.length},
+  {id:"artisans",nom:"Les artisans de la maison",ico:"gens",quand:"au premier professionnel connu",sub:()=>S.pros.slice(0,3).map(p=>p.nom).join(", "),nee:()=>S.pros.length>0,n:()=>S.pros.length},
+  {id:"travaux",nom:"Travaux",ico:"travaux",quand:"au premier devis",sub:()=>"Chantiers, devis, ce que ça a coûté",nee:()=>S.travaux.length>0,n:()=>S.travaux.length},
+  {id:"echanges",nom:"Échanges et accès",ico:"echanges",quand:"au premier accès ouvert à un tiers",sub:()=>"Qui voit quoi, pour combien de temps",nee:()=>S.acces.length>0,n:()=>S.acces.filter(a=>a.ouvert).length},
+  {id:"transmission",nom:"Transmission",ico:"cle",quand:"le jour où la maison change de mains",sub:()=>"Les dossiers, le livre du logement",nee:()=>!!S.transmission},
+];
+const carteNee=id=>CARTES.find(c=>c.id===id).nee();
+function naissances(){ // annonce dans le fil ce qui vient d'apparaître
+  const nouvelles=[];
+  CARTES.forEach(c=>{if(c.nee()&&!S.nees.includes(c.id)){S.nees.push(c.id);nouvelles.push(c)}});
+  if(nouvelles.length){
+    const noms=nouvelles.map(c=>c.nom);
+    const t=nouvelles.length===1?`Une rubrique vient d'apparaître : ${noms[0]}.`:`${["","","Deux","Trois","Quatre","Cinq","Six"][nouvelles.length]||nouvelles.length} rubriques viennent d'apparaître : ${noms.slice(0,-1).join(", ")} et ${noms.at(-1)}.`;
+    filAjouter({type:"naissance",t,go:"#/carte/"+nouvelles[0].id,ico:"maison"});
+  }
+  return nouvelles;
+}
+
+/* ================= le fil ================= */
+function filAjouter(e){const x={id:uid(),d:now(),fait:false,...e};S.fil.unshift(x);save();return x}
+function filDecider(id,choix){
+  const e=S.fil.find(x=>x.id===id);if(!e)return;
+  if(e.type==="recu"){
+    const rec=e.rec;
+    if(choix==="garder"){rec.recu="adresse";ranger(rec);naissances();e.fait=true;e.t2=`Gardé : ${rec.titre||rec.nom}.`;
+      if(!S.expediteursOk.includes(rec.fournisseur)&&!e.inconnu){e.propose=rec.fournisseur}
+      toast("Gardé dans la mémoire de la maison");}
+    else{e.fait=true;e.t2="Refusé. Rien n'est entré.";}
+  }else if(e.type==="rappel"){
+    const r=S.rappels.find(r=>r.id===e.rappel);
+    if(choix==="fait"){if(r){r.fait=true;r.du=shiftDate(today(),365)}e.fait=true;e.t2="Noté. Prochain rappel dans un an. Vous pourrez photographier la facture quand elle arrive.";toast("Déjà fait, noté")}
+    else if(choix==="rappeler"){contacter(r?.pro||"");return}
+  }else if(e.type==="question"){
+    if(e.q==="annexes"){e.fait=true;e.t2=choix==="oui"?"Ajoutez-la depuis Ma maison, en deux gestes.":"Très bien.";if(choix==="oui"){save();route("#/maison");return}}
+    else if(e.q==="notaire"){if(choix==="partager"){partagerAdresse();return}e.fait=true;e.t2="Vous pourrez le faire plus tard depuis Ma maison."}
+    else if(e.q==="manque"){if(choix==="demander"){demanderA("Diagnostic Émeraude","le diagnostic électrique");return}e.fait=true;e.t2="Très bien. La question reviendra quand ce sera utile."}
+  }
+  save();render();
+}
+function toujoursAccepter(id,oui){const e=S.fil.find(x=>x.id===id);if(!e)return;if(oui&&e.propose&&!S.expediteursOk.includes(e.propose))S.expediteursOk.push(e.propose);e.propose=null;e.t3=oui?"Ce que cet expéditeur enverra sera gardé sans vous le demander. Vous pourrez changer d'avis dans les réglages.":"";save();render()}
+
+/* rappels dus → une seule entrée visible à la fois */
+function pousserRappels(){
+  const dus=S.rappels.filter(r=>!r.fait&&r.du<=today()&&!S.fil.some(e=>e.type==="rappel"&&e.rappel===r.id&&!e.fait));
+  const dejaUn=S.fil.some(e=>e.type==="rappel"&&!e.fait);
+  if(dus.length&&!dejaUn){const r=dus[0];filAjouter({type:"rappel",t:r.t,rappel:r.id,pro:r.pro||"",ico:"cloche",info:!!r.info})}
+}
+
+/* une question du jour, les premiers jours seulement */
+const QUESTIONS=[
+  {q:"annexes",t:"Avez-vous un parking, une cave ou une annexe ?",boutons:[["Oui, ajouter","oui"],["Non","non"]]},
+  {q:"notaire",t:"Votre notaire a-t-il l'adresse VIDOM de la maison ? Ce qu'il y enverra arrivera ici.",boutons:[["Partager l'adresse","partager"],["Plus tard","plus-tard"]]},
+  {q:"manque",t:"Il manque le diagnostic électrique. Le demander au diagnostiqueur ?",boutons:[["Demander","demander"],["Plus tard","plus-tard"]],cond:()=>S.docs.length>=3&&!S.docs.some(d=>d.titre==="Diagnostic électrique")},
+];
+function questionDuJour(){
+  if(!S.cree)return;
+  if(S.dernierJour===today())return;
+  const enAttente=S.fil.some(e=>e.type==="question"&&!e.fait);
+  if(enAttente){S.dernierJour=today();return}
+  const q=QUESTIONS.find(q=>!S.questionsPosees.includes(q.q)&&(!q.cond||q.cond()));
+  S.dernierJour=today();
+  if(q){S.questionsPosees.push(q.q);filAjouter({type:"question",q:q.q,t:q.t,boutons:q.boutons,ico:"bulle"})}
+  save();
+}
+
+/* souvenirs : les anniversaires */
+function souvenirs(){
+  S.fil.filter(e=>e.type==="souvenir"&&e.orig).forEach(()=>{});
+}
+
+/* ================= demander à la maison ================= */
+function demander(texte){
+  const q=texte.trim();if(!q)return;
+  const bas=q.toLowerCase();
+  const r=RESERVE.questions.find(x=>x.mots.some(m=>bas.includes(m)));
+  const e={type:"qa",q,fait:true,ico:"bulle"};
+  if(r){
+    const doc=r.doc?S.docs.find(d=>d.titre===r.doc):null;
+    const eq=r.equip?S.equipements.find(x=>x.nom===r.equip):null;
+    const pro=r.pro?S.pros.find(p=>p.nom===r.pro):null;
+    const connu=(r.doc&&doc)||(r.equip&&eq)||(r.pro&&pro)||(!r.doc&&!r.equip&&!r.pro);
+    if(connu){e.rep=r.rep;e.doc=doc?doc.id:null;e.equip=eq?eq.id:null;e.pro=pro?pro.id:null;e.go=r.go||null}
+    else{e.rep="Cela n'est pas encore dans la mémoire de la maison. Photographiez le document, ou demandez-le à un professionnel.";e.manque=true}
+  }else{e.rep="Cela n'est pas dans la mémoire de la maison. Voulez-vous le demander à un professionnel ?";e.manque=true}
+  filAjouter(e);
+}
+function suggestionsDuMoment(){
+  const s=[];
+  if(S.docs.some(d=>d.travaux))s.push("Quand a-t-on refait la toiture ?");
+  if(S.equipements.some(e=>e.nom==="Four"))s.push("Où est la notice du four ?");
+  if(S.equipements.some(e=>e.nom==="Chaudière gaz"))s.push("Qui est venu pour la chaudière ?");
+  if(S.docs.some(d=>d.type==="diagnostic"))s.push("Quel est le DPE ?");
+  if(S.equipements.length)s.push("Quelles garanties expirent bientôt ?");
+  if(S.docs.some(d=>d.type==="acte"))s.push("Quand la maison a-t-elle été achetée ?");
+  if(!s.length)s.push("Quelle est la surface de la maison ?","En quelle année a-t-elle été construite ?","Où est l'adresse VIDOM ?");
+  return s.slice(0,3);
+}
+
+/* ================= contacter, demander, partager ================= */
+function contacter(nom){
+  const p=S.pros.find(p=>p.nom===nom)||{nom:nom||"un professionnel",tel:"",mail:"",metier:""};
+  modal(`<h2>${p.tel?"Appeler":"Écrire à"} ${h(p.nom)}</h2><p class="muted">${h(p.metier)}${p.ville?" · "+h(p.ville):""}</p>
+    <div class="stack">${p.tel?`<a class="btn primary big" href="tel:${p.tel.replace(/\s/g,"")}">${I.telephone} ${h(p.tel)}</a>`:""}
+    ${p.mail?`<a class="btn big" href="mailto:${p.mail}?subject=${encodeURIComponent("Maison des Tilleuls — "+(p.metier||"demande"))}">${I.mail} Écrire un courriel</a>`:""}</div>
+    <p class="small faint">Le message part de votre messagerie, pas de VIDOM. L'artisan que la maison connaît passe toujours avant un inconnu.</p>
+    <button class="btn" onclick="closeModal()">Fermer</button>`);
+}
+function demanderA(nom,quoi){
+  const ref=RESERVE.pros[nom]||{};
+  const txt=`Bonjour,\n\nPourriez-vous m'envoyer ${quoi} concernant la maison du ${S.logement.adresse}, ${S.logement.cp} ${S.logement.ville} ?\n\nVous pouvez l'adresser directement à la mémoire de la maison : ${S.logement.depot}\n\nAvec mes remerciements,\n${S.compte.email}`;
+  modal(`<h2>Demander ${h(quoi)}</h2><p class="muted">À ${h(nom)}${ref.metier?", "+h(ref.metier).toLowerCase():""}. Relisez, puis envoyez depuis votre messagerie.</p>
+    <textarea class="input" id="dem" rows="8">${h(txt)}</textarea>
+    <div class="row"><a class="btn primary grow" href="mailto:${ref.mail||""}?subject=${encodeURIComponent("Demande — "+quoi)}&body=${encodeURIComponent(txt)}" onclick="demandeEnvoyee('${h(nom)}','${h(quoi)}')">${I.envoi} Envoyer</a><button class="btn" onclick="closeModal()">Annuler</button></div>`);
+}
+function demandeEnvoyee(nom,quoi){closeModal();const e=S.fil.find(x=>x.type==="question"&&x.q==="manque"&&!x.fait);if(e){e.fait=true;e.t2=`Demandé à ${nom} le ${dateFr(today())}. La réponse arrivera par l'adresse VIDOM.`}filAjouter({type:"info",t:`Demande envoyée à ${nom} : ${quoi}. Vous serez prévenu quand la réponse arrivera.`,ico:"envoi",fait:true});S.rappels.push({id:uid(),t:`${nom} n'a pas encore répondu pour ${quoi}. Relancer ?`,pro:nom,du:shiftDate(today(),14),fait:false});save();render();toast("Demande envoyée")}
+function partagerAdresse(){
+  const a=S.logement.depot;
+  const texte=`Voici l'adresse de la mémoire de ma maison (${S.logement.adresse}, ${S.logement.ville}) : ${a}. Tout ce que vous y enverrez y sera conservé, avec mon accord.`;
+  if(navigator.share){navigator.share({title:"Adresse VIDOM",text:texte}).then(()=>adressePartagee()).catch(()=>{})}
+  else{modal(`<h2>Partager l'adresse</h2><p class="muted">Copiez-la, ou envoyez-la depuis votre messagerie.</p><div class="card"><span class="mono">${h(a)}</span></div>
+    <div class="row wrap"><button class="btn primary grow" onclick="copier('${h(a)}');adressePartagee();closeModal()">Copier</button><a class="btn grow" href="mailto:?subject=${encodeURIComponent("L'adresse de la mémoire de ma maison")}&body=${encodeURIComponent(texte)}" onclick="adressePartagee();closeModal()">${I.mail} Par courriel</a></div>
+    <button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
+}
+function adressePartagee(){const e=S.fil.find(x=>x.type==="question"&&x.q==="notaire"&&!x.fait);if(e){e.fait=true;e.t2="Adresse partagée. Ce qui arrivera sera proposé ici, rien n'entrera sans vous."}save();render()}
+function copier(t){try{navigator.clipboard.writeText(t);toast("Copié")}catch(e){toast("Sélectionnez et copiez l'adresse")}}
+
+/* ================= réception par l'adresse VIDOM (simulée) ================= */
+function recevoir(opts={}){
+  const it=opts.item||prochainItem("maison");
+  if(!it){toast("La réserve est vide : tout est déjà dans la maison.");return null}
+  const rec={id:uid(),date:now(),img:null,statut:"propose",...it,date0:today()};
+  const exp=opts.expediteur||rec.fournisseur||"un expéditeur";
+  const inconnu=!!opts.inconnu;
+  const doublon=S.docs.some(d=>d.titre===rec.titre);
+  let t=rec.k==="doc"?`${exp} a envoyé ${articleDoc(rec)}${rec.montant?" de "+euros(rec.montant):""}${rec.travaux?" pour "+lc(rec.travaux):""}.`:`${exp} a envoyé la fiche d'un équipement : ${lc(rec.nom)} ${rec.marque}.`;
+  if(inconnu)t=`Un expéditeur inconnu (${exp}) a envoyé ${articleDoc(rec)}. Prudence : gardez-le seulement si vous l'attendiez.`;
+  if(doublon)t+=" Ce document semble déjà dans la mémoire de la maison.";
+  if(S.expediteursOk.includes(exp)&&!inconnu){rec.recu="adresse";ranger(rec);naissances();filAjouter({type:"info",t:`${exp} a envoyé ${articleDoc(rec)}. Gardé, comme vous l'avez demandé pour cet expéditeur.`,ico:"mail",fait:true});return rec}
+  filAjouter({type:"recu",t,rec,inconnu,ico:"mail"});
+  return rec;
+}
+function articleDoc(rec){const t=rec.type||"";const m={facture:"une facture",devis:"un devis",notice:"une notice",diagnostic:"un diagnostic",acte:"un acte",contrat:"une attestation",impot:"un avis d'imposition",plan:"un plan"};return m[t]||"un document"}
+</script>
+<script>
+/* ================= le dessin de la maison ================= */
+function dessinMaison(opts={}){
+  const rooms=S.pieces;const n=rooms.length;
+  if(!n)return `<p class="small faint" style="text-align:center">Aucune pièce. Ajoutez-en une.</p>`;
+  const per=n>9?4:3,bw=per===4?66:88,bh=50,gx=8,gy=8;const rows=Math.ceil(n/per);
+  const W=per*bw+(per-1)*gx,H=rows*bh+(rows-1)*gy;const x0=(320-W)/2,y0=48,top=y0+H+10;
+  const F='font-family="Source Sans 3, system-ui, sans-serif"';
+  let s=`<svg class="house" viewBox="0 0 320 ${top+8}" style="max-width:${opts.mw||300}px" role="img" aria-label="${n} pièces">`;
+  s+=`<path d="M${x0-20} ${y0-6} L160 ${y0-40} L${x0+W+20} ${y0-6}" fill="none" stroke="#50575E" stroke-width="2.5" stroke-linejoin="round"/><path d="M${x0-6} ${y0-8} L160 ${y0-34} L${x0+W+6} ${y0-8} Z" fill="#EFE6D8"/>`;
+  rooms.forEach((p,i)=>{
+    const r=Math.floor(i/per),c=i%per,cnt=Math.min(per,n-r*per),off=(W-(cnt*bw+(cnt-1)*gx))/2;
+    const x=x0+off+c*(bw+gx),y=y0+r*(bh+gy);
+    const lit=pieceALaLumiere(p),sel=opts.sel===p.id;const nom=p.nom.length>12?p.nom.slice(0,11)+"…":p.nom;const fs=p.nom.length>10?11:12;
+    const go=opts.click===false?"":`onclick="location.hash='#/piece/${p.id}'"`;
+    if(sel)s+=`<g ${go}><rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="6" fill="#F4E3DB" stroke="#C9775B" stroke-width="2.5"/><text x="${x+bw/2}" y="${y+bh/2+4}" text-anchor="middle" font-size="${fs}" font-weight="600" fill="#A85F45" ${F}>${h(nom)}</text></g>`;
+    else if(lit)s+=`<g ${go}><rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="6" fill="#E4EBE6" stroke="#5F7A6A" stroke-width="2"/><text x="${x+bw/2}" y="${y+bh/2+4}" text-anchor="middle" font-size="${fs}" font-weight="600" fill="#4A6255" ${F}>${h(nom)}</text></g>`;
+    else s+=`<g ${go}><rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="6" fill="#FFFDF9" stroke="#D8C8B2" stroke-width="1.5" stroke-dasharray="4 4"/><text x="${x+bw/2}" y="${y+bh/2+4}" text-anchor="middle" font-size="${fs}" fill="#B5B0A5" ${F}>${h(nom)}</text></g>`;
+  });
+  s+=`<line x1="${x0-20}" y1="${top}" x2="${x0+W+20}" y2="${top}" stroke="#50575E" stroke-width="2.5" stroke-linecap="round"/></svg>`;
+  return s;
+}
+function phraseCourte(){const n=S.pieces.length,l=S.pieces.filter(pieceALaLumiere).length;return n?`${l} sur ${n} pièce${n>1?"s":""}`:""}
+function phrasePieces(){
+  const n=S.pieces.length,l=S.pieces.filter(pieceALaLumiere).length;
+  if(!n)return"";
+  if(l===0)return `${n} pièce${n>1?"s":""}. Elles s'allumeront à mesure.`;
+  if(l===n)return `${n} pièce${n>1?"s":""} sur ${n}. Toute la maison est connue.`;
+  const reste=S.pieces.filter(p=>!pieceALaLumiere(p));
+  const r=reste.length===1?`il reste ${lc(reste[0].nom)}`:(reste.every(p=>p.type==="chambre")?"les chambres attendent":`il en reste ${reste.length}`);
+  return `${l} pièce${l>1?"s":""} sur ${n} · ${r}`;
+}
+function qrSvg(texte){
+  try{const q=qrcode(0,"L");q.addData(texte);q.make();return q.createSvgTag({cellSize:4,margin:0,scalable:true})}catch(e){return `<div class="small faint">QR</div>`}
+}
+
+/* ================= vues : le premier jour ================= */
+const V={};
+V.bienvenue=()=>`<div class="view center fadein" style="gap:24px">
+  <div class="stack" style="gap:12px">
+    <h1 class="h" style="font-size:1.8em">VIDOM construit avec vous la mémoire de votre logement.</h1>
+    <p style="font-size:1.1em">Elle se construit avec le temps : à chaque photo, à chaque document reçu, une nouvelle rubrique apparaît.</p>
+    <p class="muted" style="font-size:1.1em">Tout se fait à votre rythme.</p>
+  </div>
+  <button class="btn primary big" onclick="S.etape='compte';save();render()">Commençons ${I.fleche}</button>
+</div>`;
+
+V.compte=()=>`<div class="view center fadein" style="gap:18px">
+  <div class="stack"><h1 class="h">Votre compte.</h1><p class="muted">Pour retrouver votre maison sur tous vos appareils, et pour que personne d'autre n'y entre.</p></div>
+  <form class="stack" style="gap:14px" onsubmit="event.preventDefault();compteOk()">
+    <label class="f"><span>Votre adresse de courriel</span><input class="input" id="email" type="email" autocomplete="email" inputmode="email" value="${h(S.compte.email)}" placeholder="vous@exemple.fr" required></label>
+    <label class="f"><span>Votre mot de passe</span><div class="row"><input class="input" id="mdp" type="password" autocomplete="new-password" placeholder="Au moins 8 caractères" minlength="8" required><button type="button" class="btn sm" onclick="const m=document.getElementById('mdp');m.type=m.type==='password'?'text':'password';this.textContent=m.type==='password'?'Afficher':'Masquer'">Afficher</button></div></label>
+    <button class="btn primary big" type="submit">Continuer ${I.fleche}</button>
+  </form>
+  <div class="split"><button class="btn ghost" onclick="mdpOublie()">Mot de passe oublié ?</button><button class="btn ghost" onclick="dejaCompte()">J'ai déjà un compte</button></div>
+  <p class="small faint" style="text-align:center">Un seul compte, plusieurs logements possibles plus tard.</p>
+</div>`;
+function compteOk(){S.compte.email=document.getElementById("email").value.trim();S.etape="adresse";save();render()}
+function mdpOublie(){const m=document.getElementById("email")?.value||"";modal(`<h2>Mot de passe oublié</h2><p class="muted">VIDOM vous envoie un courriel avec un lien pour en choisir un nouveau.</p><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em2" type="email" value="${h(m)}"></label><button class="btn primary big" onclick="closeModal();toast('Courriel envoyé (simulé). Regardez votre boîte.')">Envoyer le lien</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+function dejaCompte(){modal(`<h2>Se connecter</h2><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em3" type="email" placeholder="vous@exemple.fr"></label><label class="f"><span>Votre mot de passe</span><input class="input" id="mdp3" type="password"></label><button class="btn primary big" onclick="S.compte.email=document.getElementById('em3').value.trim();closeModal();S.etape='adresse';save();render()">Continuer</button><button class="btn ghost" onclick="closeModal()">Annuler</button><p class="small faint">Dans cette maquette, la connexion est simulée : rien ne quitte votre appareil.</p>`)}
+
+V.adresse=()=>{
+  const c=S.comptage;
+  const ligne=(t,nom)=>`<div class="step"><span>${h(nom)}</span><span class="ctl"><button aria-label="Moins" onclick="compter('${t}',-1)">${I.moins}</button><b class="num">${c[t]||0}</b><button aria-label="Plus" onclick="compter('${t}',1)">${I.plus}</button></span></div>`;
+  return `<div class="view fadein" style="gap:18px;padding-top:10px">
+  <h1 class="h">Quelle est l'adresse de votre logement ?</h1>
+  <div style="position:relative"><input class="input" id="adr" placeholder="Numéro, rue, ville" value="${h(S.logement.adresseSaisie||"")}" oninput="suggerer(this.value)" autocomplete="street-address"><div id="sugg"></div></div>
+  <div class="stack" style="gap:2px"><h2>Et combien de pièces ?</h2><p class="small muted">Une estimation suffit, vous pourrez ajuster.</p></div>
+  <div class="card" style="gap:0;padding:4px 16px">
+    ${TYPES_PIECES.map(t=>ligne(t.type,t.nom)).join("")}
+    ${AUTRES_PIECES.filter(t=>c[t.type]).map(t=>ligne(t.type,t.nom)).join("")}
+    <div class="step" style="border:0"><button class="btn ghost" style="padding:0;gap:8px" onclick="autrePiece()">${I.plus} Autre pièce (bureau, cave, jardin…)</button></div>
+  </div>
+  <button class="btn primary big" onclick="adresseOk()">Valider</button>
+  <p class="small faint" style="text-align:center">Deux minutes. Rien à remplir d'autre.</p>
+</div>`};
+function compter(t,d){S.comptage[t]=Math.max(0,(S.comptage[t]||0)+d);save();render();}
+function autrePiece(){modal(`<h2>Une autre pièce</h2><div class="row wrap">${AUTRES_PIECES.map(t=>`<button class="chip btn-chip ${S.comptage[t.type]?"on":""}" onclick="S.comptage['${t.type}']=(S.comptage['${t.type}']||0)+1;save();closeModal();render()">${h(t.nom)}</button>`).join("")}</div><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
+function suggerer(v){const box=document.getElementById("sugg");S.logement.adresseSaisie=v;if(v.trim().length<3){box.innerHTML="";return}
+  const s=[`${v.trim()}`.replace(/,.*$/,"")+", 35400 Saint-Malo"];box.innerHTML=`<div class="card" style="position:absolute;left:0;right:0;top:60px;z-index:5;padding:6px 8px;gap:0">${s.map(x=>`<button class="line" style="width:100%;text-align:left" onclick="choisirAdresse('${h(x)}')">${I.maison}<span style="flex:1 1 auto">${h(x)}</span></button>`).join("")}</div>`}
+function choisirAdresse(x){document.getElementById("adr").value=x;S.logement.adresseSaisie=x;document.getElementById("sugg").innerHTML="";save()}
+function adresseOk(){
+  const v=(document.getElementById("adr")?.value||S.logement.adresseSaisie||"").trim();
+  if(!v){toast("L'adresse, d'abord.");document.getElementById("adr")?.focus();return}
+  if(!Object.values(S.comptage).some(n=>n>0)){toast("Au moins une pièce.");return}
+  const m=v.match(/^(.*?),?\s*(\d{5})?\s*([^\d,]*)$/);
+  S.logement.adresse=(m&&m[1]||v).trim().replace(/,$/,"")||v;S.logement.cp=(m&&m[2])||RESERVE.logement.cp;S.logement.ville=(m&&m[3]||"").trim()||RESERVE.logement.ville;
+  const rue=S.logement.adresse.replace(/^\d+\s*(bis|ter)?\s*/i,"").replace(/^(rue|avenue|boulevard|impasse|chemin|allée|place|route)\s+(de\s|des\s|du\s|d'|de la\s|de l')?/i,"");
+  S.logement.nom=S.logement.nom||`Maison ${/^[aeiouy]/i.test(rue)?"de l'":"des "}${rue.charAt(0).toUpperCase()+rue.slice(1)}`;
+  if(/tilleul/i.test(rue))S.logement.nom="Maison des Tilleuls";
+  Object.assign(S.logement,{annee:RESERVE.logement.annee,surface:RESERVE.logement.surface,dpe:RESERVE.logement.dpe,dpeDate:RESERVE.logement.dpeDate,parcelles:RESERVE.logement.parcelles});
+  S.logement.depot=depotPour(S.logement.nom);
+  creerPieces();S.etape="maison-adresse";save();render();
+}
+
+V["maison-adresse"]=()=>`<div class="view fadein" style="gap:14px;padding-top:8px">
+  <h1 class="h" style="font-size:1.45em">Voici votre maison, et son adresse.</h1>
+  <div class="card" style="padding:14px 16px 10px;gap:6px">${dessinMaison({click:false,mw:290})}<p class="small muted" style="text-align:center">${phrasePieces()}</p></div>
+  <div class="card soft" style="gap:10px">
+    <div class="row" style="align-items:flex-start;gap:14px"><div class="qr">${qrSvg("mailto:"+S.logement.depot)}</div><div class="stack" style="gap:4px"><span class="small b" style="color:var(--sauge-f)">L'adresse VIDOM de votre logement</span><span class="mono" style="font-size:.95em">${h(S.logement.depot)}</span></div></div>
+    <p class="small muted">À donner à tous ceux qui ont des informations sur votre logement : notaire, agent immobilier, artisans, assureur. Ce qu'ils y envoient arrive ici. Rien n'entre sans vous.</p>
+    <div class="row"><button class="btn grow" onclick="partagerAdresse()">Partager</button><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button></div>
+  </div>
+  <button class="btn primary big" onclick="S.etape='commencons';save();render()">Continuer ${I.fleche}</button>
+</div>`;
+
+V.commencons=()=>{
+  const porte=(ico,titre,sub,primary,inner)=>`<label class="card btn file" style="flex-direction:row;align-items:center;gap:14px;padding:16px;text-align:left;${primary?"background:var(--sauge);border-color:var(--sauge);color:var(--blanc)":""}"><span class="tile" style="width:44px;height:44px;${primary?"background:rgba(255,253,249,.18);color:var(--blanc)":""}">${I[ico]}</span><span class="stack" style="gap:2px"><span class="b" style="font-size:1.05em">${titre}</span><span class="small" style="${primary?"color:rgba(255,253,249,.85)":"color:var(--ardoise)"}">${sub}</span></span>${inner}</label>`;
+  const desk=isDesk();
+  return `<div class="view fadein" style="gap:14px;padding-top:8px">
+  <div class="stack" style="gap:6px"><h1 class="h">Commençons par quelques photos.</h1><p class="muted">Ce que vous avez sous la main. VIDOM trie, pièce par pièce, et crée les rubriques qui vont avec.</p></div>
+  ${desk?porte("fichier","Importer","Depuis votre ordinateur, ou glissez vos fichiers n'importe où sur la page.",true,`<input type="file" accept="image/*,.pdf" multiple onchange="fichiers(this.files,'maison')">`):porte("camera","Photographier","Des factures, des documents, un classeur entier — ou vos appareils, si vous n'avez pas de factures.",true,`<input type="file" accept="image/*" capture="environment" multiple onchange="fichiers(this.files,'maison')">`)}
+  <button class="card" style="flex-direction:row;align-items:center;gap:14px;padding:16px;text-align:left" onclick="envoyerAdresse()"><span class="tile">${I.mail}</span><span class="stack" style="gap:2px"><span class="b" style="font-size:1.05em">Envoyer à l'adresse VIDOM</span><span class="small muted">Vos documents déjà numérisés, depuis votre messagerie.</span></span></button>
+  ${desk?porte("camera","Photographier","Avec la caméra de l'ordinateur, ou continuez sur votre téléphone.",false,`<input type="file" accept="image/*" capture="environment" multiple onchange="fichiers(this.files,'maison')">`):porte("fichier","Importer","Depuis votre téléphone, Dropbox ou Google Drive.",false,`<input type="file" accept="image/*,.pdf" multiple onchange="fichiers(this.files,'maison')">`)}
+  ${desk?`<div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="qr" style="width:72px;height:72px">${qrSvg(location.href.split("#")[0])}</div><span class="small muted">Continuez sur votre téléphone : ouvrez ce code, votre maison vous y attend.</span></div>`:""}
+  <button class="btn ghost" style="margin-top:auto" onclick="plusTard()">Ou plus tard. La maison attend.</button>
+</div>`};
+function plusTard(){S.cree=true;S.etape="";filAjouter({type:"info",t:`La mémoire de ${lc(S.logement.nom)} commence aujourd'hui. Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière.`,ico:"maison",fait:true});save();route("#/fil")}
+function envoyerAdresse(){modal(`<h2>Envoyer à l'adresse VIDOM</h2><p class="muted">Depuis votre messagerie, envoyez vos documents déjà numérisés à :</p><div class="card"><span class="mono">${h(S.logement.depot)}</span></div><div class="row wrap"><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button><a class="btn grow" href="mailto:${S.logement.depot}?subject=${encodeURIComponent("Documents de la maison")}">${I.mail} Ouvrir ma messagerie</a></div><p class="small faint">Dans cette maquette, rien ne peut vraiment arriver : simulons la réception de ce que vous auriez envoyé.</p><button class="btn primary big" onclick="closeModal();simulerEnvoi()">Simuler l'arrivée de cinq documents</button><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
+function simulerEnvoi(){const lot=[];for(let i=0;i<5;i++){const it=prochainItem("maison");if(!it)break;lot.push({id:uid(),date:now(),img:null,statut:"propose",recu:"adresse",...it})}
+  if(!lot.length){toast("La réserve est vide.");return}terminerLot(lot)}
+
+/* le tri d'une fournée */
+function terminerLot(lot){
+  const nees=[];lot.forEach(r=>{if(r.k!=="inconnu"){r.statut="range";ranger(r)}});
+  const n=naissances();
+  S.derniereBatch={date:now(),items:lot.map(r=>({id:r.id,k:r.k,pieceId:r.pieceId,titre:r.k==="equip"?r.nom:(r.titre||"Photo non reconnue"),img:r.img,statut:r.statut,nees:false}))};
+  S.derniereBatch.nees=n.map(c=>c.nom);
+  S.lot=null;save();
+  if(!S.cree){S.cree=true;S.etape="";save();route("#/tri")}else route("#/tri");
+}
+V.tri=()=>{
+  const b=S.derniereBatch;if(!b)return V.fil();
+  const groupes={};b.items.filter(i=>i.statut==="range").forEach(i=>{(groupes[i.pieceId]=groupes[i.pieceId]||[]).push(i)});
+  const inconnus=b.items.filter(i=>i.statut!=="range");
+  const ordre=Object.keys(groupes).sort((a,c)=>a==="maison"?1:c==="maison"?-1:0);
+  const total=b.items.length;
+  return `<div class="view fadein" style="gap:14px;padding-top:8px">
+  <div class="split"><h1 class="h" style="font-size:1.45em">VIDOM a trié ce qu'il a reçu.</h1><span class="chip terra">${total} ${total>1?"photos":"photo"}</span></div>
+  <div class="card" style="gap:0;padding:4px 16px">
+    ${ordre.map(pid=>`<div class="line" style="align-items:flex-start"><span class="stack" style="gap:2px"><span class="b" style="color:var(--sauge-f)">${h(pid==="maison"?"La maison entière":nomPiece(pid))}</span><span class="small muted">${groupes[pid].map(i=>h(i.titre)).join(", ")}</span></span><span class="chip">${groupes[pid].length}</span></div>`).join("")}
+    ${inconnus.length?`<div class="line"><span class="small b" style="color:var(--terra-f)">${inconnus.length} photo${inconnus.length>1?"s":""} non reconnue${inconnus.length>1?"s":""}</span><button class="chip terra" onclick="revoirInconnus()">Voir</button></div>`:""}
+    ${!ordre.length&&!inconnus.length?`<p class="small muted" style="padding:10px 0">Rien à trier pour l'instant.</p>`:""}
+  </div>
+  ${b.nees&&b.nees.length?`<div class="card soft" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">${b.nees.length===1?"Une rubrique vient d'apparaître":`${["","","Deux","Trois","Quatre","Cinq","Six"][b.nees.length]||b.nees.length} rubriques viennent d'apparaître`}</p><p class="small muted">${h(b.nees.join(", "))}.</p></div>`:""}
+  <a class="btn primary big" href="#/maison">Voir ma maison ${I.fleche}</a>
+  <button class="btn ghost" onclick="corrigerLot()">Corriger une pièce</button>
+</div>`};
+function revoirInconnus(){const b=S.derniereBatch;const inc=b.items.filter(i=>i.statut!=="range");modal(`<h2>Photos non reconnues</h2><p class="muted">VIDOM n'a pas su lire ces photos. Dites-lui ce que c'est, ou laissez-les.</p>${inc.map(i=>`<div class="card" style="flex-direction:row;align-items:center"><div class="photo" style="width:64px;min-height:64px;padding:0;flex:0 0 auto">${i.img?`<img src="${i.img}" alt="">`:""}</div><span class="stack grow" style="flex:1 1 auto"><span class="small b">Photo du ${dateFr(b.date)}</span></span><button class="btn sm" onclick="closeModal();corrigerInconnu('${i.id}')">Dire ce que c'est</button></div>`).join("")}<button class="btn" onclick="closeModal()">Laisser pour l'instant</button>`)}
+function corrigerInconnu(id){const b=S.derniereBatch;const i=b.items.find(x=>x.id===id);modal(`<h2>Qu'est-ce que c'est ?</h2>${formCorrection({pieceId:S.pieceCourante||"maison",k:"doc",nom:""})}<button class="btn primary big" onclick="appliquerInconnu('${id}')">Ranger</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+function appliquerInconnu(id){const b=S.derniereBatch;const i=b.items.find(x=>x.id===id);const k=document.getElementById("ck").value,p=document.getElementById("cp").value,nom=document.getElementById("cn").value.trim()||"Document";
+  const rec={id:uid(),date:now(),img:i.img,k,pieceId:p,nom,marque:"",modele:"",ref:"",achat:today(),garantie:"",notice:false,sav:"",etat:"bon",titre:nom,type:"autre",fournisseur:"",montant:null};ranger(rec);naissances();i.statut="range";i.titre=nom;i.pieceId=p;closeModal();save();render();toast("Rangé dans "+nomPiece(p))}
+function formCorrection(rec){return `<label class="f"><span>C'est</span><select class="input" id="ck"><option value="equip" ${rec.k==="equip"?"selected":""}>Un équipement</option><option value="doc" ${rec.k==="doc"?"selected":""}>Un document</option></select></label><label class="f"><span>Son nom</span><input class="input" id="cn" value="${h(rec.nom||rec.titre||"")}" placeholder="Par exemple : four, facture de plomberie"></label><label class="f"><span>Dans</span><select class="input" id="cp"><option value="maison" ${rec.pieceId==="maison"?"selected":""}>La maison entière</option>${S.pieces.map(p=>`<option value="${p.id}" ${rec.pieceId===p.id?"selected":""}>${h(p.nom)}</option>`).join("")}</select></label>`}
+function corrigerLot(){const b=S.derniereBatch;modal(`<h2>Corriger</h2><p class="muted">Touchez ce qui n'est pas au bon endroit.</p><div class="card" style="gap:0;padding:4px 16px">${b.items.filter(i=>i.statut==="range").map(i=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();corrigerItem('${i.id}')"><span class="stack" style="gap:0"><span class="b">${h(i.titre)}</span><span class="small muted">${h(i.pieceId==="maison"?"La maison entière":nomPiece(i.pieceId))}</span></span>${I.fleche}</button>`).join("")}</div><button class="btn" onclick="closeModal()">Fermer</button>`)}
+function corrigerItem(id){const e=S.equipements.find(x=>x.id===id),d=S.docs.find(x=>x.id===id);const o=e||d;if(!o)return;modal(`<h2>Corriger</h2>${formCorrection({pieceId:o.piece,k:e?"equip":"doc",nom:e?e.nom:d.titre})}<button class="btn primary big" onclick="appliquerCorrection('${id}')">Enregistrer</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+function appliquerCorrection(id){const p=document.getElementById("cp").value,nom=document.getElementById("cn").value.trim();const e=S.equipements.find(x=>x.id===id),d=S.docs.find(x=>x.id===id);if(e){e.piece=p;if(nom)e.nom=nom}if(d){d.piece=p;if(nom)d.titre=nom}
+  if(S.derniereBatch){const i=S.derniereBatch.items.find(x=>x.id===id);if(i){i.pieceId=p;if(nom)i.titre=nom}}closeModal();save();render();toast("Corrigé")}
+
+/* ================= une photo, reconnue ================= */
+V.reconnu=()=>{
+  const lot=S.lot||[];const rec=lot[0];if(!rec)return V.fil();
+  const piece=rec.pieceId||"maison";const pn=piece==="maison"?"la maison entière":nomPiece(piece);
+  const titre=rec.k==="equip"?`${rec.nom} ${rec.marque}${rec.modele?", "+rec.modele.split(" ")[0]:""}`:(rec.k==="doc"?rec.titre:"Photo non reconnue");
+  const detail=rec.k==="equip"?`${rec.achat?"Acheté en "+MOIS[+rec.achat.slice(5,7)-1]+" "+rec.achat.slice(0,4)+". ":""}${rec.garantie?(joursDepuis(rec.garantie)<0?"Garanti jusqu'en "+MOIS[+rec.garantie.slice(5,7)-1]+" "+rec.garantie.slice(0,4)+". ":"Garantie terminée en "+rec.garantie.slice(0,4)+". "):""}${rec.notice?"La notice a été retrouvée":"Pas de notice trouvée"}${rec.sav?", et le service après-vente aussi.":"."}`
+    :(rec.k==="doc"?`${rec.fournisseur?h(rec.fournisseur)+" · ":""}${dateFr(rec.date)}${rec.montant?" · "+euros(rec.montant):""}${rec.garantie?" · garantie jusqu'en "+rec.garantie.slice(0,4):""}`:"VIDOM n'a pas su lire cette photo. Dites-lui ce que c'est, ou laissez-la.");
+  if(rec.statut==="range")return `<div class="view fadein" style="gap:16px;padding-top:8px">
+    <div class="photo" style="min-height:120px">${rec.img?`<img src="${rec.img}" alt="">`:""}<span class="chip">${h(rec.photo||titre)}</span></div>
+    <div class="card soft" style="gap:8px"><div class="row">${I.check}<span class="b" style="color:var(--sauge-f)">Rangé dans ${h(pn)}</span></div><p class="muted">${S.equipements.length+S.docs.length===1?"Votre maison connaît maintenant son premier élément.":"Votre maison en sait un peu plus."} ${piece==="maison"?"Continuez, ou choisissez une pièce.":"Continuez dans "+h(pn)+", ou passez à une autre pièce."}</p></div>
+    ${rec.nees&&rec.nees.length?`<div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">${rec.nees.length===1?"Une rubrique vient d'apparaître":"Des rubriques viennent d'apparaître"}</p><p class="small muted">${h(rec.nees.join(", "))}.</p></div>`:""}
+    <label class="btn primary big file">${I.camera} ${piece==="maison"?"Photographier autre chose":"Continuer dans "+h(pn)}<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'${piece}')"></label>
+    <div class="row"><a class="btn grow" href="#/maison">Une autre pièce</a><a class="btn grow" href="#/fil">Le fil</a></div>
+  </div>`;
+  return `<div class="view fadein" style="gap:16px;padding-top:8px">
+    <div class="photo">${rec.img?`<img src="${rec.img}" alt="">`:""}<span class="chip">${h(rec.photo||"Votre photo")}</span></div>
+    <div class="card" style="gap:12px">
+      <div class="row">${rec.k==="inconnu"?`<span class="small b" style="color:var(--terra-f)">Pas reconnu</span>`:`${I.check}<span class="small b" style="color:var(--sauge-f)">Reconnu</span>`}</div>
+      <h2 style="font-size:1.4em">${h(titre)}</h2>
+      <p class="muted">${detail}</p>
+      ${rec.k!=="inconnu"?`<p class="small faint">Rangé dans ${h(pn)}. Si ce n'est pas la bonne pièce, touchez « Corriger ».</p>`:""}
+      <div class="row">${rec.k!=="inconnu"?`<button class="btn primary grow" onclick="cestBienCa()">C'est bien ça</button><button class="btn" onclick="corrigerRec()">Corriger</button>`:`<button class="btn primary grow" onclick="corrigerRec()">Dire ce que c'est</button><button class="btn" onclick="laisserRec()">Laisser</button>`}</div>
+    </div>
+    ${lot.length>1?`<p class="small faint" style="text-align:center">Encore ${lot.length-1} photo${lot.length>2?"s":""} à regarder.</p>`:""}
+  </div>`;
+};
+function cestBienCa(){const rec=S.lot[0];rec.statut="range";ranger(rec);const n=naissances();rec.nees=n.map(c=>c.nom);save();
+  if(S.lot.length>1){toast("Rangé dans "+nomPiece(rec.pieceId));S.lot.shift();save();render();return}
+  render()}
+function corrigerRec(){const rec=S.lot[0];modal(`<h2>Corriger</h2>${formCorrection({pieceId:rec.pieceId||"maison",k:rec.k==="doc"?"doc":"equip",nom:rec.k==="equip"?rec.nom:(rec.titre||"")})}<button class="btn primary big" onclick="appliquerRec()">Ranger</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+function appliquerRec(){const rec=S.lot[0];const k=document.getElementById("ck").value,p=document.getElementById("cp").value,nom=document.getElementById("cn").value.trim();
+  if(rec.k==="inconnu"){Object.assign(rec,{k,nom:nom||"Équipement",titre:nom||"Document",marque:"",modele:"",ref:"",achat:today(),garantie:"",notice:false,sav:"",etat:"bon",type:"autre",fournisseur:"",montant:null})}
+  else{if(k!==rec.k){rec.k=k;if(k==="doc"){rec.titre=nom||rec.nom;rec.type="autre";rec.fournisseur=rec.marque||"";rec.montant=null}else{rec.nom=nom||rec.titre;rec.marque="";rec.modele="";rec.ref="";rec.achat=today();rec.garantie="";rec.notice=false;rec.sav="";rec.etat="bon"}}else if(nom){if(k==="equip")rec.nom=nom;else rec.titre=nom}}
+  rec.pieceId=p;closeModal();cestBienCa()}
+function laisserRec(){S.lot.shift();save();if(!S.lot.length){route("#/fil")}else render()}
+
+/* ================= fichiers → photos → reconnaissance ================= */
+function reduire(file){return new Promise(res=>{
+  if(!file.type.startsWith("image/")){res(null);return}
+  const img=new Image();const url=URL.createObjectURL(file);
+  img.onload=()=>{try{const max=520;let w=img.width,h2=img.height;const k=Math.min(1,max/Math.max(w,h2));w=Math.round(w*k);h2=Math.round(h2*k);const c=document.createElement("canvas");c.width=w;c.height=h2;c.getContext("2d").drawImage(img,0,0,w,h2);res(c.toDataURL("image/jpeg",.7))}catch(e){res(null)}URL.revokeObjectURL(url)};
+  img.onerror=()=>{URL.revokeObjectURL(url);res(null)};img.src=url;
+})}
+async function fichiers(files,pieceId){
+  const list=[...files].slice(0,30);if(!list.length)return;
+  closeModal();toast(list.length>1?`${list.length} fichiers reçus. VIDOM regarde…`:"VIDOM regarde…");
+  const trop=S.equipements.length+S.docs.length>40;
+  const lot=[];
+  for(const f of list){const img=trop?null:await reduire(f);const rec=reconnaitre(f,pieceId,img);rec.pieceId=rec.pieceId||pieceId||"maison";lot.push(rec)}
+  if(pieceId&&pieceId!=="maison")S.pieceCourante=pieceId;
+  if(lot.length===1){S.lot=lot;save();route("#/reconnu")}
+  else terminerLot(lot);
+}
+</script>
+<script>
+/* ================= le fil ================= */
+let filtreFil="tout";
+function groupeJour(d){const j=joursDepuis(d);if(j<=0)return"Aujourd'hui";if(j===1)return"Hier";if(j<7)return"Cette semaine";if(j<31)return"Ce mois-ci";const y=d.slice(0,4);return y===today().slice(0,4)?moisFr(d).replace(/^./,c=>c.toUpperCase()):`Il y a ${Math.floor(j/365)>=1?(Math.floor(j/365)===1?"un an":Math.floor(j/365)+" ans"):"longtemps"} · ${moisFr(d)}`}
+function entreeFil(e){
+  const ico=e.ico&&I[e.ico]?`<span style="color:${e.type==="recu"&&!e.fait?"var(--terra-f)":"var(--sauge-f)"}">${I[e.ico]}</span>`:"";
+  const quand=`<span class="when">${joursDepuis(e.d)<=1?heure(e.d):dateFr(e.d)}</span>`;
+  let corps="",boutons="";
+  if(e.type==="qa"){
+    const doc=e.doc?S.docs.find(d=>d.id===e.doc):null,eq=e.equip?S.equipements.find(x=>x.id===e.equip):null,pro=e.pro?S.pros.find(p=>p.id===e.pro):null;
+    return `<div class="stack fadein" style="gap:8px"><div class="bulle">${h(e.q)}</div><div class="card" style="max-width:88%;gap:10px"><p>${h(e.rep)}</p>
+      ${doc?carteDoc(doc):""}${eq?`<a class="line" href="#/equipement/${eq.id}">${I.outil}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(eq.nom)} ${h(eq.marque)}</span><span class="small muted">${eq.notice?"Notice retrouvée":""}${eq.sav?" · SAV":""}</span></span>${I.fleche}</a>`:""}
+      ${pro?`<button class="btn sm" onclick="contacter('${h(pro.nom)}')">Recontacter ${h(pro.nom)}</button>`:""}${e.go?`<a class="btn sm" href="${e.go}">Voir</a>`:""}
+      ${e.manque?`<div class="row wrap"><label class="btn sm file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} onchange="fichiers(this.files,'maison')"></label><button class="btn sm" onclick="trouverPro()">Demander à un professionnel</button></div>`:""}
+    </div></div>`;
+  }
+  if(e.type==="recu"&&!e.fait)boutons=`<div class="row"><button class="btn primary grow" onclick="filDecider('${e.id}','garder')">La garder</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>`;
+  if(e.type==="rappel"&&!e.fait)boutons=e.info?`<div class="row"><button class="btn grow" onclick="filDecider('${e.id}','fait')">Compris</button></div>`:`<div class="row wrap">${e.pro?`<button class="btn grow" onclick="filDecider('${e.id}','rappeler')">Rappeler ${h(e.pro)}</button>`:""}<button class="btn" onclick="filDecider('${e.id}','fait')">Déjà fait</button></div>`;
+  if(e.type==="question"&&!e.fait)boutons=`<div class="row wrap">${e.boutons.map((b,i)=>`<button class="btn ${i===0?"primary":""} ${i===0?"grow":""}" onclick="filDecider('${e.id}','${b[1]}')">${h(b[0])}</button>`).join("")}</div>`;
+  if(e.type==="naissance"||e.type==="acces")boutons=`<div class="row"><a class="btn" href="${e.go}">Voir</a></div>`;
+  if(e.propose)boutons+=`<div class="card soft" style="gap:8px;padding:12px 14px"><p class="small">Toujours garder ce que ${h(e.propose)} envoie ?</p><div class="row"><button class="btn sm" onclick="toujoursAccepter('${e.id}',true)">Oui</button><button class="btn sm" onclick="toujoursAccepter('${e.id}',false)">Non, me demander</button></div></div>`;
+  corps=`<p>${h(e.t)}</p>${e.t2?`<p class="small muted">${h(e.t2)}</p>`:""}${e.t3?`<p class="small muted">${h(e.t3)}</p>`:""}`;
+  return `<div class="card fadein ${e.type==="recu"&&!e.fait?"attn":""}"><div class="split">${quand}${ico}</div>${corps}${boutons}</div>`;
+}
+V.fil=()=>{
+  pousserRappels();
+  let entrees=S.fil.slice();
+  if(filtreFil==="documents")entrees=entrees.filter(e=>e.type==="recu"||(e.type==="qa"&&e.doc));
+  if(filtreFil==="afaire")entrees=entrees.filter(e=>(e.type==="rappel"||e.type==="question"||e.type==="recu")&&!e.fait);
+  if(filtreFil==="souvenirs")entrees=entrees.filter(e=>e.type==="souvenir");
+  const groupes=[];entrees.forEach(e=>{const g=groupeJour(e.d);let x=groupes.find(y=>y.g===g);if(!x){x={g,l:[]};groupes.push(x)}x.l.push(e)});
+  const vide=!S.fil.length;
+  const nAfaire=S.fil.filter(e=>(e.type==="rappel"||e.type==="question"||e.type==="recu")&&!e.fait).length;
+  return `<div class="view" style="gap:12px">
+    <div class="row wrap" style="gap:6px">${[["tout","Tout"],["afaire",nAfaire?`À faire · ${nAfaire}`:"À faire"],["documents","Documents"],["souvenirs","Souvenirs"]].map(([k,n])=>`<button class="chip btn-chip ${filtreFil===k?"on":""}" style="padding:6px 12px" onclick="filtreFil='${k}';render()">${n}</button>`).join("")}</div>
+    ${vide?`<div class="card soft" style="gap:8px"><p class="b" style="color:var(--sauge-f)">Rien encore.</p><p class="muted">Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière. Ou envoyez un document à l'adresse VIDOM de la maison.</p><label class="btn primary file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label></div>`:""}
+    ${!vide&&!entrees.length?`<p class="small faint" style="text-align:center;padding:20px 0">Rien de ce côté pour l'instant.</p>`:""}
+    ${groupes.map(g=>`<div class="sep"><span>${h(g.g)}</span><i></i></div>${g.l.map(entreeFil).join("")}`).join("")}
+    <div style="flex:1 1 auto"></div>
+    <div class="stack" style="gap:8px">
+      <div class="row wrap" style="gap:6px">${suggestionsDuMoment().map(s=>`<button class="chip btn-chip" onclick="poserQuestion('${h(s)}')">${h(s)}</button>`).join("")}</div>
+      <form class="ask" onsubmit="event.preventDefault();poserQuestion(this.q.value);this.q.value=''"><input class="input" name="q" placeholder="Écrire ou parler à la maison…" autocomplete="off" aria-label="Demander à la maison"><button type="submit" aria-label="Envoyer">${I.fleche}</button></form>
+    </div>
+  </div>`;
+};
+function poserQuestion(q){demander(q);filtreFil="tout";render();setTimeout(()=>{const el=document.querySelector(".pane.right .view, .col .view");if(el)el.scrollIntoView({block:"start"})},50)}
+function carteDoc(d){return `<a class="line" href="#/document/${d.id}" style="border:1px solid var(--bois-c);border-radius:12px;padding:10px 12px">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${d.montant?euros(d.montant)+" · ":""}${dateFr(d.date)}</span></span>${I.fleche}</a>`}
+
+/* ================= ma maison ================= */
+V.maison=()=>{
+  const L=S.logement;
+  const cartes=CARTES.filter(c=>c.nee());
+  const prochaine=CARTES.find(c=>!c.nee()&&c.id!=="transmission"&&c.id!=="echanges")||CARTES.find(c=>!c.nee());
+  const carte=c=>`<a class="card" href="#/carte/${c.id}" style="flex-direction:row;align-items:center;gap:14px;padding:14px 16px"><span class="tile">${I[c.ico]}</span><span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(c.nom)}</span><span class="small muted">${h(c.sub()||"")}</span></span>${c.n&&c.n()?`<span class="chip num">${c.n()}</span>`:(c.id==="adresse"?`<span style="color:var(--sable)">${I.qr}</span>`:"")}</a>`;
+  return `<div class="view" style="gap:12px">
+    <div class="split" style="align-items:flex-start"><div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(L.nom)}</h1><p class="small muted">${h(L.adresse)}, ${h(L.ville)}${L.annee?" · "+L.annee:""}${L.surface?" · "+L.surface+" m²":""}${L.dpe?" · DPE "+h(L.dpe):""} · <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerLogement()">Corriger</button></p></div>${isDesk()?"":`<a class="btn sm" href="#/reglages" aria-label="Réglages">${I.reglages}</a>`}</div>
+    <div class="card" style="padding:12px 16px 8px;gap:6px">
+      ${S.plan?`<img class="plan" src="${S.plan}" alt="Le plan de la maison">`:""}
+      ${dessinMaison({mw:S.plan?220:300})}
+      <p class="small b" style="text-align:center;color:var(--sauge-f)">${h(phrasePieces())}</p>
+      <div class="row wrap" style="justify-content:center;gap:6px"><label class="btn sm file">${I.plan} ${S.plan?"Changer le plan":"Vous avez un plan ?"}<input type="file" accept="image/*" onchange="planFichier(this.files)"></label><button class="btn sm" onclick="ajouterPiece()">${I.plus} Une pièce</button></div>
+    </div>
+    ${cartes.map(carte).join("")}
+    ${prochaine?`<${prochaine.id==="echanges"?'button onclick="choisirTiers()" style="text-align:left;width:100%"':"div"} class="card dash" style="flex-direction:row;align-items:center;gap:14px;padding:12px 16px"><span class="tile dash">${I.plus}</span><span class="small">${h(prochaine.nom)} apparaîtra ${h(prochaine.quand)}.${prochaine.id==="echanges"?" Ouvrir un accès ?":""}</span></${prochaine.id==="echanges"?"button":"div"}>`:""}
+  </div>`;
+};
+function corrigerLogement(){const L=S.logement;modal(`<h2>Corriger</h2><p class="muted">Ce que VIDOM a trouvé à l'adresse. Vous restez seul maître de la mémoire de votre logement.</p><label class="f"><span>Nom de la maison</span><input class="input" id="ln" value="${h(L.nom)}"></label><div class="grid2"><label class="f"><span>Année</span><input class="input" id="la" inputmode="numeric" value="${L.annee||""}"></label><label class="f"><span>Surface (m²)</span><input class="input" id="ls" inputmode="numeric" value="${L.surface||""}"></label></div><label class="f"><span>Classe énergétique</span><select class="input" id="ld">${"ABCDEFG".split("").map(c=>`<option ${L.dpe===c?"selected":""}>${c}</option>`).join("")}<option value="" ${!L.dpe?"selected":""}>Inconnue</option></select></label><p class="small faint">Source : ce que VIDOM a trouvé à l'adresse${L.dpeDate?" (diagnostic du "+h(L.dpeDate)+")":""}.</p><button class="btn primary big" onclick="L=S.logement;L.nom=document.getElementById('ln').value.trim()||L.nom;L.annee=+document.getElementById('la').value||null;L.surface=+document.getElementById('ls').value||null;L.dpe=document.getElementById('ld').value;closeModal();save();render()">Enregistrer</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+async function planFichier(files){const f=files[0];if(!f)return;const img=await reduire(f);if(img){S.plan=img;filAjouter({type:"info",t:"Le plan de la maison est conservé. Le dessin s'appuie dessus.",ico:"plan",fait:true});save();render();toast("Plan conservé")}}
+function ajouterPiece(){modal(`<h2>Une pièce de plus</h2><div class="row wrap">${[...TYPES_PIECES,...AUTRES_PIECES].map(t=>`<button class="chip btn-chip" onclick="creerPiece('${t.type}','${h(t.nom)}')">${h(t.nom)}</button>`).join("")}</div><label class="f"><span>Ou un autre nom</span><div class="row"><input class="input" id="pn" placeholder="Atelier, véranda…"><button class="btn" onclick="creerPiece('autre',document.getElementById('pn').value.trim())">Ajouter</button></div></label><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+function creerPiece(type,nom){if(!nom)return;const n=S.pieces.filter(p=>p.type===type).length;const def=[...TYPES_PIECES,...AUTRES_PIECES].find(t=>t.type===type);
+  if(def&&n===1){const p0=S.pieces.find(p=>p.type===type);if(p0.nom===def.nom)p0.nom=def.nom+" 1"}
+  S.pieces.push({id:uid(),type,nom:def&&n>0?`${def.nom} ${n+1}`:nom,photos:[]});S.comptage[type]=(S.comptage[type]||0)+1;closeModal();save();render();toast("Pièce ajoutée")}
+
+V.piece=id=>{
+  const p=pieceParId(id);if(!p)return V.maison();
+  const eqs=S.equipements.filter(e=>e.piece===id),docs=S.docs.filter(d=>d.piece===id),photos=p.photos.filter(Boolean);
+  return `<div class="view" style="gap:12px">
+    <div class="split"><h1 class="h" style="font-size:1.45em">${h(p.nom)}</h1><button class="btn sm" onclick="renommerPiece('${id}')">Renommer</button></div>
+    ${photos.length?`<div class="grid2">${photos.slice(0,4).map(s=>`<div class="photo" style="min-height:110px;padding:0"><img src="${s}" alt=""></div>`).join("")}</div>`:""}
+    ${!eqs.length&&!docs.length?`<div class="card soft"><p class="muted">Rien encore dans ${h(lc(p.nom))}. Photographiez un appareil, son étiquette, une facture.</p></div>`:""}
+    ${eqs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Équipements</p>${eqs.map(e=>`<a class="line" href="#/equipement/${e.id}">${I.outil}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(e.nom)}</span><span class="small muted">${h(e.marque)} ${h(e.modele)}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
+    ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
+    <label class="btn primary big file">${I.camera} Photographier ici<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'${id}')"></label>
+    <button class="btn ghost" onclick="retirerPiece('${id}')">Retirer cette pièce</button>
+  </div>`;
+};
+function renommerPiece(id){const p=pieceParId(id);modal(`<h2>Renommer</h2><input class="input" id="rn" value="${h(p.nom)}"><button class="btn primary big" onclick="pieceParId('${id}').nom=document.getElementById('rn').value.trim()||'Pièce';closeModal();save();render()">Enregistrer</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+function retirerPiece(id){const p=pieceParId(id);const n=S.equipements.filter(e=>e.piece===id).length+S.docs.filter(d=>d.piece===id).length;modal(`<h2>Retirer ${h(lc(p.nom))} ?</h2><p class="muted">${n?`Ce qui y est rangé (${n} élément${n>1?"s":""}) sera rattaché à la maison entière. Rien n'est perdu.`:"Rien n'y est rangé."}</p><div class="row"><button class="btn primary grow" onclick="S.equipements.forEach(e=>{if(e.piece==='${id}')e.piece='maison'});S.docs.forEach(d=>{if(d.piece==='${id}')d.piece='maison'});S.pieces=S.pieces.filter(x=>x.id!=='${id}');closeModal();save();route('#/maison')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+
+/* ================= les cartes ================= */
+V.carte=id=>{
+  if(id==="adresse")return V["adresse-vidom"]();
+  const c=CARTES.find(x=>x.id===id);if(!c)return V.maison();
+  if(!c.nee())return `<div class="view"><div class="card dash"><p>${h(c.nom)} apparaîtra ${h(c.quand)}.</p></div><a class="btn" href="#/maison">Ma maison</a></div>`;
+  const F={equipements:vEquipements,documents:vDocuments,artisans:vArtisans,travaux:vTravaux,echanges:vEchanges,transmission:vTransmission};
+  return F[id]();
+};
+function vEquipements(){
+  const parPiece={};S.equipements.forEach(e=>{(parPiece[e.piece]=parPiece[e.piece]||[]).push(e)});
+  const ordre=Object.keys(parPiece).sort((a,b)=>a==="maison"?1:b==="maison"?-1:0);
+  const expirent=S.equipements.filter(e=>e.garantie&&joursDepuis(e.garantie)<0&&joursDepuis(e.garantie)>-180);
+  return `<div class="view" style="gap:12px">
+    <h1 class="h" style="font-size:1.45em">Équipements</h1>
+    ${expirent.length?`<div class="card soft"><p class="small">${expirent.length===1?"Une garantie expire":expirent.length+" garanties expirent"} dans les six mois : ${expirent.map(e=>lc(e.nom)).join(", ")}.</p></div>`:""}
+    ${ordre.map(pid=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(pid==="maison"?"La maison entière":nomPiece(pid))}</p>${parPiece[pid].map(e=>`<a class="line" href="#/equipement/${e.id}">${I.outil}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(e.nom)}</span><span class="small muted">${h(e.marque)}${e.garantie&&joursDepuis(e.garantie)<0?" · garanti jusqu'en "+e.garantie.slice(0,4):""}</span></span>${I.fleche}</a>`).join("")}</div>`).join("")}
+    <label class="btn file">${I.camera} Photographier un appareil<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label>
+  </div>`;
+}
+V.equipement=id=>{
+  const e=S.equipements.find(x=>x.id===id);if(!e)return vEquipements();
+  const docs=S.docs.filter(d=>d.lie===e.nom||d.lie===e.id);
+  return `<div class="view" style="gap:12px">
+    ${e.img?`<div class="photo" style="min-height:130px"><img src="${e.img}" alt=""></div>`:""}
+    <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(e.nom)}</h1><p class="muted">${h(e.marque)} ${h(e.modele)} · ${h(nomPiece(e.piece))}</p></div>
+    <div class="card"><dl class="kv">${e.ref?`<dt>Référence</dt><dd class="num">${h(e.ref)}</dd>`:""}${e.achat?`<dt>Acheté</dt><dd>${dateFr(e.achat)}</dd>`:""}${e.garantie?`<dt>Garantie</dt><dd>${joursDepuis(e.garantie)<0?"jusqu'au "+dateFr(e.garantie):"terminée le "+dateFr(e.garantie)}</dd>`:""}${e.installateur?`<dt>Installé par</dt><dd>${h(e.installateur)}</dd>`:""}${e.entretiens&&e.entretiens.length?`<dt>Entretiens</dt><dd>${e.entretiens.map(x=>dateFr(x.d)+(x.par?" · "+h(x.par):"")).join("<br>")}</dd>`:""}<dt>État</dt><dd>${e.etat==="bon"?"Bon":h(e.etat)}</dd></dl></div>
+    <div class="grid2">${e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" disabled>Pas de notice</button>`}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
+    ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents reliés</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
+    <p class="small faint">Notice et service après-vente retrouvés à partir de la référence lue sur l'étiquette. <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerItem('${e.id}')">Corriger</button></p>
+  </div>`;
+};
+function voirNotice(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Notice — ${h(e.marque)} ${h(e.modele)}</h2><div class="book"><p class="small muted">Retrouvée sur le site du fabricant à partir de la référence ${h(e.ref)}.</p><p style="margin-top:10px"><b>Mise en service.</b> Raccordez l'appareil, vérifiez le niveau, lancez un premier cycle à vide.</p><p><b>Entretien.</b> Nettoyez le filtre une fois par mois. Détartrez tous les six mois.</p><p><b>En cas de panne.</b> Le code affiché indique la cause : E15, fuite ; E22, filtre obstrué ; E24, évacuation.</p></div><div class="row"><button class="btn primary grow" onclick="closeModal();toast('Notice conservée dans Documents')">Conserver dans Documents</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
+function sav(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Service après-vente ${h(e.marque)}</h2><p class="muted">Retrouvé à partir de la référence ${h(e.ref)}. ${e.garantie&&joursDepuis(e.garantie)<0?"L'appareil est encore sous garantie.":"L'appareil n'est plus sous garantie."}</p><a class="btn primary big" href="tel:${e.sav.replace(/\s/g,"")}">${I.telephone} ${h(e.sav)}</a><p class="small faint">Ayez sous la main : la référence ${h(e.ref)}, la date d'achat (${dateFr(e.achat)}) et la facture, qui est dans la mémoire de la maison.</p><button class="btn" onclick="closeModal()">Fermer</button>`)}
+function probleme(id){const e=S.equipements.find(x=>x.id===id);const garanti=e.garantie&&joursDepuis(e.garantie)<0;const pro=S.pros.find(p=>p.nom===e.installateur);modal(`<h2>Un problème avec ${h(lc(e.nom))} ?</h2><p class="muted">${garanti?"Il est sous garantie : le service après-vente d'abord.":(pro?`${h(pro.nom)} connaît cet appareil : la maison le propose en premier.`:"Voici par où commencer.")}</p><div class="stack">${garanti&&e.sav?`<button class="btn primary big" onclick="closeModal();sav('${e.id}')">${I.telephone} Appeler le SAV</button>`:""}${pro?`<button class="btn ${garanti?"":"primary"} big" onclick="closeModal();contacter('${h(pro.nom)}')">${I.gens} Recontacter ${h(pro.nom)}</button>`:""}<button class="btn big" onclick="closeModal();trouverPro('${h(e.nom)}')">Trouver un professionnel</button><button class="btn big" onclick="closeModal();sinistre('${e.id}')">Déclarer un sinistre à l'assureur</button></div><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
+function sinistre(id){const e=S.equipements.find(x=>x.id===id);const ass=S.docs.find(d=>d.type==="contrat");modal(`<h2>Déclaration de sinistre</h2><p class="muted">VIDOM prépare le dossier avec ce que la maison sait. Vous relisez, vous envoyez.</p><div class="book"><p class="b">${h(S.logement.nom)} — ${h(S.logement.adresse)}, ${h(S.logement.cp)} ${h(S.logement.ville)}</p><p class="small muted">${ass?"Contrat : "+h(ass.fournisseur)+", attestation du "+dateFr(ass.date):"Attestation d'assurance : à photographier"}</p><p style="margin-top:8px"><b>Équipement concerné :</b> ${h(e.nom)} ${h(e.marque)} ${h(e.modele)}, ${e.achat?"acheté le "+dateFr(e.achat):""}${e.installateur?", installé par "+h(e.installateur):""}.</p><p><b>Pièces jointes :</b> facture d'achat, photos, ${e.notice?"notice":""}.</p></div><div class="row"><a class="btn primary grow" href="mailto:?subject=${encodeURIComponent("Déclaration de sinistre — "+S.logement.adresse)}" onclick="closeModal();filAjouter({type:'info',t:'Déclaration de sinistre préparée pour '+'${h(lc(e.nom))}'+'. Envoyée depuis votre messagerie.',ico:'envoi',fait:true});render()">${I.envoi} Envoyer</a><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
+
+function vDocuments(){
+  const TYPES={acte:"Acte",diagnostic:"Diagnostics",facture:"Factures",devis:"Devis",notice:"Notices",contrat:"Contrats et attestations",impot:"Impôts",plan:"Plans",autre:"Autres"};
+  const par={};S.docs.forEach(d=>{(par[d.type]=par[d.type]||[]).push(d)});
+  return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Documents</h1>
+    ${Object.keys(TYPES).filter(t=>par[t]).map(t=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${TYPES[t]}</p>${par[t].sort((a,b)=>b.date.localeCompare(a.date)).map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""} · ${d.piece==="maison"?"la maison":h(nomPiece(d.piece))}</span></span>${I.fleche}</a>`).join("")}</div>`).join("")}
+    <div class="row"><label class="btn grow file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter</button></div>
+  </div>`;
+}
+V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();const t=S.travaux.find(t=>t.docs.includes(d.id));
+  return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:160px"><img src="${d.img}" alt=""></div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
+    <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">${h(d.titre)}</h1><p class="muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</p></div>
+    <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd></dl></div>
+    <div class="row wrap">${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Corriger</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
+  </div>`};
+function retirerDoc(id){modal(`<h2>Retirer ce document ?</h2><p class="muted">Il disparaît vraiment de la mémoire de la maison.</p><div class="row"><button class="btn terra grow" onclick="S.docs=S.docs.filter(d=>d.id!=='${id}');closeModal();save();route('#/carte/documents');toast('Retiré')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+
+function vArtisans(){
+  return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Les artisans de la maison</h1><p class="muted">Ceux qui la connaissent déjà. Ils passent toujours avant un inconnu.</p>
+    <div class="card" style="gap:0;padding:4px 16px">${S.pros.map(p=>`<a class="line" href="#/pro/${p.id}"><span class="tile" style="width:36px;height:36px;font-weight:700;font-size:.85em">${h(p.nom.split(/\s/).map(w=>w[0]).join("").slice(0,2).toUpperCase())}</span><span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(p.nom)}</span><span class="small muted">${h(p.metier)} · ${p.interventions[0]?h(p.interventions[0].motif)+", "+dateFr(p.interventions[0].d):""}</span></span>${I.fleche}</a>`).join("")}</div>
+    <button class="btn big" onclick="trouverPro()">${I.gens} Trouver un professionnel</button>
+  </div>`;
+}
+V.pro=id=>{const p=S.pros.find(x=>x.id===id);if(!p)return vArtisans();const docs=S.docs.filter(d=>d.fournisseur===p.nom);
+  return `<div class="view" style="gap:12px"><div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(p.nom)}</h1><p class="muted">${h(p.metier)}${p.ville?" · "+h(p.ville):""}</p></div>
+    <div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ce qu'il a fait ici</p>${p.interventions.map(i=>`<div class="line"><span>${h(i.motif)}</span><span class="small muted">${dateFr(i.d)}</span></div>`).join("")}</div>
+    ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ses documents</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
+    <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre appréciation</p>${p.avis.length?p.avis.map(a=>`<p class="small">${"★".repeat(a.n)}${"☆".repeat(5-a.n)} <span class="muted">${h(a.t)} · ${dateFr(a.d)}</span></p>`).join(""):`<p class="small muted">Elle reste dans la mémoire de la maison et se transmet avec elle. L'artisan ne la voit jamais.</p>`}<div class="row">${[1,2,3,4,5].map(n=>`<button class="btn sm" onclick="noter('${p.id}',${n})">${"★".repeat(n)}</button>`).join("")}</div></div>
+    <button class="btn primary big" onclick="contacter('${h(p.nom)}')">${I.telephone} Recontacter</button>
+  </div>`};
+function noter(id,n){const p=S.pros.find(x=>x.id===id);p.avis.push({n,t:"Par vous",d:today()});save();render();toast("Appréciation conservée")}
+function trouverPro(quoi){const connus=S.pros;modal(`<h2>Trouver un professionnel</h2>${connus.length?`<p class="small b" style="color:var(--sauge-f)">Ceux que la maison connaît</p><div class="card" style="gap:0;padding:4px 16px">${connus.map(p=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();contacter('${h(p.nom)}')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(p.nom)}</span><span class="small muted">${h(p.metier)}</span></span>${I.telephone}</button>`).join("")}</div>`:""}<p class="small b" style="color:var(--sauge-f)">Près de chez vous</p><div class="card" style="gap:0;padding:4px 16px">${[["Atelier Saint-Servan","Plombier-chauffagiste","Saint-Malo"],["Élec'Côte","Électricien","Saint-Malo"],["Menuiserie Rance","Menuisier","Dinard"]].map(x=>`<div class="line"><span class="stack" style="gap:0"><span class="b">${x[0]}</span><span class="small muted">${x[1]} · ${x[2]}</span></span><span class="chip neutre">Inconnu de la maison</span></div>`).join("")}</div><p class="small faint">Un professionnel inconnu n'entre dans la maison qu'après une première intervention.</p><button class="btn" onclick="closeModal()">Fermer</button>`)}
+
+function vTravaux(){return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Travaux</h1>
+  ${S.travaux.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="card" style="gap:6px"><div class="split"><span class="b">${h(t.titre)}</span><span class="chip num">${t.montant?euros(t.montant):"devis"}</span></div><p class="small muted">${h(t.par)} · ${dateFr(t.date)}</p><div class="stack" style="gap:0">${t.docs.map(id=>S.docs.find(d=>d.id===id)).filter(Boolean).map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span style="flex:1 1 auto">${h(d.titre)}</span>${I.fleche}</a>`).join("")}</div></div>`).join("")}
+  <div class="card soft"><p class="small">Total connu : <b class="num">${euros(S.travaux.reduce((a,t)=>a+(t.montant||0),0))}</b>. Chaque devis et chaque facture photographiés viennent ici tout seuls.</p></div>
+  <button class="btn big" onclick="ouvrirChantier()">${I.travaux} Ouvrir un chantier</button></div>`}
+function ouvrirChantier(){modal(`<h2>Ouvrir un chantier</h2><label class="f"><span>Quoi</span><input class="input" id="ct" placeholder="Rénovation de la salle de bain"></label><label class="f"><span>Par qui</span><input class="input" id="cq" placeholder="${S.pros[0]?h(S.pros[0].nom):"Un artisan"}"></label><button class="btn primary big" onclick="const t=document.getElementById('ct').value.trim();if(!t)return;S.travaux.push({id:uid(),titre:t,par:document.getElementById('cq').value.trim(),date:today(),montant:0,docs:[]});naissances();closeModal();save();render();toast('Chantier ouvert')">Ouvrir</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+
+/* ================= adresse VIDOM ================= */
+V["adresse-vidom"]=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">L'adresse VIDOM de votre logement</h1>
+  <div class="card soft" style="gap:12px"><div class="row" style="align-items:flex-start;gap:14px"><div class="qr" style="width:120px;height:120px">${qrSvg("mailto:"+S.logement.depot)}</div><div class="stack" style="gap:4px"><span class="mono" style="font-size:1.05em">${h(S.logement.depot)}</span><span class="small muted">Tout ce qui y est envoyé arrive dans le fil. Rien n'entre sans vous.</span></div></div>
+  <div class="row"><button class="btn primary grow" onclick="partagerAdresse()">Partager</button><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button></div></div>
+  <div class="card" style="gap:6px"><p class="small b" style="color:var(--sauge-f)">À qui la donner</p><p class="small muted">Notaire, agent immobilier, artisans, assureur, syndic, diagnostiqueur — tous ceux qui détiennent des papiers de votre logement. Ils envoient, vous décidez.</p></div>
+  <div class="card" style="gap:6px"><p class="small b" style="color:var(--sauge-f)">Expéditeurs acceptés sans vous demander</p>${S.expediteursOk.length?S.expediteursOk.map(x=>`<div class="line"><span>${h(x)}</span><button class="btn sm" onclick="S.expediteursOk=S.expediteursOk.filter(y=>y!=='${h(x)}');save();render()">Me redemander</button></div>`).join(""):`<p class="small muted">Aucun. Chaque envoi vous est proposé.</p>`}</div>
+  <button class="btn" onclick="etiquette()">${I.qr} Imprimer l'étiquette</button>
+</div>`;
+function etiquette(){modal(`<h2>L'étiquette de la maison</h2><p class="muted">À coller sur le tableau électrique ou dans le classeur. L'artisan la scanne, sa facture arrive ici.</p><div class="book" style="text-align:center"><div class="qr" style="width:140px;height:140px;margin:0 auto">${qrSvg("mailto:"+S.logement.depot)}</div><p class="b" style="margin-top:10px">${h(S.logement.nom)}</p><p class="mono small">${h(S.logement.depot)}</p><p class="small muted" style="margin-top:6px">Envoyez ici vos factures, devis et notices pour ce logement.</p></div><div class="row"><button class="btn primary grow" onclick="window.print()">Imprimer</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
+
+/* ================= échanges et accès ================= */
+function vEchanges(){
+  return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Échanges et accès</h1><p class="muted">Le logement au centre. Chaque tiers ne voit que ce qui le concerne, pour un temps, et vous voyez qui a vu quoi.</p>
+    ${RESERVE.tiers.map(t=>{const a=S.acces.find(x=>x.tiers===t.id&&x.ouvert);return `<div class="card" style="gap:8px"><div class="row"><span class="tile">${I[t.ico]}</span><span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(t.nom)}</span><span class="small muted">${a?`Ouvert à ${h(a.nom)} jusqu'au ${dateFr(a.fin)}`:`Voit : ${t.voit.join(", ").toLowerCase()}`}</span></span>${a?`<span class="chip">Ouvert</span>`:""}</div><div class="row wrap">${a?`<button class="btn sm" onclick="voirComme('${t.id}')">${I.oeil} Voir comme</button><button class="btn sm" onclick="fermerAcces('${a.id}')">Fermer l'accès</button>`:`<button class="btn sm primary" onclick="ouvrirAcces('${t.id}')">Ouvrir l'accès</button><button class="btn sm" onclick="voirComme('${t.id}')">${I.oeil} Voir comme</button>`}</div></div>`}).join("")}
+    <div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Qui a vu quoi</p>${S.journalAcces.length?S.journalAcces.slice(0,12).map(j=>`<div class="line"><span class="small">${h(j.t)}</span><span class="small muted" style="white-space:nowrap">${dateFr(j.d)} ${heure(j.d)}</span></div>`).join(""):`<p class="small muted" style="padding:6px 0">Personne n'a encore rien vu.</p>`}</div>
+  </div>`;
+}
+function choisirTiers(){modal(`<h2>Ouvrir un accès à un tiers</h2><p class="muted">Il ne verra que ce qui le concerne, pour un temps, et vous verrez chaque ouverture.</p><div class="card" style="gap:0;padding:4px 16px">${RESERVE.tiers.map(t=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();ouvrirAcces('${t.id}')"><span class="tile" style="width:36px;height:36px">${I[t.ico]}</span><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(t.nom)}</span><span class="small muted">${h(t.voit.join(', '))}</span></span>${I.fleche}</button>`).join("")}</div><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+function ouvrirAcces(tid){const t=RESERVE.tiers.find(x=>x.id===tid);modal(`<h2>Ouvrir l'accès : ${h(t.nom.toLowerCase())}</h2><label class="f"><span>Son nom</span><input class="input" id="an" value="${h(t.ex)}" placeholder="Nom ou cabinet"></label><label class="f"><span>Pour combien de temps</span><select class="input" id="ad"><option value="30">Un mois</option><option value="90" ${t.duree==="3 mois"?"selected":""}>Trois mois</option><option value="180" ${t.duree==="6 mois"?"selected":""}>Six mois</option><option value="365">Un an</option></select></label><div class="card soft" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Ce qu'il verra</p><p class="small">${t.voit.join(" · ")}</p><p class="small muted">Et rien d'autre. Ce qui n'est pas dans cette liste ne lui est pas envoyé.</p></div><button class="btn primary big" onclick="accesOk('${tid}')">Ouvrir, et obtenir le lien</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+function accesOk(tid){const t=RESERVE.tiers.find(x=>x.id===tid);const nom=document.getElementById("an").value.trim()||t.nom;const j=+document.getElementById("ad").value;const code=Math.random().toString(36).slice(2,10);
+  const a={id:uid(),tiers:tid,nom,debut:today(),fin:shiftDate(today(),j),ouvert:true,lien:`vidom.fr/p/${code}`};S.acces.push(a);S.journalAcces.unshift({d:now(),t:`Accès ouvert à ${nom} (${t.nom.toLowerCase()}), jusqu'au ${dateFr(a.fin)}`});naissances();
+  filAjouter({type:"acces",t:`Accès ouvert à ${nom} jusqu'au ${dateFr(a.fin)}. Vous verrez chaque ouverture ici.`,go:"#/carte/echanges",ico:"echanges",fait:true});
+  closeModal();save();render();modal(`<h2>Le lien à lui envoyer</h2><div class="card"><span class="mono">${h(a.lien)}</span></div><p class="small muted">Envoyez-le depuis votre messagerie. Il ouvre une page à part, sans compte, qui montre exactement ce que vous avez choisi, jusqu'au ${dateFr(a.fin)}. Ensuite, la page dit « cet accès est terminé ».</p><div class="row"><button class="btn primary grow" onclick="copier('${h(a.lien)}')">Copier le lien</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
+function fermerAcces(id){const a=S.acces.find(x=>x.id===id);a.ouvert=false;S.journalAcces.unshift({d:now(),t:`Accès de ${a.nom} fermé par vous`});save();render();toast("Accès fermé")}
+function voirComme(tid){const t=RESERVE.tiers.find(x=>x.id===tid);const a=S.acces.find(x=>x.tiers===tid&&x.ouvert);
+  const blocs=t.voit.map(v=>{const l=v.toLowerCase();let items=[];if(l.includes("acte"))items=S.docs.filter(d=>d.type==="acte");else if(l.includes("diagnostic"))items=S.docs.filter(d=>d.type==="diagnostic");else if(l.includes("facture"))items=S.docs.filter(d=>d.type==="facture"&&d.travaux);else if(l.includes("plan"))items=S.docs.filter(d=>d.type==="plan");else if(l.includes("équipement"))items=S.equipements;else if(l.includes("travaux"))items=S.travaux;else if(l.includes("artisan"))items=S.pros;else if(l.includes("document"))items=S.docs.filter(d=>d.type!=="acte"&&d.type!=="impot"&&d.type!=="contrat");else if(l.includes("fiche"))items=[{titre:`${S.logement.nom} · ${S.logement.annee||"?"} · ${S.logement.surface||"?"} m² · DPE ${S.logement.dpe||"?"}`}];else if(l.includes("notice"))items=S.equipements.filter(e=>e.notice);else if(l.includes("intervention"))items=S.pros.flatMap(p=>p.interventions.map(i=>({titre:i.motif+" — "+p.nom})));else if(l.includes("dossier"))items=[{titre:"Le dossier, tel que vous l'aurez validé"}];return `<p class="small b" style="color:var(--sauge-f);margin-top:8px">${h(v)}</p>${items.length?items.map(i=>`<p class="small">· ${h(i.titre||i.nom)}</p>`).join(""):`<p class="small faint">— rien encore</p>`}`}).join("");
+  if(a){S.journalAcces.unshift({d:now(),t:`${a.nom} a ouvert la page (simulation « voir comme »)`});save()}
+  modal(`<div class="book" style="background:#E9E4DA;border-radius:8px 8px 0 0;padding:8px 12px;box-shadow:none"><span class="small mono">${a?h(a.lien):"vidom.fr/p/…"}</span></div><div class="book" style="border-radius:0 0 8px 8px"><p class="small muted">Partagé par ${h(S.compte.email||"le gardien")} avec ${h(a?a.nom:t.nom.toLowerCase())}${a?" · jusqu'au "+dateFr(a.fin):""}</p><p class="b" style="margin-top:6px">${h(S.logement.nom)}</p>${blocs}<p class="small faint" style="margin-top:10px">Ce que vous ne voyez pas n'a pas été transmis.</p></div><button class="btn" onclick="closeModal();render()">Fermer</button>`)}
+
+/* ================= transmission ================= */
+function vTransmission(){const T=S.transmission;
+  const dossier=(id,nom,contenu)=>`<button class="card" style="text-align:left;gap:4px" onclick="ouvrirDossier('${id}')"><span class="b">${nom}</span><span class="small muted">${contenu}</span></button>`;
+  return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Transmission</h1><p class="muted">${T.motif==="vente"?"La maison va changer de mains. Voici ce qu'elle peut laisser au suivant.":T.motif==="depart"?"Vous quittez la maison. Sa mémoire peut continuer sans vous.":"Quelqu'un demande la mémoire de la maison."}</p>
+    ${dossier("vente","Le dossier de vente","Acte, diagnostics, travaux, équipements et garanties — pour le notaire, l'agent, l'acquéreur.")}
+    ${dossier("livre","Le livre du logement","Son histoire, année par année, avec les artisans qui la connaissent. Gratuit, toujours.")}
+    ${dossier("carnet","Le carnet d'entretien","Ce qui est à faire, et quand. Gratuit, toujours.")}
+    <div class="card soft" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Le jour où la maison change de mains</p><p class="small">Vous triez en trois catégories : ce qui reste à la maison, ce qui part avec vous, ce qui s'efface. Rien ne part sans votre geste.</p><button class="btn" onclick="trierTransmission()">Faire le tri</button><button class="btn ghost sm" onclick="modeBlanc()">Le jouer à blanc, sans rien changer</button></div>
+    <button class="btn ghost" onclick="S.transmission=null;S.nees=S.nees.filter(x=>x!=='transmission');save();route('#/maison')">Finalement, pas maintenant</button>
+  </div>`}
+function ouvrirDossier(id){const docs=S.docs;const eqs=S.equipements;const pages={vente:{titre:"Dossier de vente",pages:[["Le logement",[`${S.logement.nom}, ${S.logement.adresse}, ${S.logement.cp} ${S.logement.ville}`,`Construite en ${S.logement.annee||"?"} · ${S.logement.surface||"?"} m² · DPE ${S.logement.dpe||"?"}`]],["Acte et diagnostics",docs.filter(d=>d.type==="acte"||d.type==="diagnostic").map(d=>d.titre+" — "+dateFr(d.date))],["Travaux",S.travaux.map(t=>`${t.titre} — ${t.par}, ${dateFr(t.date)}${t.montant?", "+euros(t.montant):""}`)],["Équipements et garanties",eqs.map(e=>`${e.nom} ${e.marque}${e.garantie&&joursDepuis(e.garantie)<0?" — garanti jusqu'en "+e.garantie.slice(0,4):""}`)]]},
+    livre:{titre:"Le livre du logement",pages:[["L'histoire",[...docs.map(d=>dateFr(d.date)+" — "+d.titre),...S.fil.filter(e=>e.type==="souvenir").map(e=>dateFr(e.d)+" — "+e.t)].sort()],["Ceux qui la connaissent",S.pros.map(p=>`${p.nom}, ${p.metier.toLowerCase()}`)]]},
+    carnet:{titre:"Le carnet d'entretien",pages:[["À faire chaque année",eqs.filter(e=>e.entretien).map(e=>`${e.nom} — entretien annuel${e.installateur?", "+e.installateur:""}`)],["Garanties en cours",eqs.filter(e=>e.garantie&&joursDepuis(e.garantie)<0).map(e=>`${e.nom} — jusqu'au ${dateFr(e.garantie)}`)]]}}[id];
+  modal(`<h2>${pages.titre}</h2>${pages.pages.map(([t,l])=>`<div class="book"><p class="b">${h(t)}</p>${l.length?l.map(x=>`<label class="check"><input type="checkbox" checked><span class="small">${h(x)}</span></label>`).join(""):`<p class="small faint">Rien encore.</p>`}</div>`).join("")}<p class="small muted">Chaque ligne se garde ou se retire. ${id==="vente"?"19 € — gratuit pendant la version test.":"Gratuit."}</p><div class="row"><a class="btn primary grow" href="mailto:?subject=${encodeURIComponent(pages.titre+" — "+S.logement.nom)}" onclick="closeModal();S.journalAcces.unshift({d:now(),t:'${h(pages.titre)} envoyé par vous'});filAjouter({type:'info',t:'${h(pages.titre)} envoyé depuis votre messagerie.',ico:'envoi',fait:true});render()">${I.envoi} Envoyer</a><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
+function trierTransmission(blanc){const cat=x=>`<div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">${x[0]}</p><p class="small muted">${x[1]}</p>${x[2].map(i=>`<label class="check"><input type="checkbox" checked><span class="small">${h(i)}</span></label>`).join("")||`<p class="small faint">Rien.</p>`}</div>`;
+  modal(`<h2>${blanc?"À blanc — rien ne change":"Le tri"}</h2>${cat(["Reste à la maison","Pour le prochain gardien.",[...S.docs.filter(d=>d.type!=="impot"&&d.type!=="contrat").map(d=>d.titre),...S.equipements.map(e=>e.nom),...S.pros.map(p=>p.nom)]])}${cat(["Part avec vous","Vos papiers à vous.",S.docs.filter(d=>d.type==="impot"||d.type==="contrat").map(d=>d.titre)])}${cat(["S'efface","Ce qui ne regarde personne.",S.fil.filter(e=>e.type==="souvenir").map(e=>e.t)])}<div class="row"><button class="btn ${blanc?"":"primary"} grow" onclick="closeModal();${blanc?"toast('Joué à blanc. Rien n\\'a changé.')":"transmettre()"}">${blanc?"Terminer l'essai":"Transmettre la mémoire"}</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+function modeBlanc(){trierTransmission(true)}
+function transmettre(){modal(`<div class="book" style="text-align:center"><p class="b" style="font-size:1.2em">La mémoire de ${h(S.logement.nom)} continue avec ses prochains gardiens.</p><p class="small muted" style="margin-top:8px">${S.docs.length} documents, ${S.equipements.length} équipements, ${S.pros.length} artisans. Merci d'en avoir pris soin.</p></div><p class="small muted">Dans cette maquette, rien n'est transmis pour de vrai. Vous pouvez « Repartir de zéro » dans les réglages.</p><button class="btn primary big" onclick="closeModal();S.journalAcces.unshift({d:now(),t:'Transmission jouée jusqu\\'au bout (maquette)'});save();route('#/fil')">Fermer</button>`)}
+function changerDeMains(motif){S.transmission={motif,d:today()};naissances();filAjouter({type:"naissance",t:motif==="vente"?"Vous vendez la maison. La rubrique Transmission est apparue : le dossier de vente, le livre du logement, et le tri du dernier jour.":"Vous quittez la maison. La rubrique Transmission est apparue.",go:"#/carte/transmission",ico:"cle"});save();route("#/carte/transmission")}
+
+/* ================= réglages ================= */
+V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Réglages</h1>
+  <div class="card" style="gap:0;padding:4px 16px">
+    <button class="line" style="width:100%;text-align:left" onclick="corrigerLogement()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(S.logement.nom)}</span><span class="small muted">Nom, année, surface, classe énergétique</span></span>${I.fleche}</button>
+    <button class="line" style="width:100%;text-align:left" onclick="modal('<h2>Votre compte</h2><p class=muted>'+h(S.compte.email||'Sans courriel')+'</p><p class=\\'small faint\\'>Dans cette maquette, le compte est joué localement. Rien ne quitte votre appareil.</p><button class=\\'btn\\' onclick=closeModal()>Fermer</button>')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Votre compte</span><span class="small muted">${h(S.compte.email||"—")}</span></span>${I.fleche}</button>
+    <a class="line" href="#/adresse-vidom"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Adresse VIDOM et QR</span><span class="small muted mono">${h(S.logement.depot)}</span></span>${I.fleche}</a>
+  </div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Taille du texte</p><div class="row">${[["normal","Normal"],["grand","Grand"],["tres-grand","Très grand"]].map(([k,n])=>`<button class="chip btn-chip ${S.reglages.texte===k?"on":""}" onclick="S.reglages.texte='${k}';document.documentElement.dataset.texte='${k}';save();render()">${n}</button>`).join("")}</div></div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Donner accès à un tiers</p><p class="small muted">Notaire, agent, artisan, assureur : chacun ne voit que ce qui le concerne.</p><button class="btn" onclick="choisirTiers()">${I.echanges} Ouvrir un accès</button></div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">La maison change de mains</p><p class="small muted">Le jour venu, et seulement ce jour-là, la rubrique Transmission apparaît.</p><div class="row"><button class="btn grow" onclick="changerDeMains('vente')">Je vends</button><button class="btn grow" onclick="changerDeMains('depart')">Je pars</button></div></div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre mémoire vous appartient</p><div class="row wrap"><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter ma mémoire</button><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Mon avis sur la maquette VIDOM")}&body=${encodeURIComponent("Écran : "+location.hash+"\n\n")}">${I.mail} Donner mon avis</a></div><p class="small faint">${S.docs.length} documents · ${S.equipements.length} équipements · ${S.fil.length} moments dans le fil.</p></div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Simuler, pour voir la maison vivre</p><p class="small muted">Chaque événement produit ses effets réels dans le fil et dans Ma maison.</p><div class="row wrap">${[["facture","Un artisan dépose sa facture"],["assureur","L'assureur répond"],["garantie","Une garantie expire demain"],["inconnu","Un courriel inconnu arrive"],["acquereur","Un acquéreur demande la mémoire"],["an","Un an plus tard"]].map(([k,n])=>`<button class="btn sm" onclick="simuler('${k}')">${n}</button>`).join("")}</div></div>
+  <div class="card" style="gap:8px"><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le fil.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'localStorage.removeItem(KEY);location.hash=&quot;&quot;;location.reload()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
+  <p class="small faint" style="text-align:center">VIDOM — maquette du 11 septembre 2026. Tout reste sur votre appareil.</p>
+</div>`;
+function emporter(){const data=JSON.stringify(S,null,2);const b=new Blob([data],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`vidom-${slug(S.logement.nom||"maison")}-${today()}.json`;document.body.appendChild(a);a.click();a.remove();toast("Votre mémoire est téléchargée")}
+
+/* ================= simuler ================= */
+function simuler(k){
+  if(k==="facture"){const it=RESERVE.items.map((x,i)=>({x,i})).find(({x,i})=>!S.reserveServie.includes(i)&&x.k==="doc"&&x.type==="facture"&&x.piece==="maison");let item=null;if(it){S.reserveServie.push(it.i);item=JSON.parse(JSON.stringify(it.x));item.pieceId="maison"}recevoir({item,expediteur:item?item.fournisseur:"Couverture Bretonne"})}
+  else if(k==="assureur"){const it=RESERVE.items.map((x,i)=>({x,i})).find(({x,i})=>!S.reserveServie.includes(i)&&x.type==="contrat");let item=null;if(it){S.reserveServie.push(it.i);item=JSON.parse(JSON.stringify(it.x));item.pieceId="maison"}if(!item){filAjouter({type:"info",t:"MAIF a répondu : votre attestation est déjà dans la mémoire de la maison.",ico:"mail",fait:true})}else recevoir({item,expediteur:"MAIF"})}
+  else if(k==="garantie"){const e=S.equipements.find(e=>e.garantie)||S.equipements[0];if(!e){toast("Aucun équipement encore. Photographiez-en un.");return}e.garantie=shiftDate(today(),1);S.rappels.push({id:uid(),t:`La garantie de ${lc(e.nom)} ${e.marque} expire demain. Un problème à signaler avant ?`,equip:e.id,du:today(),fait:false,info:true});pousserRappels()}
+  else if(k==="inconnu"){const item={k:"doc",type:"facture",titre:"Facture — nettoyage de toiture",date:today(),fournisseur:"Nettoyage Express 35",montant:390,pieceId:"maison"};recevoir({item,expediteur:"Nettoyage Express 35",inconnu:true})}
+  else if(k==="acquereur"){S.transmission=S.transmission||{motif:"demande",d:today()};naissances();filAjouter({type:"naissance",t:"Un acquéreur potentiel demande la mémoire de la maison. La rubrique Transmission est apparue : vous choisissez ce qu'il verra.",go:"#/carte/transmission",ico:"cle"})}
+  else if(k==="an"){unAnPlusTard()}
+  save();render();toast("Simulé");
+}
+function unAnPlusTard(){
+  // une année de vie : tout ce qui reste dans la réserve, réparti sur douze mois
+  let n=0;
+  RESERVE.items.forEach((x,i)=>{if(S.reserveServie.includes(i))return;S.reserveServie.push(i);const it=JSON.parse(JSON.stringify(x));const p=it.piece==="maison"?null:pieceParType(it.piece);it.pieceId=p?p.id:"maison";const rec={id:uid(),date:shiftDate(today(),-Math.floor(Math.random()*330)-10)+"T10:00",img:null,statut:"range",recu:n%3===0?"adresse":"photo",...it};ranger(rec);n++;
+    if(n%4===0)filAjouter({type:"info",t:`${it.k==="equip"?it.nom+" "+it.marque:it.titre} — ${rec.recu==="adresse"?"reçu par l'adresse VIDOM":"photographié"}.`,ico:it.k==="equip"?"outil":"doc",fait:true,d:rec.date})});
+  S.pieces.forEach(p=>{if(!pieceALaLumiere(p))p.photos.push(null)});
+  // un chantier, un accès, un souvenir, un entretien fait
+  if(!S.travaux.some(t=>t.titre==="Ravalement de la façade")){S.travaux.push({id:uid(),titre:"Ravalement de la façade",par:"Façades Émeraude",date:shiftDate(today(),-120),montant:6900,docs:[]});connaitrePro("Façades Émeraude","Ravalement de la façade",shiftDate(today(),-120));S.pros.find(p=>p.nom==="Façades Émeraude").metier="Façadier"}
+  if(!S.acces.length){const a={id:uid(),tiers:"assureur",nom:"MAIF",debut:shiftDate(today(),-200),fin:shiftDate(today(),-140),ouvert:false,lien:"vidom.fr/p/k4d8x2qa"};S.acces.push(a);S.journalAcces.push({d:shiftDate(today(),-190)+"T09:40",t:"MAIF a ouvert la page (dossier sinistre)"},{d:shiftDate(today(),-200)+"T18:12",t:"Accès ouvert à MAIF, deux mois"})}
+  filAjouter({type:"souvenir",t:"Il y a un an : le tilleul a été planté dans le jardin.",ico:"feuille",fait:true,d:shiftDate(today(),-365)+"T16:00"});
+  filAjouter({type:"souvenir",t:"Première flambée dans le poêle.",ico:"feuille",fait:true,d:shiftDate(today(),-300)+"T20:00"});
+  filAjouter({type:"info",t:"Entretien de la chaudière fait par Bertin Chauffage. Prochain rappel dans un an.",ico:"cloche",fait:true,d:shiftDate(today(),-20)+"T11:00"});
+  S.rappels.forEach(r=>{if(!r.fait&&r.du<=today())r.du=shiftDate(today(),Math.floor(Math.random()*200)+30)});
+  const chaud=S.equipements.find(e=>e.entretien);if(chaud){chaud.entretiens.push({d:shiftDate(today(),-20),par:"Bertin Chauffage"})}
+  naissances();S.fil.sort((a,b)=>b.d.localeCompare(a.d));
+}
+</script>
+<script>
+/* ================= navigation et rendu ================= */
+const TITRES={fil:"Le fil",maison:"Ma maison",reglages:"Réglages",carte:"Ma maison",piece:"Ma maison",equipement:"Équipements",document:"Documents",pro:"Les artisans de la maison",tri:"Le tri","adresse-vidom":"Adresse VIDOM",reconnu:"Photographier"};
+const RETOUR={carte:"#/maison",piece:"#/maison",equipement:"#/carte/equipements",document:"#/carte/documents",pro:"#/carte/artisans",reglages:"#/maison","adresse-vidom":"#/maison",tri:"#/fil",reconnu:"#/fil"};
+function parseHash(){const hh=location.hash.replace(/^#\/?/,"");const [name,...rest]=hh.split("/");return {name:name||"fil",arg:rest.join("/")}}
+function vue(name,arg){
+  if(name==="carte")return V.carte(arg);
+  if(name==="piece")return V.piece(arg);
+  if(name==="equipement")return V.equipement(arg);
+  if(name==="document")return V.document(arg);
+  if(name==="pro")return V.pro(arg);
+  if(V[name])return V[name]();
+  return V.fil();
+}
+function nav(name){
+  const on=k=>k===name?"on":"";
+  const cap=isDesk()?"":'capture="environment"';
+  return `<nav class="nav">
+    <a href="#/fil" class="${on("fil")}">${I.bulle}<span>Le fil</span></a>
+    <label class="cam ${on("reconnu")}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;border-radius:var(--r);color:var(--blanc);background:var(--sauge);font-size:.8em;font-weight:500;cursor:pointer;position:relative;overflow:hidden">${I.camera}<span>Photographier</span><input class="sr" type="file" accept="image/*" ${cap} multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label>
+    <a href="#/maison" class="${["maison","carte","piece","equipement","document","pro","adresse-vidom","reglages"].includes(name)?"on":""}">${I.maison}<span>Ma maison</span></a>
+  </nav>`;
+}
+function render(){
+  document.documentElement.dataset.texte=S.reglages.texte||"normal";
+  const app=document.getElementById("app");
+  if(!S.cree){
+    document.body.classList.remove("app");
+    const e=S.etape||"bienvenue";
+    const pre=e==="bienvenue"||e==="compte"?"VIDOM":(e==="adresse"?"Commençons":h(S.logement.nom||"VIDOM"));
+    const right=e==="maison-adresse"||e==="commencons"?`<span class="chip">Premier jour</span>`:"";
+    const back=e==="compte"?`<button class="back" onclick="S.etape='bienvenue';save();render()">${I.retour}</button>`:e==="adresse"?`<button class="back" onclick="S.etape='compte';save();render()">${I.retour}</button>`:e==="maison-adresse"?`<button class="back" onclick="S.etape='adresse';save();render()">${I.retour}</button>`:e==="commencons"?`<button class="back" onclick="S.etape='maison-adresse';save();render()">${I.retour}</button>`:"";
+    app.innerHTML=`<div class="col"><div class="top"><span class="row">${back}<span class="t">${pre}</span></span>${right}</div>${(V[e]||V.bienvenue)()}</div>`;
+    return;
+  }
+  document.body.classList.add("app");
+  questionDuJour();
+  const {name,arg}=parseHash();
+  const html=vue(name,arg);
+  const titre=TITRES[name]||"VIDOM";
+  const retour=RETOUR[name];
+  if(isDesk()){
+    const rightName=name==="maison"?"fil":name;
+    const rightHtml=name==="maison"?V.fil():html;
+    const rt=name==="maison"?"Le fil":titre;
+    const rr=name==="maison"?"":retour;
+    app.innerHTML=`<div class="desk">
+      <div class="pane left"><div class="topbar"><span class="t">${h(S.logement.nom)}</span><span class="small muted">${h(S.logement.ville)}</span></div>${V.maison()}</div>
+      <div class="pane right"><div class="topbar"><span class="row">${rr&&rr!=="#/fil"&&rightName!=="fil"?`<a class="back" href="${rr}">${I.retour}</a>`:(rightName!=="fil"&&rightName!=="maison"?`<a class="back" href="#/fil">${I.retour}</a>`:"")}<span class="t">${rt}</span></span><span class="actions"><label class="btn primary file">${I.plus} Ajouter<input type="file" accept="image/*,.pdf" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><button class="btn" onclick="ajouterDesk()" aria-label="Photographier ou continuer sur le téléphone">${I.camera}</button><a class="btn" href="#/reglages" aria-label="Réglages">${I.reglages}</a></span></div>${rightHtml}</div>
+    </div>`;
+  }else{
+    app.innerHTML=`<div class="col"><div class="top"><span class="row">${retour?`<a class="back" href="${retour}">${I.retour}</a>`:""}<span class="t">${name==="fil"?h(S.logement.nom):titre}</span></span>${name==="fil"?`<span class="chip">${h(phraseCourte())}</span>`:""}</div>${html}${nav(name)}</div>`;
+  }
+  const dv=document.querySelector(".pane.right")||window;
+  if(render.lastRoute!==location.hash){window.scrollTo(0,0);render.lastRoute=location.hash}
+}
+function ajouterDesk(){modal(`<h2>Photographier</h2><div class="stack"><label class="btn primary big file">${I.camera} Avec la caméra de l'ordinateur<input type="file" accept="image/*" capture="environment" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="qr" style="width:96px;height:96px">${qrSvg(location.href.split("#")[0])}</div><span class="small muted">Continuez sur votre téléphone : ouvrez ce code, la maison vous y attend. Ce que vous photographierez là-bas se retrouvera ici.</span></div></div><button class="btn" onclick="closeModal()">Fermer</button>`)}
+function route(hsh){if(hsh&&location.hash!==hsh){location.hash=hsh}else render()}
+window.addEventListener("hashchange",render);
+window.addEventListener("resize",()=>{clearTimeout(render.rt);render.rt=setTimeout(render,120)});
+
+/* glisser-déposer, n'importe où sur la page */
+(function(){
+  let n=0;const d=document.getElementById("drop");
+  document.addEventListener("dragenter",e=>{if(!S.cree&&S.etape!=="commencons")return;n++;d.hidden=false});
+  document.addEventListener("dragleave",()=>{n=Math.max(0,n-1);if(!n)d.hidden=true});
+  document.addEventListener("dragover",e=>e.preventDefault());
+  document.addEventListener("drop",e=>{e.preventDefault();n=0;d.hidden=true;if(e.dataTransfer&&e.dataTransfer.files.length)fichiers(e.dataTransfer.files,S.pieceCourante||"maison")});
+})();
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
+/* rendre le premier écran */
+if(S.cree&&!location.hash)location.hash="#/fil";
+render();
+</script>
+</body>
+</html>
