@@ -156,6 +156,7 @@ label.f>span{font-size:.85em;color:var(--ardoise)}
 <div id="toast" class="toast" role="status"></div>
 <div id="modal"></div>
 <div id="drop" class="drop" hidden>Déposez vos fichiers : VIDOM range.</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ================= manifeste (installable) ================= */
 (function(){
@@ -281,7 +282,7 @@ const AUTRES_PIECES=[{type:"bureau",nom:"Bureau"},{type:"buanderie",nom:"Buander
 const KEY="vidom-maquette-v1";
 const etatInitial=()=>({
   v:1,cree:false,etape:"bienvenue",compte:{email:""},
-  logement:{nom:"",adresse:"",cp:"",ville:"",annee:null,surface:null,dpe:"",dpeDate:"",depot:""},
+  logement:{id:null,nom:"",adresse:"",cp:"",ville:"",annee:null,surface:null,dpe:"",dpeDate:"",depot:""},
   comptage:{cuisine:1,salon:1,chambre:2,"salle de bain":1},pieces:[],plan:null,
   equipements:[],docs:[],pros:[],travaux:[],acces:[],journalAcces:[],
   fil:[],rappels:[],reserveServie:[],nees:["adresse"],
@@ -291,10 +292,10 @@ const etatInitial=()=>({
 });
 let S=null;
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}syncDiffere()}
 S=load()||etatInitial();
 if(!S.v){S=etatInitial()}
-const uid=()=>"i"+(S.idc++);
+const uid=()=>(crypto&&crypto.randomUUID)?crypto.randomUUID():"i"+Date.now().toString(36)+Math.random().toString(36).slice(2);
 
 /* ================= utilitaires ================= */
 const h=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -315,6 +316,169 @@ function closeModal(){document.getElementById("modal").innerHTML="";document.bod
 const isDesk=()=>window.matchMedia("(min-width:1024px)").matches;
 const slug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 function depotPour(nom){const c=Math.abs([...nom].reduce((a,ch)=>a*31+ch.charCodeAt(0)|0,7)).toString(36).slice(0,3);return `${slug(nom)}-${c}@depot.vidom.fr`}
+
+/* ================= la vraie mémoire : Supabase ================= */
+/* localStorage reste le cache immédiat (rien ne change dans le reste du code) ;
+   ce qui suit lit et écrit en plus la même chose dans le compte réel, en tâche de fond. */
+const SUPA_URL="https://tqcxsxgpjjybeearvysj.supabase.co";
+const SUPA_KEY="sb_publishable_ckoht2xpCpfpGviMBrx5zQ_ccczT55F";
+const supa=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
+
+function reconstituerActivitesPros(){ // reconstruit "ce qu'il a fait ici" à partir de ce qui est chargé, sans rien écrire
+  S.pros.forEach(p=>{p.interventions=[]});
+  const pousse=(nom,motif,d)=>{if(!nom||!d)return;const p=S.pros.find(x=>x.nom===nom);if(!p)return;if(!p.interventions.some(i=>i.motif===motif&&i.d===d))p.interventions.push({motif,d})};
+  S.equipements.forEach(e=>{if(e.installateur)pousse(e.installateur,`Installation : ${lc(e.nom||"équipement")}`,e.achat)});
+  S.docs.forEach(d=>{if(d.fournisseur)pousse(d.fournisseur,d.travaux?d.travaux:(d.type==="facture"?"Facture reçue":"Document reçu"),d.date)});
+  S.travaux.forEach(t=>{if(t.par)pousse(t.par,t.titre,t.date)});
+  S.pros.forEach(p=>p.interventions.sort((a,b)=>(b.d||"").localeCompare(a.d||"")));
+}
+function reconstituerPhotosPieces(){ // la petite galerie de la pièce : ce qui a été rangé dedans, pas une entité à part
+  S.pieces.forEach(p=>{
+    const photos=[...S.equipements.filter(e=>e.piece===p.id&&e.img),...S.docs.filter(d=>d.piece===p.id&&d.img)].map(x=>x.img).slice(0,6);
+    p.photos=photos;
+  });
+}
+
+async function hydrate(){ // relit la vraie mémoire du compte connecté et reconstruit S dans sa forme habituelle
+  if(!supa)return;
+  let session=null;
+  try{const {data}=await supa.auth.getSession();session=data&&data.session}catch(e){return}
+  if(!session)return;
+  S.compte.email=session.user.email||S.compte.email;
+  try{
+    const {data:membres}=await supa.from("logement_membres").select("logement_id,date_debut").eq("user_id",session.user.id).order("date_debut",{ascending:true});
+    const actif=(membres||[])[0];
+    if(!actif){save();return} // compte réel, mais pas encore de logement créé : on reste sur l'installation
+    const logementId=actif.logement_id;
+    const [{data:logement},{data:pieces},{data:equipements},{data:artisans},{data:interventions},{data:documents},{data:rappels},{data:expediteurs},{data:fil},{data:etatRow}]=await Promise.all([
+      supa.from("logements").select("*").eq("id",logementId).maybeSingle(),
+      supa.from("pieces").select("*").eq("logement_id",logementId),
+      supa.from("equipements").select("*").eq("logement_id",logementId),
+      supa.from("artisans").select("*").eq("logement_id",logementId),
+      supa.from("interventions").select("*").eq("logement_id",logementId),
+      supa.from("documents").select("*").eq("logement_id",logementId),
+      supa.from("rappels").select("*").eq("logement_id",logementId),
+      supa.from("expediteurs_autorises").select("*").eq("logement_id",logementId),
+      supa.from("fil_activite").select("*").eq("logement_id",logementId).order("horodatage",{ascending:false}).limit(300),
+      supa.from("etat_logement").select("*").eq("logement_id",logementId).maybeSingle(),
+    ]);
+    if(!logement){save();return}
+    const chemins=(documents||[]).map(d=>d.chemin_stockage).filter(Boolean);
+    let urlParChemin={};
+    if(chemins.length){
+      try{const {data:signed}=await supa.storage.from("logement-files").createSignedUrls(chemins,60*60*24*30);
+        (signed||[]).forEach(s=>{if(s&&s.signedUrl&&s.path)urlParChemin[s.path]=s.signedUrl});
+      }catch(e){}
+    }
+    Object.assign(S.logement,{
+      id:logement.id,nom:logement.nom||"",adresse:logement.adresse||"",cp:logement.code_postal||"",
+      ville:logement.ville||"",annee:logement.annee_construction||null,surface:logement.surface||null,
+      dpe:logement.classe_energetique||logement.dpe||"",dpeDate:logement.dpe_date||"",depot:logement.adresse_depot||S.logement.depot||""
+    });
+    S.pieces=(pieces||[]).map(p=>({id:p.id,type:p.type_piece||"autre",nom:p.nom,photos:[]}));
+    S.pros=(artisans||[]).map(a=>({id:a.id,nom:a.nom,metier:a.metier||"",tel:a.telephone||"",mail:a.email||"",ville:a.ville||"",interventions:[],avis:[]}));
+    S.travaux=(interventions||[]).map(iv=>({id:iv.id,titre:iv.type_intervention||"Travaux",par:iv.artisan_nom||"",date:iv.date_intervention||"",montant:iv.cout||0,docs:(documents||[]).filter(r=>r.intervention_id===iv.id).map(r=>r.id)}));
+    const photoParEquip={};const docsBruts=[];
+    (documents||[]).forEach(r=>{
+      if(r.type_document==="photo"&&r.equipement_id&&!r.fournisseur&&r.montant_ttc==null){
+        const prev=photoParEquip[r.equipement_id];
+        if(!prev||new Date(r.created_at)>new Date(prev.created_at))photoParEquip[r.equipement_id]=r;
+      }else docsBruts.push(r);
+    });
+    S.docs=docsBruts.map(r=>{
+      const iv=r.intervention_id?(interventions||[]).find(x=>x.id===r.intervention_id):null;
+      return {id:r.id,piece:r.piece_id||"maison",type:r.type_document||"autre",titre:r.titre||r.nom_fichier||"Document",
+        date:(r.date_document||(r.created_at||"").slice(0,10)),fournisseur:r.fournisseur||"",montant:r.montant_ttc,
+        lie:r.equipement_id||"",travaux:iv?(iv.type_intervention||""):"",garantie:r.date_garantie_fin||"",
+        img:r.chemin_stockage?(urlParChemin[r.chemin_stockage]||null):null,pdf:r.mime_type==="application/pdf",chemin:r.chemin_stockage||null,
+        recu:r.source==="adresse_vidom"?"adresse":"photo",dateRecu:(r.created_at||"").slice(0,10)};
+    });
+    S.equipements=(equipements||[]).map(r=>{
+      const photo=photoParEquip[r.id];
+      return {id:r.id,piece:r.piece_id||"maison",nom:r.categorie||"Équipement",marque:r.marque||"",modele:r.modele||"",
+        ref:r.numero_serie||"",achat:r.date_achat||r.date_installation||"",garantie:r.date_garantie_fin||"",
+        installateur:r.installateur||"",notice:!!r.notice,sav:r.service_apres_vente||"",etat:r.etat||"bon",
+        entretien:!!r.entretien_requis,
+        img:photo&&photo.chemin_stockage?(urlParChemin[photo.chemin_stockage]||null):null,
+        pdf:photo?photo.mime_type==="application/pdf":false,chemin:photo?(photo.chemin_stockage||null):null,
+        date:r.created_at,entretiens:[]};
+    });
+    reconstituerActivitesPros();
+    reconstituerPhotosPieces();
+    S.rappels=(rappels||[]).map(r=>({id:r.id,t:r.texte,equip:r.equipement_id||"",pro:"",du:r.date_echeance||"",fait:!!r.fait,info:!!r.info}));
+    S.expediteursOk=(expediteurs||[]).map(e=>e.expediteur);
+    S.fil=(fil||[]).map(f=>({id:f.id,d:f.horodatage,fait:!!f.fait,type:f.type,...(f.donnees||{})}));
+    if(etatRow&&etatRow.etat){
+      const et=etatRow.etat;
+      if(et.nees)S.nees=et.nees;if(et.questionsPosees)S.questionsPosees=et.questionsPosees;
+      if(et.dernierJour)S.dernierJour=et.dernierJour;if(et.reserveServie)S.reserveServie=et.reserveServie;
+    }
+    S.cree=true;S.etape="";
+    save();
+  }catch(e){/* pas grave : on continue avec la dernière version connue, en local */}
+}
+
+let pousserTout_timer=null,pousserTout_actif=false,pousserTout_rejoue=false;
+function syncDiffere(){ if(!supa)return; clearTimeout(pousserTout_timer); pousserTout_timer=setTimeout(pousserTout,900); }
+if(typeof window!=="undefined")window.addEventListener("online",()=>syncDiffere());
+async function pousserTout(){ // pousse l'état courant vers le compte réel ; échoue en silence si hors ligne, réessaiera plus tard
+  if(!supa||!S.logement||!S.logement.id)return;
+  if(pousserTout_actif){pousserTout_rejoue=true;return}
+  let session=null;
+  try{const {data}=await supa.auth.getSession();session=data&&data.session}catch(e){return}
+  if(!session)return;
+  pousserTout_actif=true;
+  try{
+    const lig=S.logement;
+    await supa.from("logements").upsert({
+      id:lig.id,nom:lig.nom||"",adresse:lig.adresse||null,code_postal:lig.cp||null,ville:lig.ville||null,
+      annee_construction:lig.annee||null,surface:lig.surface||null,classe_energetique:/^[A-G]$/.test(lig.dpe)?lig.dpe:null,
+      dpe_date:lig.dpeDate||null,adresse_depot:lig.depot||null,created_by:session.user.id
+    },{onConflict:"id"});
+    if(S.pieces.length)await supa.from("pieces").upsert(S.pieces.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,type_piece:p.type||null})),{onConflict:"id"});
+    if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null})),{onConflict:"id"});
+    if(S.travaux.length)await supa.from("interventions").upsert(S.travaux.map(t=>({id:t.id,logement_id:lig.id,type_intervention:t.titre||"Travaux",artisan_nom:t.par||null,date_intervention:t.date||null,cout:t.montant||null})),{onConflict:"id"});
+    if(S.equipements.length){
+      await supa.from("equipements").upsert(S.equipements.map(e=>({
+        id:e.id,logement_id:lig.id,piece_id:(e.piece&&e.piece!=="maison")?e.piece:null,
+        categorie:e.nom||"Équipement",marque:e.marque||null,modele:e.modele||null,numero_serie:e.ref||null,
+        date_installation:e.achat||null,date_achat:e.achat||null,date_garantie_fin:e.garantie||null,
+        installateur:e.installateur||null,notice:!!e.notice,service_apres_vente:e.sav||null,
+        etat:["bon","moyen","a_remplacer","hors_service"].includes(e.etat)?e.etat:"bon",entretien_requis:!!e.entretien
+      })),{onConflict:"id"});
+      const photosEq=S.equipements.filter(e=>e.chemin).map(e=>({
+        id:"ph-"+e.id,logement_id:lig.id,equipement_id:e.id,piece_id:(e.piece&&e.piece!=="maison")?e.piece:null,
+        type_document:"photo",titre:"Photo de l'équipement",chemin_stockage:e.chemin,mime_type:e.pdf?"application/pdf":"image/jpeg",
+        source:"manuel",uploaded_by:session.user.id
+      }));
+      if(photosEq.length)await supa.from("documents").upsert(photosEq,{onConflict:"id"});
+    }
+    if(S.docs.length){
+      const lignesDoc=S.docs.map(d=>{
+        const eq=(d.lie&&typeof equipParLie==="function")?equipParLie(d.lie):null;
+        const iv=d.travaux?S.travaux.find(t=>t.titre===d.travaux):null;
+        return {
+          id:d.id,logement_id:lig.id,piece_id:(d.piece&&d.piece!=="maison")?d.piece:null,
+          equipement_id:eq?eq.id:(S.equipements.some(e=>e.id===d.lie)?d.lie:null),intervention_id:iv?iv.id:null,
+          type_document:d.type||"autre",titre:d.titre||null,chemin_stockage:d.chemin||null,
+          mime_type:d.chemin?(d.pdf?"application/pdf":"image/jpeg"):null,
+          date_document:d.date?d.date.slice(0,10):null,fournisseur:d.fournisseur||null,montant_ttc:d.montant,
+          date_garantie_fin:d.garantie||null,source:d.recu==="adresse"?"adresse_vidom":"manuel",uploaded_by:session.user.id
+        };
+      });
+      await supa.from("documents").upsert(lignesDoc,{onConflict:"id"});
+    }
+    if(S.rappels.length)await supa.from("rappels").upsert(S.rappels.map(r=>({id:r.id,logement_id:lig.id,texte:r.t,equipement_id:S.equipements.some(e=>e.id===r.equip)?r.equip:null,date_echeance:r.du||null,fait:!!r.fait,info:!!r.info})),{onConflict:"id"});
+    if(S.expediteursOk.length)await supa.from("expediteurs_autorises").upsert(S.expediteursOk.map(exp=>({logement_id:lig.id,expediteur:exp})),{onConflict:"logement_id,expediteur"});
+    if(S.fil.length){
+      const lignesFil=S.fil.slice(0,300).map(f=>{const {id,d,fait,type,...reste}=f;return {id,logement_id:lig.id,type:type||"info",horodatage:d||now(),fait:!!fait,donnees:reste}});
+      await supa.from("fil_activite").upsert(lignesFil,{onConflict:"id"});
+    }
+    await supa.from("etat_logement").upsert({logement_id:lig.id,etat:{nees:S.nees,questionsPosees:S.questionsPosees,dernierJour:S.dernierJour,reserveServie:S.reserveServie},maj_le:new Date().toISOString()},{onConflict:"logement_id"});
+  }catch(e){ /* réessaiera au prochain enregistrement, ou à la reconnexion */ }
+  pousserTout_actif=false;
+  if(pousserTout_rejoue){pousserTout_rejoue=false;syncDiffere()}
+}
 </script>
 <script>
 /* ================= pièces ================= */
@@ -360,9 +524,9 @@ function prochainItem(pieceId){
 }
 
 /* ================= reconnaissance et rangement ================= */
-function reconnaitre(file,pieceId,dataUrl){
+function reconnaitre(file,pieceId,dataUrl,pdf,chemin){
   const it=prochainItem(pieceId||S.pieceCourante||"maison");
-  const rec={id:uid(),date:now(),img:dataUrl||null,statut:"propose"};
+  const rec={id:uid(),date:now(),img:dataUrl||null,pdf:!!pdf,chemin:chemin||null,statut:"propose"};
   if(!it){rec.k="inconnu";rec.titre="Photo non reconnue";return rec}
   Object.assign(rec,it);
   return rec;
@@ -377,7 +541,7 @@ function docsLies(e){ // les documents reliés à cet équipement, par identifia
 function ranger(rec){ // C'est bien ça
   const nees=[];
   if(rec.k==="equip"){
-    const e={id:rec.id,piece:rec.pieceId,nom:rec.nom,marque:rec.marque,modele:rec.modele,ref:rec.ref,achat:rec.achat,garantie:rec.garantie,installateur:rec.installateur||"",notice:rec.notice,sav:rec.sav,etat:rec.etat,entretien:!!rec.entretien,img:rec.img,date:rec.date,entretiens:rec.entretien?[{d:rec.achat,par:rec.installateur}]:[]};
+    const e={id:rec.id,piece:rec.pieceId,nom:rec.nom,marque:rec.marque,modele:rec.modele,ref:rec.ref,achat:rec.achat,garantie:rec.garantie,installateur:rec.installateur||"",notice:rec.notice,sav:rec.sav,etat:rec.etat,entretien:!!rec.entretien,img:rec.img,pdf:!!rec.pdf,chemin:rec.chemin||null,date:rec.date,entretiens:rec.entretien?[{d:rec.achat,par:rec.installateur}]:[]};
     S.equipements.push(e);
     // les documents déjà rangés qui le visaient par son nom (arrivés avant lui) se relient à lui pour de bon
     S.docs.forEach(d=>{if(d.lie&&d.lie!==e.id&&slug(d.lie)===slug(e.nom))d.lie=e.id});
@@ -386,7 +550,7 @@ function ranger(rec){ // C'est bien ça
     if(rec.garantie&&joursDepuis(rec.garantie)<0&&joursDepuis(rec.garantie)>-200)S.rappels.push({id:uid(),t:`La garantie de ${lc(rec.nom)} ${rec.marque} expire le ${dateFr(rec.garantie)}.`,equip:e.id,du:rec.garantie,fait:false,info:true});
   }else if(rec.k==="doc"){
     const cible=rec.lie?equipParLie(rec.lie):null; // si l'équipement existe déjà, on relie par identifiant tout de suite
-    const d={id:rec.id,piece:rec.pieceId,type:rec.type,titre:rec.titre,date:rec.date,fournisseur:rec.fournisseur,montant:rec.montant,lie:cible?cible.id:(rec.lie||""),travaux:rec.travaux||"",garantie:rec.garantie||"",img:rec.img,recu:rec.recu||"photo",dateRecu:rec.date0||rec.date};
+    const d={id:rec.id,piece:rec.pieceId,type:rec.type,titre:rec.titre,date:rec.date,fournisseur:rec.fournisseur,montant:rec.montant,lie:cible?cible.id:(rec.lie||""),travaux:rec.travaux||"",garantie:rec.garantie||"",img:rec.img,pdf:!!rec.pdf,chemin:rec.chemin||null,recu:rec.recu||"photo",dateRecu:rec.date0||rec.date};
     S.docs.push(d);
     if(rec.fournisseur&&RESERVE.pros[rec.fournisseur])connaitrePro(rec.fournisseur,rec.travaux?rec.travaux:(rec.type==="facture"?"Facture reçue":"Document reçu"),rec.date);
     if(rec.travaux){let t=S.travaux.find(t=>t.titre===rec.travaux);if(!t){t={id:uid(),titre:rec.travaux,par:rec.fournisseur,date:rec.date,montant:0,docs:[]};S.travaux.push(t)}t.docs.push(d.id);if(rec.type==="facture")t.montant=rec.montant;if(rec.date>t.date)t.date=rec.date}
@@ -608,9 +772,38 @@ V.compte=()=>`<div class="view center fadein" style="gap:18px">
   <div class="split"><button class="btn ghost" onclick="mdpOublie()">Mot de passe oublié ?</button><button class="btn ghost" onclick="dejaCompte()">J'ai déjà un compte</button></div>
   <p class="small faint" style="text-align:center">Un seul compte, plusieurs logements possibles plus tard.</p>
 </div>`;
-function compteOk(){S.compte.email=document.getElementById("email").value.trim();S.etape="adresse";save();render()}
-function mdpOublie(){const m=document.getElementById("email")?.value||"";modal(`<h2>Mot de passe oublié</h2><p class="muted">VIDOM vous envoie un courriel avec un lien pour en choisir un nouveau.</p><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em2" type="email" value="${h(m)}"></label><button class="btn primary big" onclick="closeModal();toast('Courriel envoyé (simulé). Regardez votre boîte.')">Envoyer le lien</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
-function dejaCompte(){modal(`<h2>Se connecter</h2><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em3" type="email" placeholder="vous@exemple.fr"></label><label class="f"><span>Votre mot de passe</span><input class="input" id="mdp3" type="password"></label><button class="btn primary big" onclick="S.compte.email=document.getElementById('em3').value.trim();closeModal();S.etape='adresse';save();render()">Continuer</button><button class="btn ghost" onclick="closeModal()">Annuler</button><p class="small faint">Dans cette maquette de démonstration, la connexion ne retrouve rien : chaque appareil garde sa propre mémoire, y compris s'il s'agit du même courriel. Vous allez donc recréer une maison ici. Dans la version réelle, un même compte retrouvera la même maison partout.</p>`)}
+async function compteOk(){
+  const email=document.getElementById("email").value.trim();const mdp=document.getElementById("mdp").value;
+  if(!supa){S.compte.email=email;S.etape="adresse";save();render();return}
+  toast("Un instant…");
+  try{
+    const {data,error}=await supa.auth.signUp({email,password:mdp});
+    if(error){toast(/registered/i.test(error.message)?"Ce compte existe déjà : utilisez « J'ai déjà un compte ».":"Cela n'a pas fonctionné : "+error.message);return}
+    S.compte.email=email;
+    if(data&&data.session){S.etape="adresse";save();render()}
+    else modal(`<h2>Vérifiez votre boîte de courriel</h2><p class="muted">VIDOM a envoyé un lien de confirmation à ${h(email)}. Une fois confirmé, revenez ici et utilisez « J'ai déjà un compte ».</p><button class="btn primary big" onclick="closeModal()">Compris</button>`);
+  }catch(e){toast("Cela n'a pas fonctionné. Vérifiez votre connexion.")}
+}
+function mdpOublie(){const m=document.getElementById("email")?.value||"";modal(`<h2>Mot de passe oublié</h2><p class="muted">VIDOM vous envoie un courriel avec un lien pour en choisir un nouveau.</p><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em2" type="email" value="${h(m)}"></label><button class="btn primary big" onclick="mdpOublieOk()">Envoyer le lien</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+async function mdpOublieOk(){
+  const email=document.getElementById("em2").value.trim();if(!email){toast("Votre adresse de courriel, d'abord.");return}
+  if(!supa){closeModal();toast("Courriel envoyé (simulé). Regardez votre boîte.");return}
+  try{const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname+"#/reinitialiser"});closeModal();toast(error?("Cela n'a pas fonctionné : "+error.message):"Courriel envoyé, si ce compte existe. Regardez votre boîte.")}
+  catch(e){closeModal();toast("Cela n'a pas fonctionné.")}
+}
+function dejaCompte(){modal(`<h2>Se connecter</h2><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em3" type="email" placeholder="vous@exemple.fr"></label><label class="f"><span>Votre mot de passe</span><input class="input" id="mdp3" type="password"></label><button class="btn primary big" onclick="dejaCompteOk()">Continuer</button><button class="btn ghost" onclick="closeModal()">Annuler</button><p class="small faint">Retrouvez la même maison sur tous vos appareils avec ce compte.</p>`)}
+async function dejaCompteOk(){
+  const email=document.getElementById("em3").value.trim();const mdp=document.getElementById("mdp3").value;
+  if(!supa){S.compte.email=email;closeModal();S.etape="adresse";save();render();return}
+  toast("Un instant…");
+  try{
+    const {error}=await supa.auth.signInWithPassword({email,password:mdp});
+    if(error){toast("Identifiants incorrects, ou compte inconnu.");return}
+    closeModal();S.compte.email=email;
+    await hydrate();
+    if(S.cree)route("#/fil");else{S.etape="adresse";save();render()}
+  }catch(e){toast("Cela n'a pas fonctionné. Vérifiez votre connexion.")}
+}
 
 V.adresse=()=>{
   const c=S.comptage;
@@ -636,6 +829,7 @@ function adresseOk(){
   const v=(document.getElementById("adr")?.value||S.logement.adresseSaisie||"").trim();
   if(!v){toast("L'adresse, d'abord.");document.getElementById("adr")?.focus();return}
   if(!Object.values(S.comptage).some(n=>n>0)){toast("Au moins une pièce.");return}
+  S.logement.id=S.logement.id||uid();
   const m=v.match(/^(.*?),?\s*(\d{5})?\s*([^\d,]*)$/);
   S.logement.adresse=(m&&m[1]||v).trim().replace(/,$/,"")||v;S.logement.cp=(m&&m[2])||RESERVE.logement.cp;S.logement.ville=(m&&m[3]||"").trim()||RESERVE.logement.ville;
   const rue=S.logement.adresse.replace(/^\d+\s*(bis|ter)?\s*/i,"").replace(/^(rue|avenue|boulevard|impasse|chemin|allée|place|route)\s+(de\s|des\s|du\s|d'|de la\s|de l')?/i,"");
@@ -677,7 +871,7 @@ function simulerEnvoi(){const lot=[];for(let i=0;i<5;i++){const it=prochainItem(
 function terminerLot(lot){
   const nees=[];lot.forEach(r=>{if(r.k!=="inconnu"){r.statut="range";ranger(r)}});
   const n=naissances();
-  S.derniereBatch={date:now(),items:lot.map(r=>({id:r.id,k:r.k,pieceId:r.pieceId,titre:r.k==="equip"?r.nom:(r.titre||"Photo non reconnue"),img:r.img,statut:r.statut,nees:false}))};
+  S.derniereBatch={date:now(),items:lot.map(r=>({id:r.id,k:r.k,pieceId:r.pieceId,titre:r.k==="equip"?r.nom:(r.titre||"Photo non reconnue"),img:r.img,pdf:!!r.pdf,chemin:r.chemin||null,statut:r.statut,nees:false}))};
   S.derniereBatch.nees=n.map(c=>c.nom);
   S.lot=null;save();
   if(!S.cree){S.cree=true;S.etape="";save();route("#/tri")}else route("#/tri");
@@ -699,10 +893,10 @@ V.tri=()=>{
   <a class="btn primary big" href="#/maison">Voir ma maison ${I.fleche}</a>
   <button class="btn ghost" onclick="corrigerLot()">Corriger une pièce</button>
 </div>`};
-function revoirInconnus(){const b=S.derniereBatch;const inc=b.items.filter(i=>i.statut!=="range");modal(`<h2>Photos non reconnues</h2><p class="muted">VIDOM n'a pas su lire ces photos. Dites-lui ce que c'est, ou laissez-les.</p>${inc.map(i=>`<div class="card" style="flex-direction:row;align-items:center"><div class="photo" style="width:64px;min-height:64px;padding:0;flex:0 0 auto">${i.img?`<img src="${i.img}" alt="">`:""}</div><span class="stack grow" style="flex:1 1 auto"><span class="small b">Photo du ${dateFr(b.date)}</span></span><button class="btn sm" onclick="closeModal();corrigerInconnu('${i.id}')">Dire ce que c'est</button></div>`).join("")}<button class="btn" onclick="closeModal()">Laisser pour l'instant</button>`)}
+function revoirInconnus(){const b=S.derniereBatch;const inc=b.items.filter(i=>i.statut!=="range");modal(`<h2>Photos non reconnues</h2><p class="muted">VIDOM n'a pas su lire ces photos. Dites-lui ce que c'est, ou laissez-les.</p>${inc.map(i=>`<div class="card" style="flex-direction:row;align-items:center"><div class="photo" style="width:64px;min-height:64px;padding:0;flex:0 0 auto">${i.pdf?"":(i.img?`<img src="${i.img}" alt="">`:"")}</div><span class="stack grow" style="flex:1 1 auto"><span class="small b">Photo du ${dateFr(b.date)}</span></span><button class="btn sm" onclick="closeModal();corrigerInconnu('${i.id}')">Dire ce que c'est</button></div>`).join("")}<button class="btn" onclick="closeModal()">Laisser pour l'instant</button>`)}
 function corrigerInconnu(id){const b=S.derniereBatch;const i=b.items.find(x=>x.id===id);modal(`<h2>Qu'est-ce que c'est ?</h2>${formCorrection({pieceId:S.pieceCourante||"maison",k:"doc",nom:""})}<button class="btn primary big" onclick="appliquerInconnu('${id}')">Ranger</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
 function appliquerInconnu(id){const b=S.derniereBatch;const i=b.items.find(x=>x.id===id);const k=document.getElementById("ck").value,p=document.getElementById("cp").value,nom=document.getElementById("cn").value.trim()||"Document";
-  const rec={id:uid(),date:now(),img:i.img,k,pieceId:p,nom,marque:"",modele:"",ref:"",achat:today(),garantie:"",notice:false,sav:"",etat:"bon",titre:nom,type:"autre",fournisseur:"",montant:null};ranger(rec);naissances();i.statut="range";i.titre=nom;i.pieceId=p;closeModal();save();render();toast("Rangé dans "+nomPiece(p))}
+  const rec={id:uid(),date:now(),img:i.img,pdf:!!i.pdf,chemin:i.chemin||null,k,pieceId:p,nom,marque:"",modele:"",ref:"",achat:today(),garantie:"",notice:false,sav:"",etat:"bon",titre:nom,type:"autre",fournisseur:"",montant:null};ranger(rec);naissances();i.statut="range";i.titre=nom;i.pieceId=p;closeModal();save();render();toast("Rangé dans "+nomPiece(p))}
 function formCorrection(rec){return `<label class="f"><span>C'est</span><select class="input" id="ck"><option value="equip" ${rec.k==="equip"?"selected":""}>Un équipement</option><option value="doc" ${rec.k==="doc"?"selected":""}>Un document</option></select></label><label class="f"><span>Son nom</span><input class="input" id="cn" value="${h(rec.nom||rec.titre||"")}" placeholder="Par exemple : four, facture de plomberie"></label><label class="f"><span>Dans</span><select class="input" id="cp"><option value="maison" ${rec.pieceId==="maison"?"selected":""}>La maison entière</option>${S.pieces.map(p=>`<option value="${p.id}" ${rec.pieceId===p.id?"selected":""}>${h(p.nom)}</option>`).join("")}</select></label>`}
 function corrigerLot(){const b=S.derniereBatch;modal(`<h2>Corriger</h2><p class="muted">Touchez ce qui n'est pas au bon endroit.</p><div class="card" style="gap:0;padding:4px 16px">${b.items.filter(i=>i.statut==="range").map(i=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();corrigerItem('${i.id}')"><span class="stack" style="gap:0"><span class="b">${h(i.titre)}</span><span class="small muted">${h(i.pieceId==="maison"?"La maison entière":nomPiece(i.pieceId))}</span></span>${I.fleche}</button>`).join("")}</div><button class="btn" onclick="closeModal()">Fermer</button>`)}
 function corrigerItem(id){const e=S.equipements.find(x=>x.id===id),d=S.docs.find(x=>x.id===id);const o=e||d;if(!o)return;modal(`<h2>Corriger</h2>${formCorrection({pieceId:o.piece,k:e?"equip":"doc",nom:e?e.nom:d.titre})}<button class="btn primary big" onclick="appliquerCorrection('${id}')">Enregistrer</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
@@ -710,6 +904,11 @@ function appliquerCorrection(id){const p=document.getElementById("cp").value,nom
   if(S.derniereBatch){const i=S.derniereBatch.items.find(x=>x.id===id);if(i){i.pieceId=p;if(nom)i.titre=nom}}closeModal();save();render();toast("Corrigé")}
 
 /* ================= une photo, reconnue ================= */
+function vignette(rec){ // ce qu'on montre dans la case photo : l'image réduite, le vrai PDF, ou rien
+  if(rec.pdf&&rec.img)return `<embed src="${rec.img}" type="application/pdf" style="position:absolute;inset:0;width:100%;height:100%;border:0">`;
+  if(rec.img)return `<img src="${rec.img}" alt="">`;
+  return "";
+}
 V.reconnu=()=>{
   const lot=S.lot||[];const rec=lot[0];if(!rec)return V.fil();
   const piece=rec.pieceId||"maison";const pn=piece==="maison"?"la maison entière":nomPiece(piece);
@@ -717,14 +916,14 @@ V.reconnu=()=>{
   const detail=rec.k==="equip"?`${rec.achat?"Acheté en "+MOIS[+rec.achat.slice(5,7)-1]+" "+rec.achat.slice(0,4)+". ":""}${rec.garantie?(joursDepuis(rec.garantie)<0?"Garanti jusqu'en "+MOIS[+rec.garantie.slice(5,7)-1]+" "+rec.garantie.slice(0,4)+". ":"Garantie terminée en "+rec.garantie.slice(0,4)+". "):""}${rec.notice?"La notice a été retrouvée":"Pas de notice trouvée"}${rec.sav?", et le service après-vente aussi.":"."}`
     :(rec.k==="doc"?`${rec.fournisseur?h(rec.fournisseur)+" · ":""}${dateFr(rec.date)}${rec.montant?" · "+euros(rec.montant):""}${rec.garantie?" · garantie jusqu'en "+rec.garantie.slice(0,4):""}`:"VIDOM n'a pas su lire cette photo. Dites-lui ce que c'est, ou laissez-la.");
   if(rec.statut==="range")return `<div class="view fadein" style="gap:16px;padding-top:8px">
-    <div class="photo" style="min-height:120px">${rec.img?`<img src="${rec.img}" alt="">`:""}<span class="chip">${h(rec.photo||titre)}</span></div>
+    <div class="photo" style="min-height:120px">${vignette(rec)}<span class="chip">${h(rec.photo||titre)}</span></div>
     <div class="card soft" style="gap:8px"><div class="row">${I.check}<span class="b" style="color:var(--sauge-f)">Rangé dans ${h(pn)}</span></div><p class="muted">${S.equipements.length+S.docs.length===1?"Votre maison connaît maintenant son premier élément.":"Votre maison en sait un peu plus."} ${piece==="maison"?"Continuez, ou choisissez une pièce.":"Continuez dans "+h(pn)+", ou passez à une autre pièce."}</p></div>
     ${rec.nees&&rec.nees.length?`<div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">${rec.nees.length===1?"Une rubrique vient d'apparaître":"Des rubriques viennent d'apparaître"}</p><p class="small muted">${h(rec.nees.join(", "))}.</p></div>`:""}
     <label class="btn primary big file">${I.camera} ${piece==="maison"?"Photographier autre chose":"Continuer dans "+h(pn)}<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'${piece}')"></label>
     <div class="row"><a class="btn grow" href="#/maison">Une autre pièce</a><a class="btn grow" href="#/fil">Le fil</a></div>
   </div>`;
   return `<div class="view fadein" style="gap:16px;padding-top:8px">
-    <div class="photo">${rec.img?`<img src="${rec.img}" alt="">`:""}<span class="chip">${h(rec.photo||"Votre photo")}</span></div>
+    <div class="photo">${vignette(rec)}<span class="chip">${h(rec.photo||"Votre photo")}</span></div>
     <div class="card" style="gap:12px">
       <div class="row">${rec.k==="inconnu"?`<span class="small b" style="color:var(--terra-f)">Pas reconnu</span>`:`${I.check}<span class="small b" style="color:var(--sauge-f)">Reconnu</span>`}</div>
       <h2 style="font-size:1.4em">${h(titre)}</h2>
@@ -746,10 +945,39 @@ function appliquerRec(){const rec=S.lot[0];const k=document.getElementById("ck")
 function laisserRec(){S.lot.shift();save();if(!S.lot.length){route("#/fil")}else render()}
 
 /* ================= fichiers → photos → reconnaissance ================= */
+async function televerser(blob,ext,mime){ // dépose le fichier dans le vrai stockage VIDOM ; renvoie null si indisponible (compte non connecté, hors ligne…)
+  if(!supa||!S.logement.id)return null;
+  try{
+    const chemin=`${S.logement.id}/${uid()}.${ext}`;
+    const {error}=await supa.storage.from("logement-files").upload(chemin,blob,{contentType:mime,upsert:false});
+    if(error)return null;
+    const {data}=await supa.storage.from("logement-files").createSignedUrl(chemin,60*60*24*30);
+    if(!data||!data.signedUrl)return null;
+    return {chemin,url:data.signedUrl};
+  }catch(e){return null}
+}
 function reduire(file){return new Promise(res=>{
+  if(file.type==="application/pdf"){ // gardé tel quel : c'est le vrai document, pas une photo à réduire
+    televerser(file,"pdf","application/pdf").then(t=>{
+      if(t){res({url:t.url,pdf:true,chemin:t.chemin});return}
+      const fr=new FileReader();fr.onload=()=>res({url:fr.result,pdf:true,chemin:null});fr.onerror=()=>res(null);fr.readAsDataURL(file);
+    });
+    return;
+  }
   if(!file.type.startsWith("image/")){res(null);return}
   const img=new Image();const url=URL.createObjectURL(file);
-  img.onload=()=>{try{const max=520;let w=img.width,h2=img.height;const k=Math.min(1,max/Math.max(w,h2));w=Math.round(w*k);h2=Math.round(h2*k);const c=document.createElement("canvas");c.width=w;c.height=h2;c.getContext("2d").drawImage(img,0,0,w,h2);res(c.toDataURL("image/jpeg",.7))}catch(e){res(null)}URL.revokeObjectURL(url)};
+  img.onload=()=>{try{
+    const max=520;let w=img.width,h2=img.height;const k=Math.min(1,max/Math.max(w,h2));w=Math.round(w*k);h2=Math.round(h2*k);
+    const c=document.createElement("canvas");c.width=w;c.height=h2;c.getContext("2d").drawImage(img,0,0,w,h2);
+    c.toBlob(blob=>{
+      URL.revokeObjectURL(url);
+      if(!blob){res({url:c.toDataURL("image/jpeg",.7),pdf:false,chemin:null});return}
+      televerser(blob,"jpg","image/jpeg").then(t=>{
+        if(t){res({url:t.url,pdf:false,chemin:t.chemin});return}
+        res({url:c.toDataURL("image/jpeg",.7),pdf:false,chemin:null});
+      });
+    },"image/jpeg",.7);
+  }catch(e){URL.revokeObjectURL(url);res(null)}};
   img.onerror=()=>{URL.revokeObjectURL(url);res(null)};img.src=url;
 })}
 async function fichiers(files,pieceId){
@@ -757,9 +985,9 @@ async function fichiers(files,pieceId){
   closeModal();toast(list.length>1?`${list.length} fichiers reçus. VIDOM regarde…`:"VIDOM regarde…");
   const trop=S.equipements.length+S.docs.length>40;
   const lot=[];
-  for(const f of list){const img=trop?null:await reduire(f);const rec=reconnaitre(f,pieceId,img);rec.pieceId=rec.pieceId||pieceId||"maison";lot.push(rec)}
+  for(const f of list){const r=trop?null:await reduire(f);const rec=reconnaitre(f,pieceId,r&&r.url,r&&r.pdf,r&&r.chemin);rec.pieceId=rec.pieceId||pieceId||"maison";lot.push(rec)}
   if(pieceId&&pieceId!=="maison")S.pieceCourante=pieceId;
-  if(lot.length===1){S.lot=lot;save();route("#/reconnu")}
+  if(lot.length===1){S.lot=lot;if(!S.cree){S.cree=true;S.etape=""}save();route("#/reconnu")}
   else terminerLot(lot);
 }
 </script>
@@ -830,7 +1058,7 @@ V.maison=()=>{
   </div>`;
 };
 function corrigerLogement(){const L=S.logement;modal(`<h2>Corriger</h2><p class="muted">Ce que VIDOM a trouvé à l'adresse. Vous restez seul maître de la mémoire de votre logement.</p><label class="f"><span>Nom de la maison</span><input class="input" id="ln" value="${h(L.nom)}"></label><div class="grid2"><label class="f"><span>Année</span><input class="input" id="la" inputmode="numeric" value="${L.annee||""}"></label><label class="f"><span>Surface (m²)</span><input class="input" id="ls" inputmode="numeric" value="${L.surface||""}"></label></div><label class="f"><span>Classe énergétique</span><select class="input" id="ld">${"ABCDEFG".split("").map(c=>`<option ${L.dpe===c?"selected":""}>${c}</option>`).join("")}<option value="" ${!L.dpe?"selected":""}>Inconnue</option></select></label><p class="small faint">Source : ce que VIDOM a trouvé à l'adresse${L.dpeDate?" (diagnostic du "+h(L.dpeDate)+")":""}.</p><button class="btn primary big" onclick="L=S.logement;L.nom=document.getElementById('ln').value.trim()||L.nom;L.annee=+document.getElementById('la').value||null;L.surface=+document.getElementById('ls').value||null;L.dpe=document.getElementById('ld').value;closeModal();save();render()">Enregistrer</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
-async function planFichier(files){const f=files[0];if(!f)return;const img=await reduire(f);if(img){S.plan=img;filAjouter({type:"info",t:"Le plan de la maison est conservé. Le dessin s'appuie dessus.",ico:"plan",fait:true});save();render();toast("Plan conservé")}}
+async function planFichier(files){const f=files[0];if(!f)return;const img=await reduire(f);if(img&&img.url){S.plan=img.url;filAjouter({type:"info",t:"Le plan de la maison est conservé. Le dessin s'appuie dessus.",ico:"plan",fait:true});save();render();toast("Plan conservé")}}
 function ajouterPiece(){modal(`<h2>Une pièce de plus</h2><div class="row wrap">${[...TYPES_PIECES,...AUTRES_PIECES].map(t=>`<button class="chip btn-chip" onclick="creerPiece('${t.type}','${h(t.nom)}')">${h(t.nom)}</button>`).join("")}</div><label class="f"><span>Ou un autre nom</span><div class="row"><input class="input" id="pn" placeholder="Atelier, véranda…"><button class="btn" onclick="creerPiece('autre',document.getElementById('pn').value.trim())">Ajouter</button></div></label><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
 function creerPiece(type,nom){if(!nom)return;const n=S.pieces.filter(p=>p.type===type).length;const def=[...TYPES_PIECES,...AUTRES_PIECES].find(t=>t.type===type);
   if(def&&n===1){const p0=S.pieces.find(p=>p.type===type);if(p0.nom===def.nom)p0.nom=def.nom+" 1"}
@@ -875,7 +1103,7 @@ V.equipement=id=>{
   const e=S.equipements.find(x=>x.id===id);if(!e)return vEquipements();
   const docs=docsLies(e);
   return `<div class="view" style="gap:12px">
-    ${e.img?`<div class="photo" style="min-height:130px"><img src="${e.img}" alt=""></div>`:""}
+    ${e.img?`<div class="photo" style="min-height:${e.pdf?"420px":"130px"}">${vignette(e)}</div>`:""}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(e.nom)}</h1><p class="muted">${h(e.marque)} ${h(e.modele)} · ${h(nomPiece(e.piece))}</p></div>
     <div class="card"><dl class="kv">${e.ref?`<dt>Référence</dt><dd class="num">${h(e.ref)}</dd>`:""}${e.achat?`<dt>Acheté</dt><dd>${dateFr(e.achat)}</dd>`:""}${e.garantie?`<dt>Garantie</dt><dd>${joursDepuis(e.garantie)<0?"jusqu'au "+dateFr(e.garantie):"terminée le "+dateFr(e.garantie)}</dd>`:""}${e.installateur?`<dt>Installé par</dt><dd>${h(e.installateur)}</dd>`:""}${e.entretiens&&e.entretiens.length?`<dt>Entretiens</dt><dd>${e.entretiens.map(x=>dateFr(x.d)+(x.par?" · "+h(x.par):"")).join("<br>")}</dd>`:""}<dt>État</dt><dd>${e.etat==="bon"?"Bon":h(e.etat)}</dd></dl></div>
     <div class="grid2">${e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" disabled>Pas de notice</button>`}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
@@ -908,7 +1136,7 @@ function vDocuments(){
   </div>`;
 }
 V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();const t=S.travaux.find(t=>t.docs.includes(d.id));const eqLie=d.lie?equipParLie(d.lie):null;
-  return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:160px"><img src="${d.img}" alt=""></div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
+  return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:${d.pdf?"420px":"160px"}">${vignette(d)}</div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">${h(d.titre)}</h1><p class="muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</p></div>
     <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd></dl></div>
     <div class="row wrap">${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Corriger</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
@@ -1053,9 +1281,32 @@ function nav(name){
     <a href="#/maison" class="${["maison","carte","piece","equipement","document","pro","adresse-vidom","reglages"].includes(name)?"on":""}">${I.maison}<span>Ma maison</span></a>
   </nav>`;
 }
+function renderReinitialiser(){
+  document.body.classList.remove("app");
+  document.getElementById("app").innerHTML=`<div class="col"><div class="top"><span class="t">VIDOM</span></div><div class="view center fadein" style="gap:18px">
+    <div class="stack"><h1 class="h">Nouveau mot de passe.</h1><p class="muted">Choisissez un nouveau mot de passe pour votre compte VIDOM.</p></div>
+    <form class="stack" style="gap:14px" onsubmit="event.preventDefault();reinitialiserOk()">
+      <label class="f"><span>Nouveau mot de passe</span><input class="input" id="npw" type="password" autocomplete="new-password" minlength="8" required></label>
+      <button class="btn primary big" type="submit">Enregistrer</button>
+    </form>
+  </div></div>`;
+}
+async function reinitialiserOk(){
+  const pw=document.getElementById("npw").value;
+  if(!supa){toast("Indisponible pour l'instant.");return}
+  try{
+    const {error}=await supa.auth.updateUser({password:pw});
+    if(error){toast("Cela n'a pas fonctionné : "+error.message);return}
+    toast("Mot de passe enregistré.");
+    await hydrate();
+    location.hash=S.cree?"#/fil":"#/";
+    render();
+  }catch(e){toast("Cela n'a pas fonctionné.")}
+}
 function render(){
   document.documentElement.dataset.texte=S.reglages.texte||"normal";
   const app=document.getElementById("app");
+  if(parseHash().name==="reinitialiser"){renderReinitialiser();return}
   if(!S.cree){
     document.body.classList.remove("app");
     const e=S.etape||"bienvenue";
@@ -1086,7 +1337,7 @@ function render(){
   const dv=document.querySelector(".pane.right")||window;
   if(render.lastRoute!==location.hash){window.scrollTo(0,0);render.lastRoute=location.hash}
 }
-function ajouterDesk(){modal(`<h2>Photographier</h2><div class="stack"><label class="btn primary big file">${I.camera} Avec la caméra de l'ordinateur<input type="file" accept="image/*" capture="environment" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="qr" style="width:96px;height:96px">${qrSvg(location.href.split("#")[0])}</div><span class="small muted">Pour voir les écrans du téléphone, ouvrez ce code avec l'appareil photo de votre téléphone. Dans cette maquette de démonstration, chaque appareil garde sa propre mémoire : ce que vous ajoutez ici ne s'y retrouve pas encore. Ce sera vrai dans la version réelle, connectée.</span></div></div><button class="btn" onclick="closeModal()">Fermer</button>`)}
+function ajouterDesk(){modal(`<h2>Photographier</h2><div class="stack"><label class="btn primary big file">${I.camera} Avec la caméra de l'ordinateur<input type="file" accept="image/*" capture="environment" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="qr" style="width:96px;height:96px">${qrSvg(location.href.split("#")[0])}</div><span class="small muted">Pour continuer sur votre téléphone, ouvrez ce code avec l'appareil photo, puis connectez-vous avec le même compte : vous retrouverez la même maison.</span></div></div><button class="btn" onclick="closeModal()">Fermer</button>`)}
 function route(hsh){if(hsh&&location.hash!==hsh){location.hash=hsh}else render()}
 window.addEventListener("hashchange",render);
 window.addEventListener("resize",()=>{clearTimeout(render.rt);render.rt=setTimeout(render,120)});
@@ -1100,9 +1351,23 @@ window.addEventListener("resize",()=>{clearTimeout(render.rt);render.rt=setTimeo
   document.addEventListener("drop",e=>{e.preventDefault();n=0;d.hidden=true;if(e.dataTransfer&&e.dataTransfer.files.length)fichiers(e.dataTransfer.files,S.pieceCourante||"maison")});
 })();
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
-/* rendre le premier écran */
-if(S.cree&&!location.hash)location.hash="#/fil";
-render();
+/* rendre le premier écran : si un compte réel est déjà connecté, on va d'abord chercher sa vraie mémoire */
+(async function(){
+  if(supa){
+    try{
+      const {data}=await supa.auth.getSession();
+      if(data&&data.session&&parseHash().name!=="reinitialiser"){
+        document.getElementById("app").innerHTML=`<div class="view center" style="min-height:100vh"><p class="muted">Un instant, VIDOM retrouve votre maison…</p></div>`;
+        await hydrate();
+      }
+    }catch(e){}
+    try{supa.auth.onAuthStateChange((event)=>{
+      if(event==="PASSWORD_RECOVERY"){location.hash="#/reinitialiser";render()}
+    })}catch(e){}
+  }
+  if(S.cree&&!location.hash)location.hash="#/fil";
+  render();
+})();
 </script>
 </body>
 </html>
