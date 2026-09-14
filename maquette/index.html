@@ -767,10 +767,10 @@ V.compte=()=>`<div class="view center fadein" style="gap:18px">
   <form class="stack" style="gap:14px" onsubmit="event.preventDefault();compteOk()">
     <label class="f"><span>Votre adresse de courriel</span><input class="input" id="email" type="email" autocomplete="email" inputmode="email" value="${h(S.compte.email)}" placeholder="vous@exemple.fr" required></label>
     <label class="f"><span>Votre mot de passe</span><div class="row"><input class="input" id="mdp" type="password" autocomplete="new-password" placeholder="Au moins 8 caractères" minlength="8" required><button type="button" class="btn sm" onclick="const m=document.getElementById('mdp');m.type=m.type==='password'?'text':'password';this.textContent=m.type==='password'?'Afficher':'Masquer'">Afficher</button></div></label>
-    <button class="btn primary big" type="submit">Continuer ${I.fleche}</button>
+    <button class="btn primary big" type="submit">Créer un compte ${I.fleche}</button>
   </form>
-  <div class="split"><button class="btn ghost" onclick="mdpOublie()">Mot de passe oublié ?</button><button class="btn ghost" onclick="dejaCompte()">J'ai déjà un compte</button></div>
-  <p class="small faint" style="text-align:center">Un seul compte, plusieurs logements possibles plus tard.</p>
+  <button class="btn ghost" onclick="mdpOublie()">Mot de passe oublié ?</button>
+  <p class="small faint" style="text-align:center">Vous avez déjà un compte ? Ressaisissez simplement votre adresse et votre mot de passe ci-dessus : VIDOM vous reconnaîtra et retrouvera votre maison.</p>
 </div>`;
 async function compteOk(){
   const email=document.getElementById("email").value.trim();const mdp=document.getElementById("mdp").value;
@@ -778,10 +778,19 @@ async function compteOk(){
   toast("Un instant…");
   try{
     const {data,error}=await supa.auth.signUp({email,password:mdp});
-    if(error){toast(/registered/i.test(error.message)?"Ce compte existe déjà : utilisez « J'ai déjà un compte ».":"Cela n'a pas fonctionné : "+error.message);return}
+    // ce courriel a peut-être déjà un compte : Supabase le signale parfois par une erreur, parfois (pour ne rien révéler) par un utilisateur sans aucune identité
+    const dejaExistant=(error&&/registered/i.test(error.message))||(data&&data.user&&Array.isArray(data.user.identities)&&data.user.identities.length===0);
+    if(dejaExistant){
+      const r2=await supa.auth.signInWithPassword({email,password:mdp});
+      if(r2.error){modal(`<h2>Ce mot de passe ne correspond pas</h2><p class="muted">Un compte existe déjà pour ${h(email)}, mais ce mot de passe-là ne fonctionne pas pour ce compte. Vérifiez-le (touchez « Afficher » pour le voir en clair), ou recevez un lien pour en choisir un nouveau.</p><button class="btn primary big" onclick="closeModal()">Réessayer</button><button class="btn ghost" onclick="closeModal();mdpOublie()">Mot de passe oublié</button>`);return}
+      S.compte.email=email;await hydrate();
+      if(S.cree)route("#/fil");else{S.etape="adresse";save();render()}
+      return;
+    }
+    if(error){toast("Cela n'a pas fonctionné : "+error.message);return}
     S.compte.email=email;
     if(data&&data.session){S.etape="adresse";save();render()}
-    else modal(`<h2>Vérifiez votre boîte de courriel</h2><p class="muted">VIDOM a envoyé un lien de confirmation à ${h(email)}. Une fois confirmé, revenez ici et utilisez « J'ai déjà un compte ».</p><button class="btn primary big" onclick="closeModal()">Compris</button>`);
+    else modal(`<h2>Vérifiez votre boîte de courriel</h2><p class="muted">VIDOM a envoyé un lien de confirmation à ${h(email)}. Une fois confirmé, revenez ici et retapez votre adresse et votre mot de passe.</p><button class="btn primary big" onclick="closeModal()">Compris</button>`);
   }catch(e){toast("Cela n'a pas fonctionné. Vérifiez votre connexion.")}
 }
 function mdpOublie(){const m=document.getElementById("email")?.value||"";modal(`<h2>Mot de passe oublié</h2><p class="muted">VIDOM vous envoie un courriel avec un lien pour en choisir un nouveau.</p><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em2" type="email" value="${h(m)}"></label><button class="btn primary big" onclick="mdpOublieOk()">Envoyer le lien</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
@@ -791,20 +800,6 @@ async function mdpOublieOk(){
   try{const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname+"#/reinitialiser"});closeModal();toast(error?("Cela n'a pas fonctionné : "+error.message):"Courriel envoyé, si ce compte existe. Regardez votre boîte.")}
   catch(e){closeModal();toast("Cela n'a pas fonctionné.")}
 }
-function dejaCompte(){modal(`<h2>Se connecter</h2><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em3" type="email" placeholder="vous@exemple.fr"></label><label class="f"><span>Votre mot de passe</span><input class="input" id="mdp3" type="password"></label><button class="btn primary big" onclick="dejaCompteOk()">Continuer</button><button class="btn ghost" onclick="closeModal()">Annuler</button><p class="small faint">Retrouvez la même maison sur tous vos appareils avec ce compte.</p>`)}
-async function dejaCompteOk(){
-  const email=document.getElementById("em3").value.trim();const mdp=document.getElementById("mdp3").value;
-  if(!supa){S.compte.email=email;closeModal();S.etape="adresse";save();render();return}
-  toast("Un instant…");
-  try{
-    const {error}=await supa.auth.signInWithPassword({email,password:mdp});
-    if(error){toast("Identifiants incorrects, ou compte inconnu.");return}
-    closeModal();S.compte.email=email;
-    await hydrate();
-    if(S.cree)route("#/fil");else{S.etape="adresse";save();render()}
-  }catch(e){toast("Cela n'a pas fonctionné. Vérifiez votre connexion.")}
-}
-
 V.adresse=()=>{
   const c=S.comptage;
   const ligne=(t,nom)=>`<div class="step"><span>${h(nom)}</span><span class="ctl"><button aria-label="Moins" onclick="compter('${t}',-1)">${I.moins}</button><b class="num">${c[t]||0}</b><button aria-label="Plus" onclick="compter('${t}',1)">${I.plus}</button></span></div>`;
