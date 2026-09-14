@@ -205,33 +205,10 @@ const I={
 /* ================= réserve : la Maison des Tilleuls ================= */
 /* Servie une par une, au fil des photos et des événements. Jamais d'un bloc. */
 const RESERVE={
-  logement:{nom:"Maison des Tilleuls",adresse:"12 rue des Tilleuls",cp:"35400",ville:"Saint-Malo",annee:1962,surface:118,dpe:"C",dpeDate:"12 mai 2024",parcelles:["AB 214"],depot:"maison-des-tilleuls-b3k@depot.vidom.fr"},
-  /* équipements et documents, par type de pièce ; 'maison' = la maison entière */
-  items:[
-    {k:"equip",piece:"cuisine",nom:"Lave-vaisselle",marque:"Bosch",modele:"Série 4 SMS4HTI45E",ref:"SMS4HTI45E",achat:"2023-03-14",garantie:"2027-03-14",installateur:"",notice:true,sav:"09 69 32 15 15",etat:"bon",photo:"Étiquette du lave-vaisselle"},
-    {k:"doc",piece:"cuisine",type:"facture",titre:"Facture Darty — lave-vaisselle Bosch",date:"2023-03-14",fournisseur:"Darty",montant:649,lie:"Lave-vaisselle",photo:"Une facture"},
-    {k:"equip",piece:"cuisine",nom:"Four",marque:"Whirlpool",modele:"AKZ9 6230 IX",ref:"AKZ96230IX",achat:"2019-11-02",garantie:"2021-11-02",notice:true,sav:"09 69 39 78 00",etat:"bon",photo:"La plaque signalétique du four"},
-    {k:"equip",piece:"cuisine",nom:"Plaque à induction",marque:"Sauter",modele:"SPI4664B",ref:"SPI4664B",achat:"2019-11-02",garantie:"2021-11-02",notice:true,sav:"09 69 39 34 34",etat:"bon",photo:"Le dessous de la plaque"},
-    {k:"equip",piece:"cuisine",nom:"Réfrigérateur",marque:"Liebherr",modele:"CNef 4815",ref:"CNEF4815",achat:"2020-06-20",garantie:"2022-06-20",notice:true,sav:"03 88 04 12 00",etat:"bon",photo:"L'étiquette du réfrigérateur"},
-    {k:"equip",piece:"salon",nom:"Poêle à bois",marque:"Invicta",modele:"Chamane 14 kW",ref:"6114-44",achat:"2018-10-05",garantie:"2023-10-05",installateur:"Cheminées Malouines",notice:true,sav:"03 24 27 22 22",etat:"bon",photo:"Le poêle à bois"},
-    {k:"doc",piece:"salon",type:"notice",titre:"Notice du poêle Invicta Chamane",date:"2018-10-05",fournisseur:"Invicta",lie:"Poêle à bois",photo:"La notice du poêle"},
-    {k:"equip",piece:"garage",nom:"Chaudière gaz",marque:"Saunier Duval",modele:"ThemaPlus Condens F25",ref:"F25",achat:"2016-09-12",garantie:"2018-09-12",installateur:"Bertin Chauffage",notice:true,sav:"09 74 75 00 00",etat:"bon",entretien:true,photo:"La chaudière"},
-    {k:"equip",piece:"garage",nom:"Tableau électrique",marque:"Legrand",modele:"Drivia 3 rangées",ref:"401223",achat:"2015-04-20",garantie:"2017-04-20",installateur:"Élec'Émeraude",notice:false,sav:"",etat:"bon",photo:"Le tableau électrique"},
-    {k:"equip",piece:"chambre",nom:"Radiateur électrique",marque:"Atlantic",modele:"Divali 1500 W",ref:"507715",achat:"2021-01-18",garantie:"2023-01-18",notice:true,sav:"02 51 44 18 88",etat:"bon",photo:"L'étiquette du radiateur"},
-    {k:"equip",piece:"chambre",nom:"Volets roulants",marque:"Somfy",modele:"Oximo io",ref:"OXIMO-IO",achat:"2017-05-30",garantie:"2022-05-30",installateur:"Fermetures Malouines",notice:true,sav:"08 20 05 00 55",etat:"bon",photo:"Le moteur du volet"},
-    {k:"equip",piece:"salle de bain",nom:"Chauffe-eau thermodynamique",marque:"Atlantic",modele:"Calypso 200 L",ref:"232511",achat:"2021-07-08",garantie:"2026-07-08",installateur:"Plomberie Le Guen",notice:true,sav:"02 51 44 18 88",etat:"bon",entretien:true,photo:"Le chauffe-eau"},
-    {k:"doc",piece:"salle de bain",type:"facture",titre:"Facture Plomberie Le Guen — chauffe-eau",date:"2021-07-08",fournisseur:"Plomberie Le Guen",montant:2180,lie:"Chauffe-eau thermodynamique",photo:"Une facture de plomberie"},
-    {k:"equip",piece:"buanderie",nom:"Lave-linge",marque:"Miele",modele:"WCA 030",ref:"WCA030",achat:"2022-02-11",garantie:"2024-02-11",notice:true,sav:"09 74 50 10 00",etat:"bon",photo:"L'étiquette du lave-linge"},
-    {k:"doc",piece:"maison",type:"acte",titre:"Acte d'achat de la maison",date:"2015-07-03",fournisseur:"Maître Lefort, notaire",montant:null,photo:"L'acte d'achat"},
-    {k:"doc",piece:"maison",type:"diagnostic",titre:"Diagnostic de performance énergétique — classe C",date:"2024-05-12",fournisseur:"Diagnostic Émeraude",montant:null,photo:"Le diagnostic énergétique"},
-    {k:"doc",piece:"maison",type:"contrat",titre:"Attestation d'assurance habitation",date:"2026-01-05",fournisseur:"MAIF",montant:null,photo:"L'attestation d'assurance"},
-    {k:"doc",piece:"maison",type:"facture",titre:"Facture Couverture Bretonne — réfection de la toiture",date:"2021-05-18",fournisseur:"Couverture Bretonne",montant:8400,travaux:"Réfection de la toiture",garantie:"2031-05-18",photo:"Une facture de couverture"},
-    {k:"doc",piece:"maison",type:"devis",titre:"Devis Couverture Bretonne — toiture",date:"2021-03-02",fournisseur:"Couverture Bretonne",montant:8400,travaux:"Réfection de la toiture",photo:"Un devis"},
-    {k:"doc",piece:"maison",type:"impot",titre:"Taxe foncière 2025",date:"2025-10-15",fournisseur:"Direction générale des finances publiques",montant:1240,photo:"La taxe foncière"},
-    {k:"doc",piece:"maison",type:"facture",titre:"Facture Bertin Chauffage — entretien de la chaudière",date:"2025-09-22",fournisseur:"Bertin Chauffage",montant:135,lie:"Chaudière gaz",photo:"Une facture d'entretien"},
-    {k:"doc",piece:"maison",type:"plan",titre:"Plan de la maison",date:"1962-01-01",fournisseur:"",montant:null,photo:"Le plan de la maison"},
-    {k:"doc",piece:"maison",type:"diagnostic",titre:"Diagnostic électrique",date:"2015-05-04",fournisseur:"Diagnostic Émeraude",montant:null,photo:"Le diagnostic électrique"},
-  ],
+  /* la reconnaissance des photos, l'adresse, le DPE/cadastre et les réponses de "Demander à la maison"
+     sont désormais réels (extract-document, BAN, ADEME/IGN/RNB/Géorisques, demander-maison) : plus de
+     jeu de données fictif ici. RESERVE.pros et RESERVE.tiers restent, pour d'autres écrans encore hors
+     de ce tour (repli de connaitrePro(), démonstration "voir comme" d'un tiers). */
   pros:{
     "Couverture Bretonne":{metier:"Couvreur",tel:"02 99 40 12 34",mail:"contact@couverture-bretonne.fr",ville:"Saint-Malo"},
     "Bertin Chauffage":{metier:"Chauffagiste",tel:"02 99 56 78 90",mail:"bertin.chauffage@orange.fr",ville:"Saint-Malo"},
@@ -249,26 +226,6 @@ const RESERVE={
     {id:"acquereur",nom:"Le futur acquéreur",ex:"",duree:"1 mois",voit:["Le dossier de vente"],ico:"maison"},
     {id:"gestionnaire",nom:"Le gestionnaire locatif",ex:"",duree:"le temps du mandat",voit:["Équipements","Artisans","Travaux","Documents du logement"],ico:"gens"},
   ],
-  questions:[
-    {id:"toiture",mots:["toiture","toit","couverture"],rep:"En mai 2021, par Couverture Bretonne. La garantie décennale court jusqu'en mai 2031.",doc:"Facture Couverture Bretonne — réfection de la toiture",pro:"Couverture Bretonne"},
-    {id:"notice-four",mots:["notice du four","notice four","mode d'emploi du four"],rep:"La notice du four Whirlpool AKZ9 6230 a été retrouvée à partir de sa référence.",equip:"Four"},
-    {id:"notice-lv",mots:["notice du lave","lave-vaisselle","lave vaisselle"],rep:"Lave-vaisselle Bosch série 4, acheté en mars 2023, garanti jusqu'en mars 2027. Sa notice est dans sa fiche.",equip:"Lave-vaisselle"},
-    {id:"chaudiere",mots:["chaudière","chaudiere","chauffage","entretien"],rep:"Chaudière Saunier Duval ThemaPlus, installée en septembre 2016 par Bertin Chauffage. Dernier entretien : septembre 2025.",equip:"Chaudière gaz",pro:"Bertin Chauffage"},
-    {id:"dpe",mots:["dpe","énergétique","energetique","classe"],rep:"Classe C, diagnostic du 12 mai 2024 par Diagnostic Émeraude.",doc:"Diagnostic de performance énergétique — classe C"},
-    {id:"assurance",mots:["assurance","assureur","maif"],rep:"Assurance habitation MAIF, attestation du 5 janvier 2026.",doc:"Attestation d'assurance habitation"},
-    {id:"achat",mots:["acheté","achat","acte","notaire","quand avons","depuis quand"],rep:"La maison a été achetée le 3 juillet 2015, chez Maître Lefort.",doc:"Acte d'achat de la maison"},
-    {id:"cout",mots:["coûté","coute","coûte","combien","dépensé","depense","travaux"],rep:"Travaux connus : la toiture en 2021 (8 400 €) et le chauffe-eau en 2021 (2 180 €). Soit 10 580 €.",doc:"Facture Couverture Bretonne — réfection de la toiture"},
-    {id:"garantie",mots:["garantie","expire","garanties"],rep:"La prochaine garantie à expirer est celle du chauffe-eau, en juillet 2026 ; puis le lave-vaisselle, en mars 2027.",equip:"Chauffe-eau thermodynamique"},
-    {id:"venu",mots:["qui est venu","artisan","dernier","dernière intervention","intervenu"],rep:"La dernière intervention connue : Bertin Chauffage, pour l'entretien de la chaudière, en septembre 2025.",pro:"Bertin Chauffage"},
-    {id:"surface",mots:["surface","m²","m2","mètres"],rep:"118 m², d'après ce que VIDOM a trouvé à l'adresse. Vous pouvez corriger depuis Ma maison."},
-    {id:"annee",mots:["année","construite","construction","date de construction"],rep:"Construite en 1962, d'après ce que VIDOM a trouvé à l'adresse."},
-    {id:"adresse",mots:["adresse vidom","adresse de la maison","adresse mail","courriel de la maison"],rep:"L'adresse VIDOM de votre logement est dans Ma maison, carte « Adresse VIDOM », avec son QR.",go:"#/adresse-vidom"},
-    {id:"tilleul",mots:["tilleul","arbre","jardin","planté"],rep:"Le tilleul a été planté dans le jardin le 12 septembre 2025."},
-    {id:"plan",mots:["plan"],rep:"Le plan de la maison, s'il a été photographié, est dans Documents. Sinon, vous pouvez le photographier depuis Ma maison.",go:"#/maison"},
-    {id:"taxe",mots:["taxe","foncière","fonciere","impôt","impot"],rep:"Taxe foncière 2025 : 1 240 €, reçue le 15 octobre 2025.",doc:"Taxe foncière 2025"},
-    {id:"electricite",mots:["électri","electri","tableau"],rep:"Le tableau électrique Legrand a été remis aux normes en avril 2015 par Élec'Émeraude. Le diagnostic électrique date de mai 2015.",equip:"Tableau électrique"},
-  ],
-  suggestions:["Quand a-t-on refait la toiture ?","Où est la notice du four ?","Qui est venu pour la chaudière ?","Quel est le DPE ?","Quelles garanties expirent bientôt ?","Combien ont coûté les travaux ?","Quand la maison a-t-elle été achetée ?"],
 };
 
 /* types de pièces proposés le premier jour */
@@ -282,7 +239,8 @@ const AUTRES_PIECES=[{type:"bureau",nom:"Bureau"},{type:"buanderie",nom:"Buander
 const KEY="vidom-maquette-v1";
 const etatInitial=()=>({
   v:1,cree:false,etape:"bienvenue",compte:{email:""},
-  logement:{id:null,nom:"",adresse:"",cp:"",ville:"",annee:null,surface:null,dpe:"",dpeDate:"",depot:""},
+  logement:{id:null,nom:"",adresse:"",cp:"",ville:"",annee:null,surface:null,dpe:"",dpeDate:"",depot:"",
+    latitude:null,longitude:null,numeroCadastral:"",classeClimat:"",altitude:null,rnbId:"",rnbStatut:"",surfaceEmpriseSol:null,risquesNaturels:null},
   comptage:{cuisine:1,salon:1,chambre:2,"salle de bain":1},pieces:[],plan:null,
   equipements:[],docs:[],pros:[],travaux:[],acces:[],journalAcces:[],
   fil:[],rappels:[],reserveServie:[],nees:["adresse"],
@@ -315,7 +273,95 @@ function modal(html){document.getElementById("modal").innerHTML=`<div class="mod
 function closeModal(){document.getElementById("modal").innerHTML="";document.body.style.overflow=""}
 const isDesk=()=>window.matchMedia("(min-width:1024px)").matches;
 const slug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
-function depotPour(nom){const c=Math.abs([...nom].reduce((a,ch)=>a*31+ch.charCodeAt(0)|0,7)).toString(36).slice(0,3);return `${slug(nom)}-${c}@depot.vidom.fr`}
+/* adresse VIDOM réelle : allouée et vérifiée unique en base (vidom.fr, le domaine que Murielle possède) */
+async function allouerDepot(nom){
+  const base=slug(nom)||"logement";
+  const secours=()=>`${base}-${uid().slice(0,4)}@vidom.fr`; // hors ligne, ou en dernier recours
+  if(!supa)return secours();
+  let session=null;
+  try{const {data}=await supa.auth.getSession();session=data&&data.session}catch(e){}
+  if(!session)return secours();
+  for(let tentative=0;tentative<8;tentative++){
+    const graine=tentative===0?[...nom].reduce((a,ch)=>a*31+ch.charCodeAt(0)|0,7):Math.floor(Math.random()*46656)+tentative;
+    const c=Math.abs(graine).toString(36).padStart(3,"0").slice(0,3);
+    const candidat=`${base}-${c}@vidom.fr`;
+    try{
+      const {error}=await supa.from("logements").upsert({id:S.logement.id,nom,adresse_depot:candidat,created_by:session.user.id},{onConflict:"id"});
+      if(!error)return candidat;
+      if(error.code!=="23505")return candidat; // erreur d'un autre type : on garde ce nom localement, pousserTout() réessaiera la synchro
+    }catch(e){return candidat}
+  }
+  return secours();
+}
+
+/* ================= adresse réelle : BAN, DPE, cadastre, RNB, risques ================= */
+async function fetchAvecDelai(url,ms=5000){ // une source lente ou muette ne doit jamais bloquer l'installation
+  const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),ms);
+  try{return await fetch(url,{signal:ctrl.signal})}finally{clearTimeout(t)}
+}
+async function chercherAdresses(v){ // Base Adresse Nationale, gratuite et sans clé
+  try{
+    const r=await fetchAvecDelai("https://api-adresse.data.gouv.fr/search/?limit=5&q="+encodeURIComponent(v));
+    const j=await r.json();
+    return j.features||[];
+  }catch(e){return []}
+}
+async function enrichirAdresse(){ // best-effort : chaque source est indépendante, silencieuse si elle échoue
+  const lat=S.logement.latitude,lon=S.logement.longitude;
+  const t=[];
+  t.push((async()=>{ // base DPE de l'ADEME
+    try{
+      const q=encodeURIComponent(S.logement.adresse||"");
+      const qs=S.logement.cp?`&qs=${encodeURIComponent(`code_postal_ban:"${S.logement.cp}"`)}`:"";
+      const r=await fetchAvecDelai(`https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=1&q_fields=adresse_ban&q=${q}${qs}`);
+      const j=await r.json();
+      const d=j.results&&j.results[0];
+      if(d){
+        if(d.etiquette_dpe)S.logement.dpe=d.etiquette_dpe;
+        if(d.etiquette_ges)S.logement.classeClimat=d.etiquette_ges;
+        if(d.date_etablissement_dpe)S.logement.dpeDate=d.date_etablissement_dpe;
+        if(!S.logement.annee&&d.annee_construction)S.logement.annee=d.annee_construction;
+        if(!S.logement.surface&&d.surface_habitable_logement)S.logement.surface=d.surface_habitable_logement;
+      }
+    }catch(e){}
+  })());
+  if(lat!=null&&lon!=null){
+    t.push((async()=>{ // cadastre IGN, par point
+      try{
+        const geom=encodeURIComponent(JSON.stringify({type:"Point",coordinates:[lon,lat]}));
+        const r=await fetchAvecDelai(`https://apicarto.ign.fr/api/cadastre/parcelle?geom=${geom}`);
+        const j=await r.json();
+        const p=j.features&&j.features[0]&&j.features[0].properties;
+        if(p)S.logement.numeroCadastral=[p.code_dep,p.code_com,p.section,p.numero].filter(Boolean).join(" ");
+      }catch(e){}
+    })());
+    t.push((async()=>{ // Référentiel National des Bâtiments
+      try{
+        const d=0.0006;
+        const r=await fetchAvecDelai(`https://rnb-api.beta.gouv.fr/api/alpha/buildings/?bbox=${lon-d},${lat-d},${lon+d},${lat+d}`);
+        const j=await r.json();
+        const b=(j.results||[])[0];
+        if(b){S.logement.rnbId=b.rnb_id||"";S.logement.rnbStatut=b.status||""}
+      }catch(e){}
+    })());
+    t.push((async()=>{ // altitude, Géoplateforme IGN
+      try{
+        const r=await fetchAvecDelai(`https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?lon=${lon}&lat=${lat}&resource=ign_rge_alti_wld&indent=false`);
+        const j=await r.json();
+        const e=j.elevations&&j.elevations[0];
+        if(e&&typeof e.z==="number")S.logement.altitude=e.z;
+      }catch(e){}
+    })());
+    t.push((async()=>{ // Géorisques
+      try{
+        const r=await fetchAvecDelai(`https://georisques.gouv.fr/api/v1/resultats_rapport_risque?latlon=${lon},${lat}`);
+        const j=await r.json();
+        if(j&&j.risquesNaturels)S.logement.risquesNaturels=j.risquesNaturels;
+      }catch(e){}
+    })());
+  }
+  await Promise.allSettled(t);
+}
 
 /* ================= la vraie mémoire : Supabase ================= */
 /* localStorage reste le cache immédiat (rien ne change dans le reste du code) ;
@@ -373,7 +419,12 @@ async function hydrate(){ // relit la vraie mémoire du compte connecté et reco
     Object.assign(S.logement,{
       id:logement.id,nom:logement.nom||"",adresse:logement.adresse||"",cp:logement.code_postal||"",
       ville:logement.ville||"",annee:logement.annee_construction||null,surface:logement.surface||null,
-      dpe:logement.classe_energetique||logement.dpe||"",dpeDate:logement.dpe_date||"",depot:logement.adresse_depot||S.logement.depot||""
+      dpe:logement.classe_energetique||logement.dpe||"",dpeDate:logement.dpe_date||"",depot:logement.adresse_depot||S.logement.depot||"",
+      latitude:logement.latitude!=null?Number(logement.latitude):null,longitude:logement.longitude!=null?Number(logement.longitude):null,
+      numeroCadastral:logement.numero_cadastral||"",classeClimat:logement.classe_climat||"",
+      altitude:logement.altitude!=null?Number(logement.altitude):null,rnbId:logement.rnb_id||"",rnbStatut:logement.rnb_statut||"",
+      surfaceEmpriseSol:logement.surface_emprise_sol!=null?Number(logement.surface_emprise_sol):null,
+      risquesNaturels:logement.risques_naturels||null,
     });
     S.pieces=(pieces||[]).map(p=>({id:p.id,type:p.type_piece||"autre",nom:p.nom,photos:[]}));
     S.pros=(artisans||[]).map(a=>({id:a.id,nom:a.nom,metier:a.metier||"",tel:a.telephone||"",mail:a.email||"",ville:a.ville||"",interventions:[],avis:[]}));
@@ -433,7 +484,11 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
     await supa.from("logements").upsert({
       id:lig.id,nom:lig.nom||"",adresse:lig.adresse||null,code_postal:lig.cp||null,ville:lig.ville||null,
       annee_construction:lig.annee||null,surface:lig.surface||null,classe_energetique:/^[A-G]$/.test(lig.dpe)?lig.dpe:null,
-      dpe_date:lig.dpeDate||null,adresse_depot:lig.depot||null,created_by:session.user.id
+      dpe_date:lig.dpeDate||null,adresse_depot:lig.depot||null,created_by:session.user.id,
+      latitude:lig.latitude??null,longitude:lig.longitude??null,numero_cadastral:lig.numeroCadastral||null,
+      classe_climat:/^[A-G]$/.test(lig.classeClimat)?lig.classeClimat:null,altitude:lig.altitude??null,
+      rnb_id:lig.rnbId||null,rnb_statut:lig.rnbStatut||null,surface_emprise_sol:lig.surfaceEmpriseSol??null,
+      risques_naturels:lig.risquesNaturels||null,
     },{onConflict:"id"});
     if(S.pieces.length)await supa.from("pieces").upsert(S.pieces.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,type_piece:p.type||null})),{onConflict:"id"});
     if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null})),{onConflict:"id"});
@@ -494,41 +549,33 @@ function creerPieces(){
 const pieceParId=id=>S.pieces.find(p=>p.id===id);
 const pieceALaLumiere=p=>S.equipements.some(e=>e.piece===p.id)||S.docs.some(d=>d.piece===p.id)||p.photos.length>0;
 const nomPiece=id=>id==="maison"?"la maison entière":(pieceParId(id)?.nom||"la maison");
-function pieceParType(type){ // première pièce de ce type qui n'a pas encore tout reçu
-  const cands=S.pieces.filter(p=>p.type===type);
-  if(!cands.length)return null;
-  return cands.find(p=>!pieceALaLumiere(p))||cands[0];
+/* ================= reconnaissance réelle (Claude, via la fonction Edge extract-document) ================= */
+function fileVersBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(String(r.result||"").split(",")[1]||"");
+    r.onerror=()=>reject(r.error);
+    r.readAsDataURL(file);
+  });
 }
-
-/* ================= la réserve, servie une par une ================= */
-function prochainItem(pieceId){
-  const type=pieceId==="maison"?"maison":(pieceParId(pieceId)?.type||"maison");
-  const libre=i=>!S.reserveServie.includes(i);
-  let idx=-1;
-  if(type==="maison"){ // sans pièce désignée : d'abord ce qui va dans une pièce existante encore vide, puis la maison entière
-    idx=RESERVE.items.findIndex((it,i)=>libre(i)&&it.piece!=="maison"&&S.pieces.some(p=>p.type===it.piece&&!pieceALaLumiere(p)));
-    if(idx<0)idx=RESERVE.items.findIndex((it,i)=>libre(i)&&it.piece==="maison");
-    if(idx<0)idx=RESERVE.items.findIndex((it,i)=>libre(i)&&S.pieces.some(p=>p.type===it.piece));
-  }else idx=RESERVE.items.findIndex((it,i)=>libre(i)&&it.piece===type);
-  if(idx<0){ // rien pour cette pièce : un document de la maison, puis n'importe quoi
-    idx=RESERVE.items.findIndex((it,i)=>libre(i)&&it.piece==="maison");
-    if(idx<0)idx=RESERVE.items.findIndex((it,i)=>libre(i));
-  }
-  if(idx<0)return null;
-  S.reserveServie.push(idx);
-  const it=JSON.parse(JSON.stringify(RESERVE.items[idx]));
-  // rattachement à une pièce réelle
-  if(it.piece==="maison")it.pieceId="maison";
-  else{const p=(pieceId!=="maison"&&pieceParId(pieceId)?.type===it.piece)?pieceParId(pieceId):pieceParType(it.piece);it.pieceId=p?p.id:"maison"}
-  return it;
-}
-
-/* ================= reconnaissance et rangement ================= */
-function reconnaitre(file,pieceId,dataUrl,pdf,chemin){
-  const it=prochainItem(pieceId||S.pieceCourante||"maison");
-  const rec={id:uid(),date:now(),img:dataUrl||null,pdf:!!pdf,chemin:chemin||null,statut:"propose"};
-  if(!it){rec.k="inconnu";rec.titre="Photo non reconnue";return rec}
-  Object.assign(rec,it);
+async function reconnaitre(file,pieceId,dataUrl,pdf,chemin){
+  const rec={id:uid(),date:now(),img:dataUrl||null,pdf:!!pdf,chemin:chemin||null,statut:"propose",pieceId:pieceId||S.pieceCourante||"maison"};
+  if(!supa||!file){rec.k="inconnu";rec.titre="Photo non reconnue";return rec}
+  try{
+    const fileBase64=await fileVersBase64(file);
+    const mimeType=file.type||(pdf?"application/pdf":"image/jpeg");
+    const {data,error}=await supa.functions.invoke("extract-document",{body:{fileBase64,mimeType}});
+    const c=(!error&&data&&data.fields)?data.fields:null;
+    if(c&&c.kind==="equipement"){
+      Object.assign(rec,{k:"equip",nom:c.nom||"Équipement",marque:c.marque||"",modele:c.modele||"",ref:c.ref||"",
+        achat:today(),garantie:"",installateur:"",notice:false,sav:"",etat:"bon",entretien:false});
+    }else if(c&&c.kind==="document"){
+      Object.assign(rec,{k:"doc",type:c.type||"autre",titre:c.titre||"Document",date:c.date_document||today(),
+        fournisseur:c.fournisseur||"",montant:c.montant_ttc??null,lie:"",travaux:"",garantie:""});
+    }else{
+      rec.k="inconnu";rec.titre="Photo non reconnue";
+    }
+  }catch(e){rec.k="inconnu";rec.titre="Photo non reconnue"}
   return rec;
 }
 function equipParLie(lie){ // retrouve l'équipement visé par un document, par identifiant ou par nom (au cas où il a été renommé)
@@ -642,20 +689,31 @@ function souvenirs(){
   S.fil.filter(e=>e.type==="souvenir"&&e.orig).forEach(()=>{});
 }
 
-/* ================= demander à la maison ================= */
-function demander(texte){
-  const q=texte.trim();if(!q)return;
-  const bas=q.toLowerCase();
-  const r=RESERVE.questions.find(x=>x.mots.some(m=>bas.includes(m)));
+/* ================= demander à la maison, réellement (Claude, via demander-maison) ================= */
+function memoireLogement(){ // résumé compact des vraies données du logement, sans images ni URLs
+  return {
+    logement:{nom:S.logement.nom,adresse:S.logement.adresse,ville:S.logement.ville,annee:S.logement.annee,
+      surface:S.logement.surface,dpe:S.logement.dpe,dpeDate:S.logement.dpeDate,depot:S.logement.depot},
+    docs:S.docs.map(d=>({id:d.id,titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,montant:d.montant,garantie:d.garantie,travaux:d.travaux})),
+    equipements:S.equipements.map(e=>({id:e.id,nom:e.nom,marque:e.marque,modele:e.modele,achat:e.achat,garantie:e.garantie,installateur:e.installateur,etat:e.etat,notice:e.notice,entretien:e.entretien})),
+    pros:S.pros.map(p=>({id:p.id,nom:p.nom,metier:p.metier,interventions:p.interventions})),
+    travaux:S.travaux.map(t=>({id:t.id,titre:t.titre,par:t.par,date:t.date,montant:t.montant})),
+  };
+}
+async function demander(texte){
+  const q=(texte||"").trim();if(!q)return;
   const e={type:"qa",q,fait:true,ico:"bulle"};
-  if(r){
-    const doc=r.doc?S.docs.find(d=>d.titre===r.doc):null;
-    const eq=r.equip?S.equipements.find(x=>x.nom===r.equip):null;
-    const pro=r.pro?S.pros.find(p=>p.nom===r.pro):null;
-    const connu=(r.doc&&doc)||(r.equip&&eq)||(r.pro&&pro)||(!r.doc&&!r.equip&&!r.pro);
-    if(connu){e.rep=r.rep;e.doc=doc?doc.id:null;e.equip=eq?eq.id:null;e.pro=pro?pro.id:null;e.go=r.go||null}
-    else{e.rep="Cela n'est pas encore dans la mémoire de la maison. Photographiez le document, ou demandez-le à un professionnel.";e.manque=true}
-  }else{e.rep="Cela n'est pas dans la mémoire de la maison. Voulez-vous le demander à un professionnel ?";e.manque=true}
+  if(!supa){e.rep="Indisponible pour l'instant.";e.manque=true;filAjouter(e);return}
+  try{
+    const {data,error}=await supa.functions.invoke("demander-maison",{body:{question:q,memoire:memoireLogement()}});
+    if(error||!data||typeof data.rep!=="string"){e.rep="Cela n'a pas fonctionné, réessayez.";e.manque=true}
+    else{
+      e.rep=data.rep;e.manque=!!data.manque;
+      if(data.refType==="doc"&&S.docs.some(d=>d.id===data.refId))e.doc=data.refId;
+      else if(data.refType==="equip"&&S.equipements.some(x=>x.id===data.refId))e.equip=data.refId;
+      else if(data.refType==="pro"&&S.pros.some(p=>p.id===data.refId))e.pro=data.refId;
+    }
+  }catch(err){e.rep="Cela n'a pas fonctionné, réessayez.";e.manque=true}
   filAjouter(e);
 }
 function suggestionsDuMoment(){
@@ -698,22 +756,10 @@ function partagerAdresse(){
 function adressePartagee(){const e=S.fil.find(x=>x.type==="question"&&x.q==="notaire"&&!x.fait);if(e){e.fait=true;e.t2="Adresse partagée. Ce qui arrivera sera proposé ici, rien n'entrera sans vous."}save();render()}
 function copier(t){try{navigator.clipboard.writeText(t);toast("Copié")}catch(e){toast("Sélectionnez et copiez l'adresse")}}
 
-/* ================= réception par l'adresse VIDOM (simulée) ================= */
-function recevoir(opts={}){
-  const it=opts.item||prochainItem("maison");
-  if(!it){toast("La réserve est vide : tout est déjà dans la maison.");return null}
-  const rec={id:uid(),date:now(),img:null,statut:"propose",...it,date0:today()};
-  const exp=opts.expediteur||rec.fournisseur||"un expéditeur";
-  const inconnu=!!opts.inconnu;
-  const doublon=S.docs.some(d=>d.titre===rec.titre);
-  let t=rec.k==="doc"?`${exp} a envoyé ${articleDoc(rec)}${rec.montant?" de "+euros(rec.montant):""}${rec.travaux?" pour "+lc(rec.travaux):""}.`:`${exp} a envoyé la fiche d'un équipement : ${lc(rec.nom)} ${rec.marque}.`;
-  if(inconnu)t=`Un expéditeur inconnu (${exp}) a envoyé ${articleDoc(rec)}. Prudence : gardez-le seulement si vous l'attendiez.`;
-  if(doublon)t+=" Ce document semble déjà dans la mémoire de la maison.";
-  if(S.expediteursOk.includes(exp)&&!inconnu){rec.recu="adresse";ranger(rec);naissances();filAjouter({type:"info",t:`${exp} a envoyé ${articleDoc(rec)}. Gardé, comme vous l'avez demandé pour cet expéditeur.`,ico:"mail",fait:true});return rec}
-  filAjouter({type:"recu",t,rec,inconnu,ico:"mail"});
-  return rec;
-}
-function articleDoc(rec){const t=rec.type||"";const m={facture:"une facture",devis:"un devis",notice:"une notice",diagnostic:"un diagnostic",acte:"un acte",contrat:"une attestation",impot:"un avis d'imposition",plan:"un plan"};return m[t]||"un document"}
+/* La réception par l'adresse VIDOM est désormais réelle : c'est la fonction Edge receive-email qui
+   insère directement dans fil_activite (type "recu", avec le même rec que produisait cette fonction
+   avant) dès qu'un e-mail arrive vraiment. hydrate() la relit comme n'importe quelle autre entrée du
+   fil, et filDecider() (déjà en place) reste le seul endroit qui range vraiment le document. */
 </script>
 <script>
 /* ================= le dessin de la maison ================= */
@@ -817,21 +863,44 @@ V.adresse=()=>{
 </div>`};
 function compter(t,d){S.comptage[t]=Math.max(0,(S.comptage[t]||0)+d);save();render();}
 function autrePiece(){modal(`<h2>Une autre pièce</h2><div class="row wrap">${AUTRES_PIECES.map(t=>`<button class="chip btn-chip ${S.comptage[t.type]?"on":""}" onclick="S.comptage['${t.type}']=(S.comptage['${t.type}']||0)+1;save();closeModal();render()">${h(t.nom)}</button>`).join("")}</div><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
-function suggerer(v){const box=document.getElementById("sugg");S.logement.adresseSaisie=v;if(v.trim().length<3){box.innerHTML="";return}
-  const s=[`${v.trim()}`.replace(/,.*$/,"")+", 35400 Saint-Malo"];box.innerHTML=`<div class="card" style="position:absolute;left:0;right:0;top:60px;z-index:5;padding:6px 8px;gap:0">${s.map(x=>`<button class="line" style="width:100%;text-align:left" onclick="choisirAdresse('${h(x)}')">${I.maison}<span style="flex:1 1 auto">${h(x)}</span></button>`).join("")}</div>`}
-function choisirAdresse(x){document.getElementById("adr").value=x;S.logement.adresseSaisie=x;document.getElementById("sugg").innerHTML="";save()}
-function adresseOk(){
+let banSuggestions=[],suggererTimer=null;
+function suggerer(v){
+  const box=document.getElementById("sugg");S.logement.adresseSaisie=v;
+  clearTimeout(suggererTimer);
+  if(v.trim().length<3){box.innerHTML="";banSuggestions=[];return}
+  suggererTimer=setTimeout(async()=>{
+    banSuggestions=await chercherAdresses(v.trim());
+    if((document.getElementById("adr")?.value||"")!==v)return; // la saisie a changé entre-temps
+    box.innerHTML=banSuggestions.length?`<div class="card" style="position:absolute;left:0;right:0;top:60px;z-index:5;padding:6px 8px;gap:0">${banSuggestions.map((f,i)=>`<button class="line" style="width:100%;text-align:left" onclick="choisirAdresse(${i})">${I.maison}<span style="flex:1 1 auto">${h(f.properties.label)}</span></button>`).join("")}</div>`:"";
+  },300);
+}
+function choisirAdresse(i){
+  const f=banSuggestions[i];if(!f)return;
+  document.getElementById("adr").value=f.properties.label;
+  S.logement.adresseSaisie=f.properties.label;
+  S.logement._ban=f;
+  document.getElementById("sugg").innerHTML="";save();
+}
+async function adresseOk(){
   const v=(document.getElementById("adr")?.value||S.logement.adresseSaisie||"").trim();
   if(!v){toast("L'adresse, d'abord.");document.getElementById("adr")?.focus();return}
   if(!Object.values(S.comptage).some(n=>n>0)){toast("Au moins une pièce.");return}
   S.logement.id=S.logement.id||uid();
-  const m=v.match(/^(.*?),?\s*(\d{5})?\s*([^\d,]*)$/);
-  S.logement.adresse=(m&&m[1]||v).trim().replace(/,$/,"")||v;S.logement.cp=(m&&m[2])||RESERVE.logement.cp;S.logement.ville=(m&&m[3]||"").trim()||RESERVE.logement.ville;
+  const f=S.logement._ban&&S.logement._ban.properties&&S.logement._ban.properties.label===v?S.logement._ban:null;
+  if(f){
+    const p=f.properties;
+    S.logement.adresse=p.name||v;S.logement.cp=p.postcode||"";S.logement.ville=p.city||"";
+    const coord=f.geometry&&f.geometry.coordinates;
+    S.logement.longitude=coord?coord[0]:null;S.logement.latitude=coord?coord[1]:null;
+  }else{ // pas de suggestion choisie : on garde ce qui est tapé, sans deviner de champs qu'on n'a pas
+    const m=v.match(/^(.*?),?\s*(\d{5})?\s*([^\d,]*)$/);
+    S.logement.adresse=(m&&m[1]||v).trim().replace(/,$/,"")||v;S.logement.cp=(m&&m[2])||"";S.logement.ville=(m&&m[3]||"").trim();
+  }
   const rue=S.logement.adresse.replace(/^\d+\s*(bis|ter)?\s*/i,"").replace(/^(rue|avenue|boulevard|impasse|chemin|allée|place|route)\s+(de\s|des\s|du\s|d'|de la\s|de l')?/i,"");
   S.logement.nom=S.logement.nom||`Maison ${/^[aeiouy]/i.test(rue)?"de l'":"des "}${rue.charAt(0).toUpperCase()+rue.slice(1)}`;
-  if(/tilleul/i.test(rue))S.logement.nom="Maison des Tilleuls";
-  Object.assign(S.logement,{annee:RESERVE.logement.annee,surface:RESERVE.logement.surface,dpe:RESERVE.logement.dpe,dpeDate:RESERVE.logement.dpeDate,parcelles:RESERVE.logement.parcelles});
-  S.logement.depot=depotPour(S.logement.nom);
+  toast("VIDOM vérifie l'adresse…");
+  S.logement.depot=await allouerDepot(S.logement.nom);
+  await enrichirAdresse();
   creerPieces();S.etape="maison-adresse";save();render();
 }
 
@@ -858,9 +927,7 @@ V.commencons=()=>{
   <button class="btn ghost" style="margin-top:auto" onclick="plusTard()">Ou plus tard. La maison attend.</button>
 </div>`};
 function plusTard(){S.cree=true;S.etape="";filAjouter({type:"info",t:`La mémoire de ${lc(S.logement.nom)} commence aujourd'hui. Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière.`,ico:"maison",fait:true});save();route("#/fil")}
-function envoyerAdresse(){modal(`<h2>Envoyer à l'adresse VIDOM</h2><p class="muted">Depuis votre messagerie, envoyez vos documents déjà numérisés à :</p><div class="card"><span class="mono">${h(S.logement.depot)}</span></div><div class="row wrap"><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button><a class="btn grow" href="mailto:${S.logement.depot}?subject=${encodeURIComponent("Documents de la maison")}">${I.mail} Ouvrir ma messagerie</a></div><p class="small faint">Dans cette maquette, rien ne peut vraiment arriver : simulons la réception de ce que vous auriez envoyé.</p><button class="btn primary big" onclick="closeModal();simulerEnvoi()">Simuler l'arrivée de cinq documents</button><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
-function simulerEnvoi(){const lot=[];for(let i=0;i<5;i++){const it=prochainItem("maison");if(!it)break;lot.push({id:uid(),date:now(),img:null,statut:"propose",recu:"adresse",...it})}
-  if(!lot.length){toast("La réserve est vide.");return}terminerLot(lot)}
+function envoyerAdresse(){modal(`<h2>Envoyer à l'adresse VIDOM</h2><p class="muted">Depuis votre messagerie, envoyez vos documents déjà numérisés à :</p><div class="card"><span class="mono">${h(S.logement.depot)}</span></div><div class="row wrap"><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button><a class="btn grow" href="mailto:${S.logement.depot}?subject=${encodeURIComponent("Documents de la maison")}">${I.mail} Ouvrir ma messagerie</a></div><p class="small faint">Ce qui arrive à cette adresse apparaît ici, dans le fil, en attente de votre accord.</p><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
 
 /* le tri d'une fournée */
 function terminerLot(lot){
@@ -980,7 +1047,7 @@ async function fichiers(files,pieceId){
   closeModal();toast(list.length>1?`${list.length} fichiers reçus. VIDOM regarde…`:"VIDOM regarde…");
   const trop=S.equipements.length+S.docs.length>40;
   const lot=[];
-  for(const f of list){const r=trop?null:await reduire(f);const rec=reconnaitre(f,pieceId,r&&r.url,r&&r.pdf,r&&r.chemin);rec.pieceId=rec.pieceId||pieceId||"maison";lot.push(rec)}
+  for(const f of list){const r=trop?null:await reduire(f);const rec=await reconnaitre(f,pieceId,r&&r.url,r&&r.pdf,r&&r.chemin);rec.pieceId=rec.pieceId||pieceId||"maison";lot.push(rec)}
   if(pieceId&&pieceId!=="maison")S.pieceCourante=pieceId;
   if(lot.length===1){S.lot=lot;if(!S.cree){S.cree=true;S.etape=""}save();route("#/reconnu")}
   else terminerLot(lot);
@@ -1031,7 +1098,7 @@ V.fil=()=>{
     </div>
   </div>`;
 };
-function poserQuestion(q){demander(q);filtreFil="tout";render();setTimeout(()=>{const el=document.querySelector(".pane.right .view, .col .view");if(el)el.scrollIntoView({block:"start"})},50)}
+async function poserQuestion(q){filtreFil="tout";await demander(q);render();setTimeout(()=>{const el=document.querySelector(".pane.right .view, .col .view");if(el)el.scrollIntoView({block:"start"})},50)}
 function carteDoc(d){return `<a class="line" href="#/document/${d.id}" style="border:1px solid var(--bois-c);border-radius:12px;padding:10px 12px">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${d.montant?euros(d.montant)+" · ":""}${dateFr(d.date)}</span></span>${I.fleche}</a>`}
 
 /* ================= ma maison ================= */
@@ -1164,6 +1231,8 @@ function ouvrirChantier(){modal(`<h2>Ouvrir un chantier</h2><label class="f"><sp
 V["adresse-vidom"]=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">L'adresse VIDOM de votre logement</h1>
   <div class="card soft" style="gap:12px"><div class="row" style="align-items:flex-start;gap:14px"><div class="qr" style="width:120px;height:120px">${qrSvg("mailto:"+S.logement.depot)}</div><div class="stack" style="gap:4px"><span class="mono" style="font-size:1.05em">${h(S.logement.depot)}</span><span class="small muted">Tout ce qui y est envoyé arrive dans le fil. Rien n'entre sans vous.</span></div></div>
   <div class="row"><button class="btn primary grow" onclick="partagerAdresse()">Partager</button><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button></div></div>
+  <div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Tant que la réception n'est pas branchée</p><p class="small muted">Cette adresse est réelle et déjà enregistrée pour votre logement. Un e-mail envoyé ici n'arrivera dans le fil qu'une fois la réception configurée côté serveur (chez le prestataire choisi pour vidom.fr) — jusque-là, il n'arrivera simplement pas.</p></div>
+  ${(S.logement.numeroCadastral||S.logement.altitude!=null||S.logement.rnbId)?`<div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Ce que VIDOM a trouvé sur votre parcelle</p>${S.logement.numeroCadastral?`<p class="small">Cadastre : ${h(S.logement.numeroCadastral)}</p>`:""}${S.logement.altitude!=null?`<p class="small">Altitude : ${Math.round(S.logement.altitude)} m</p>`:""}${S.logement.classeClimat?`<p class="small">Classe climat (GES) : ${h(S.logement.classeClimat)}</p>`:""}<p class="small faint">Source : IGN, RNB, ADEME.</p></div>`:""}
   <div class="card" style="gap:6px"><p class="small b" style="color:var(--sauge-f)">À qui la donner</p><p class="small muted">Notaire, agent immobilier, artisans, assureur, syndic, diagnostiqueur — tous ceux qui détiennent des papiers de votre logement. Ils envoient, vous décidez.</p></div>
   <div class="card" style="gap:6px"><p class="small b" style="color:var(--sauge-f)">Expéditeurs acceptés sans vous demander</p>${S.expediteursOk.length?S.expediteursOk.map(x=>`<div class="line"><span>${h(x)}</span><button class="btn sm" onclick="S.expediteursOk=S.expediteursOk.filter(y=>y!=='${h(x)}');save();render()">Me redemander</button></div>`).join(""):`<p class="small muted">Aucun. Chaque envoi vous est proposé.</p>`}</div>
   <button class="btn" onclick="etiquette()">${I.qr} Imprimer l'étiquette</button>
@@ -1213,45 +1282,17 @@ function changerDeMains(motif){S.transmission={motif,d:today()};naissances();fil
 V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Réglages</h1>
   <div class="card" style="gap:0;padding:4px 16px">
     <button class="line" style="width:100%;text-align:left" onclick="corrigerLogement()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(S.logement.nom)}</span><span class="small muted">Nom, année, surface, classe énergétique</span></span>${I.fleche}</button>
-    <button class="line" style="width:100%;text-align:left" onclick="modal('<h2>Votre compte</h2><p class=muted>'+h(S.compte.email||'Sans courriel')+'</p><p class=\\'small faint\\'>Dans cette maquette, le compte est joué localement. Rien ne quitte votre appareil.</p><button class=\\'btn\\' onclick=closeModal()>Fermer</button>')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Votre compte</span><span class="small muted">${h(S.compte.email||"—")}</span></span>${I.fleche}</button>
+    <button class="line" style="width:100%;text-align:left" onclick="modal('<h2>Votre compte</h2><p class=muted>'+h(S.compte.email||'Sans courriel')+'</p><p class=\\'small faint\\'>Votre compte et la mémoire de votre logement sont enregistrés pour de vrai, et retrouvés sur chacun de vos appareils quand vous vous connectez.</p><button class=\\'btn\\' onclick=closeModal()>Fermer</button>')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Votre compte</span><span class="small muted">${h(S.compte.email||"—")}</span></span>${I.fleche}</button>
     <a class="line" href="#/adresse-vidom"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Adresse VIDOM et QR</span><span class="small muted mono">${h(S.logement.depot)}</span></span>${I.fleche}</a>
   </div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Taille du texte</p><div class="row">${[["normal","Normal"],["grand","Grand"],["tres-grand","Très grand"]].map(([k,n])=>`<button class="chip btn-chip ${S.reglages.texte===k?"on":""}" onclick="S.reglages.texte='${k}';document.documentElement.dataset.texte='${k}';save();render()">${n}</button>`).join("")}</div></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Donner accès à un tiers</p><p class="small muted">Notaire, agent, artisan, assureur : chacun ne voit que ce qui le concerne.</p><button class="btn" onclick="choisirTiers()">${I.echanges} Ouvrir un accès</button></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">La maison change de mains</p><p class="small muted">Le jour venu, et seulement ce jour-là, la rubrique Transmission apparaît.</p><div class="row"><button class="btn grow" onclick="changerDeMains('vente')">Je vends</button><button class="btn grow" onclick="changerDeMains('depart')">Je pars</button></div></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre mémoire vous appartient</p><div class="row wrap"><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter ma mémoire</button><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Mon avis sur la maquette VIDOM")}&body=${encodeURIComponent("Écran : "+location.hash+"\n\n")}">${I.mail} Donner mon avis</a></div><p class="small faint">${S.docs.length} documents · ${S.equipements.length} équipements · ${S.fil.length} moments dans le fil.</p></div>
-  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Simuler, pour voir la maison vivre</p><p class="small muted">Chaque événement produit ses effets réels dans le fil et dans Ma maison.</p><div class="row wrap">${[["facture","Un artisan dépose sa facture"],["assureur","L'assureur répond"],["garantie","Une garantie expire demain"],["inconnu","Un courriel inconnu arrive"],["acquereur","Un acquéreur demande la mémoire"],["an","Un an plus tard"]].map(([k,n])=>`<button class="btn sm" onclick="simuler('${k}')">${n}</button>`).join("")}</div></div>
   <div class="card" style="gap:8px"><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le fil.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'localStorage.removeItem(KEY);location.hash=&quot;&quot;;location.reload()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
   <p class="small faint" style="text-align:center">VIDOM — maquette du 11 septembre 2026. Tout reste sur votre appareil.</p>
 </div>`;
 function emporter(){const data=JSON.stringify(S,null,2);const b=new Blob([data],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`vidom-${slug(S.logement.nom||"maison")}-${today()}.json`;document.body.appendChild(a);a.click();a.remove();toast("Votre mémoire est téléchargée")}
-
-/* ================= simuler ================= */
-function simuler(k){
-  if(k==="facture"){const it=RESERVE.items.map((x,i)=>({x,i})).find(({x,i})=>!S.reserveServie.includes(i)&&x.k==="doc"&&x.type==="facture"&&x.piece==="maison");let item=null;if(it){S.reserveServie.push(it.i);item=JSON.parse(JSON.stringify(it.x));item.pieceId="maison"}recevoir({item,expediteur:item?item.fournisseur:"Couverture Bretonne"})}
-  else if(k==="assureur"){const it=RESERVE.items.map((x,i)=>({x,i})).find(({x,i})=>!S.reserveServie.includes(i)&&x.type==="contrat");let item=null;if(it){S.reserveServie.push(it.i);item=JSON.parse(JSON.stringify(it.x));item.pieceId="maison"}if(!item){filAjouter({type:"info",t:"MAIF a répondu : votre attestation est déjà dans la mémoire de la maison.",ico:"mail",fait:true})}else recevoir({item,expediteur:"MAIF"})}
-  else if(k==="garantie"){const e=S.equipements.find(e=>e.garantie)||S.equipements[0];if(!e){toast("Aucun équipement encore. Photographiez-en un.");return}e.garantie=shiftDate(today(),1);S.rappels.push({id:uid(),t:`La garantie de ${lc(e.nom)} ${e.marque} expire demain. Un problème à signaler avant ?`,equip:e.id,du:today(),fait:false,info:true});pousserRappels()}
-  else if(k==="inconnu"){const item={k:"doc",type:"facture",titre:"Facture — nettoyage de toiture",date:today(),fournisseur:"Nettoyage Express 35",montant:390,pieceId:"maison"};recevoir({item,expediteur:"Nettoyage Express 35",inconnu:true})}
-  else if(k==="acquereur"){S.transmission=S.transmission||{motif:"demande",d:today()};naissances();filAjouter({type:"naissance",t:"Un acquéreur potentiel demande la mémoire de la maison. La rubrique Transmission est apparue : vous choisissez ce qu'il verra.",go:"#/carte/transmission",ico:"cle"})}
-  else if(k==="an"){unAnPlusTard()}
-  save();render();toast("Simulé");
-}
-function unAnPlusTard(){
-  // une année de vie : tout ce qui reste dans la réserve, réparti sur douze mois
-  let n=0;
-  RESERVE.items.forEach((x,i)=>{if(S.reserveServie.includes(i))return;S.reserveServie.push(i);const it=JSON.parse(JSON.stringify(x));const p=it.piece==="maison"?null:pieceParType(it.piece);it.pieceId=p?p.id:"maison";const rec={id:uid(),date:shiftDate(today(),-Math.floor(Math.random()*330)-10)+"T10:00",img:null,statut:"range",recu:n%3===0?"adresse":"photo",...it};ranger(rec);n++;
-    if(n%4===0)filAjouter({type:"info",t:`${it.k==="equip"?it.nom+" "+it.marque:it.titre} — ${rec.recu==="adresse"?"reçu par l'adresse VIDOM":"photographié"}.`,ico:it.k==="equip"?"outil":"doc",fait:true,d:rec.date})});
-  S.pieces.forEach(p=>{if(!pieceALaLumiere(p))p.photos.push(null)});
-  // un chantier, un accès, un souvenir, un entretien fait
-  if(!S.travaux.some(t=>t.titre==="Ravalement de la façade")){S.travaux.push({id:uid(),titre:"Ravalement de la façade",par:"Façades Émeraude",date:shiftDate(today(),-120),montant:6900,docs:[]});connaitrePro("Façades Émeraude","Ravalement de la façade",shiftDate(today(),-120));S.pros.find(p=>p.nom==="Façades Émeraude").metier="Façadier"}
-  if(!S.acces.length){const a={id:uid(),tiers:"assureur",nom:"MAIF",debut:shiftDate(today(),-200),fin:shiftDate(today(),-140),ouvert:false,lien:"vidom.fr/p/k4d8x2qa"};S.acces.push(a);S.journalAcces.push({d:shiftDate(today(),-190)+"T09:40",t:"MAIF a ouvert la page (dossier sinistre)"},{d:shiftDate(today(),-200)+"T18:12",t:"Accès ouvert à MAIF, deux mois"})}
-  filAjouter({type:"souvenir",t:"Il y a un an : le tilleul a été planté dans le jardin.",ico:"feuille",fait:true,d:shiftDate(today(),-365)+"T16:00"});
-  filAjouter({type:"souvenir",t:"Première flambée dans le poêle.",ico:"feuille",fait:true,d:shiftDate(today(),-300)+"T20:00"});
-  filAjouter({type:"info",t:"Entretien de la chaudière fait par Bertin Chauffage. Prochain rappel dans un an.",ico:"cloche",fait:true,d:shiftDate(today(),-20)+"T11:00"});
-  S.rappels.forEach(r=>{if(!r.fait&&r.du<=today())r.du=shiftDate(today(),Math.floor(Math.random()*200)+30)});
-  const chaud=S.equipements.find(e=>e.entretien);if(chaud){chaud.entretiens.push({d:shiftDate(today(),-20),par:"Bertin Chauffage"})}
-  naissances();S.fil.sort((a,b)=>b.d.localeCompare(a.d));
-}
 </script>
 <script>
 /* ================= navigation et rendu ================= */
