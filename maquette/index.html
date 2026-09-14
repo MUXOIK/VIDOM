@@ -1301,7 +1301,7 @@ async function reinitialiserOk(){
 function render(){
   document.documentElement.dataset.texte=S.reglages.texte||"normal";
   const app=document.getElementById("app");
-  if(parseHash().name==="reinitialiser"){renderReinitialiser();return}
+  if(parseHash().name==="reinitialiser"||location.hash.indexOf("type=recovery")>-1){renderReinitialiser();return}
   if(!S.cree){
     document.body.classList.remove("app");
     const e=S.etape||"bienvenue";
@@ -1349,16 +1349,17 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
 /* rendre le premier écran : si un compte réel est déjà connecté, on va d'abord chercher sa vraie mémoire */
 (async function(){
   if(supa){
+    let recuperation=location.hash.indexOf("type=recovery")>-1; // repli si l'évènement ci-dessous n'arrivait pas à temps
+    try{supa.auth.onAuthStateChange((event)=>{ // enregistré avant tout "await" : sinon la fenêtre de récupération de mot de passe peut être manquée
+      if(event==="PASSWORD_RECOVERY"){recuperation=true;location.hash="#/reinitialiser";render()}
+    })}catch(e){}
     try{
       const {data}=await supa.auth.getSession();
-      if(data&&data.session&&parseHash().name!=="reinitialiser"){
+      if(!recuperation&&data&&data.session&&parseHash().name!=="reinitialiser"){
         document.getElementById("app").innerHTML=`<div class="view center" style="min-height:100vh"><p class="muted">Un instant, VIDOM retrouve votre maison…</p></div>`;
         await hydrate();
       }
     }catch(e){}
-    try{supa.auth.onAuthStateChange((event)=>{
-      if(event==="PASSWORD_RECOVERY"){location.hash="#/reinitialiser";render()}
-    })}catch(e){}
   }
   if(S.cree&&!location.hash)location.hash="#/fil";
   render();
