@@ -187,6 +187,7 @@ const I={
   mail:`<svg class="i" ${VS}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>`,
   plan:`<svg class="i" ${VS}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h9V3M12 12v9M12 15h9"/></svg>`,
   fleche:`<svg class="i" ${VS} stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+bascule:`<svg class="i" ${VS} stroke-width="2" style="width:1em;height:1em"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>`,
   retour:`<svg class="i" ${VS} stroke-width="2"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`,
   reglages:`<svg class="i" ${VS}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>`,
   travaux:`<svg class="i" ${VS}><path d="M3 21h18"/><path d="M5 21V9l7-5 7 5v12"/><path d="M9 21v-5h6v5"/></svg>`,
@@ -247,12 +248,55 @@ const etatInitial=()=>({
   questionsPosees:[],dernierJour:"",transmission:null,
   reglages:{texte:"normal"},expediteursOk:[],
   lot:null,derniereBatch:null,pieceCourante:null,idc:1,
+  logements:[],ajout:false,retourVers:null, // les logements du compte (un même compte peut en avoir plusieurs), et l'ajout en cours
 });
 let S=null;
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}syncDiffere()}
 S=load()||etatInitial();
 if(!S.v){S=etatInitial()}
+if(!Array.isArray(S.logements))S.logements=[]; // états enregistrés avant le multi-logement
+
+/* ================= plusieurs logements pour un même compte =================
+   S reste la mémoire d'UN logement (celui qu'on regarde). Chaque logement quitté est mis de côté sur l'appareil,
+   sous sa propre clé, et retrouvé tel quel quand on y revient ; le compte réel reste la référence (hydrate). */
+const cleCache=id=>KEY+":"+id;
+function mettreDeCote(){ if(S.logement&&S.logement.id&&S.cree){try{localStorage.setItem(cleCache(S.logement.id),JSON.stringify(S))}catch(e){}} }
+function etatPour(id){ // l'état mis de côté pour ce logement, sinon un état neuf qui attend hydrate()
+  let e=null;try{const r=localStorage.getItem(cleCache(id));e=r?JSON.parse(r):null}catch(e2){}
+  if(!e){e=etatInitial();e.logement.id=id;e.cree=true;e.etape=""}
+  e.compte=S.compte;e.reglages=S.reglages;e.logements=S.logements;e.ajout=false;e.retourVers=null;
+  return e;
+}
+function logementActif(){return S.logements.find(l=>l.id===S.logement.id)}
+function nomLogement(l){return l.id===S.logement.id?(S.logement.nom||l.nom):l.nom}
+function choisirLogement(){ // la liste des logements du compte, et la porte pour en ajouter un
+  const lignes=S.logements.map(l=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();basculerLogement('${l.id}')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(nomLogement(l)||"Sans nom")}</span><span class="small muted">${h(l.ville||l.adresse||"")}</span></span>${l.id===S.logement.id?`<span class="chip">Ici</span>`:I.fleche}</button>`).join("");
+  modal(`<h2>Vos logements</h2><p class="muted">Un même compte, plusieurs mémoires : chaque logement garde la sienne, avec sa propre adresse VIDOM.</p><div class="card" style="gap:0;padding:4px 16px">${lignes||`<p class="small muted" style="padding:10px 0">Aucun logement pour l'instant.</p>`}</div><button class="btn primary big" onclick="closeModal();ajouterLogement()">${I.plus} Ajouter un logement</button><button class="btn ghost" onclick="closeModal()">Fermer</button>`);
+}
+async function basculerLogement(id){
+  if(!id||id===S.logement.id)return;
+  mettreDeCote();
+  S=etatPour(id);
+  document.getElementById("app").innerHTML=`<div class="view center" style="min-height:100vh"><p class="muted">Un instant, VIDOM retrouve votre maison…</p></div>`;
+  await hydrate(id);save();
+  location.hash="#/fil";render();
+}
+function ajouterLogement(){ // rejoue le premier jour (adresse, pièces, adresse VIDOM) pour un logement de plus, sans toucher aux autres
+  mettreDeCote();
+  const precedent=S.cree?S.logement.id:null;
+  const e=etatInitial();e.compte=S.compte;e.reglages=S.reglages;e.logements=S.logements;
+  e.etape="adresse";e.ajout=true;e.retourVers=precedent;
+  S=e;save();location.hash="";render();
+}
+async function annulerAjout(){ // on renonce : retour au logement qu'on regardait
+  const id=S.retourVers;
+  if(!id){S.etape="compte";save();render();return}
+  S=etatPour(id);await hydrate(id);save();location.hash="#/fil";render();
+}
+function boutonLogement(nom,classe){ // le nom de la maison en haut : touchable dès qu'il y a plusieurs logements
+  return S.logements.length>1?`<button class="${classe}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="choisirLogement()" aria-label="Changer de logement"><span class="t">${h(nom)}</span><span style="opacity:.6;display:inline-flex">${I.bascule}</span></button>`:`<span class="${classe}">${h(nom)}</span>`;
+}
 const uid=()=>(crypto&&crypto.randomUUID)?crypto.randomUUID():"i"+Date.now().toString(36)+Math.random().toString(36).slice(2);
 
 /* ================= utilitaires ================= */
@@ -385,17 +429,25 @@ function reconstituerPhotosPieces(){ // la petite galerie de la pièce : ce qui 
   });
 }
 
-async function hydrate(){ // relit la vraie mémoire du compte connecté et reconstruit S dans sa forme habituelle
+async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et reconstruit S dans sa forme habituelle ; `voulu` : l'identifiant du logement à ouvrir
   if(!supa)return;
   let session=null;
   try{const {data}=await supa.auth.getSession();session=data&&data.session}catch(e){return}
   if(!session)return;
   S.compte.email=session.user.email||S.compte.email;
+  hydrateEnCours=true;
   try{
-    const {data:membres}=await supa.from("logement_membres").select("logement_id,date_debut").eq("user_id",session.user.id).order("date_debut",{ascending:true});
-    const actif=(membres||[])[0];
-    if(!actif){save();return} // compte réel, mais pas encore de logement créé : on reste sur l'installation
-    const logementId=actif.logement_id;
+    const {data:membres}=await supa.from("logement_membres").select("logement_id,date_debut,logements(id,nom,ville,adresse)").eq("user_id",session.user.id).order("date_debut",{ascending:true});
+    const liste=(membres||[]).filter(m=>m.logements).map(m=>({id:m.logement_id,nom:m.logements.nom||"",ville:m.logements.ville||"",adresse:m.logements.adresse||""}));
+    S.logements=liste;
+    if(!liste.length){save();return} // compte réel, mais pas encore de logement créé : on reste sur l'installation
+    if(S.ajout&&!S.cree){save();return} // un logement de plus est en train d'être créé : on ne l'interrompt pas
+    // le logement à ouvrir : celui demandé, sinon celui qu'on regardait sur cet appareil, sinon le premier du compte
+    const connu=id=>liste.some(l=>l.id===id);
+    const logementId=connu(voulu)?voulu:(connu(S.logement.id)?S.logement.id:liste[0].id);
+    if(S.cree&&S.logement.id&&!connu(S.logement.id)){ // ce que l'appareil regarde n'est pas (encore) dans le compte : on ne l'écrase pas, la synchro suivra
+      save();return}
+    if(S.logement.id&&S.logement.id!==logementId){mettreDeCote();S=etatPour(logementId)}
     const [{data:logement},{data:pieces},{data:equipements},{data:artisans},{data:interventions},{data:documents},{data:rappels},{data:expediteurs},{data:fil},{data:etatRow}]=await Promise.all([
       supa.from("logements").select("*").eq("id",logementId).maybeSingle(),
       supa.from("pieces").select("*").eq("logement_id",logementId),
@@ -464,16 +516,18 @@ async function hydrate(){ // relit la vraie mémoire du compte connecté et reco
       if(et.nees)S.nees=et.nees;if(et.questionsPosees)S.questionsPosees=et.questionsPosees;
       if(et.dernierJour)S.dernierJour=et.dernierJour;if(et.reserveServie)S.reserveServie=et.reserveServie;
     }
-    S.cree=true;S.etape="";
-    save();
+    S.cree=true;S.etape="";S.ajout=false;S.retourVers=null;
+    if(!S.logement.depot&&S.logement.nom){try{S.logement.depot=await allouerDepot(S.logement.nom)}catch(e){}} // un logement créé avant l'adresse VIDOM (VIDOM-mobile) en reçoit une
+    hydrateEnCours=false;save();
   }catch(e){/* pas grave : on continue avec la dernière version connue, en local */}
+  finally{hydrateEnCours=false}
 }
 
-let pousserTout_timer=null,pousserTout_actif=false,pousserTout_rejoue=false;
+let pousserTout_timer=null,pousserTout_actif=false,pousserTout_rejoue=false,hydrateEnCours=false;
 function syncDiffere(){ if(!supa)return; clearTimeout(pousserTout_timer); pousserTout_timer=setTimeout(pousserTout,900); }
 if(typeof window!=="undefined")window.addEventListener("online",()=>syncDiffere());
 async function pousserTout(){ // pousse l'état courant vers le compte réel ; échoue en silence si hors ligne, réessaiera plus tard
-  if(!supa||!S.logement||!S.logement.id)return;
+  if(!supa||!S.logement||!S.logement.id||!S.logement.nom||hydrateEnCours)return; // jamais un état vide ou en cours de relecture : il écraserait la vraie mémoire
   if(pousserTout_actif){pousserTout_rejoue=true;return}
   let session=null;
   try{const {data}=await supa.auth.getSession();session=data&&data.session}catch(e){return}
@@ -901,6 +955,7 @@ async function adresseOk(){
   toast("VIDOM vérifie l'adresse…");
   S.logement.depot=await allouerDepot(S.logement.nom);
   await enrichirAdresse();
+  if(!S.logements.some(l=>l.id===S.logement.id))S.logements.push({id:S.logement.id,nom:S.logement.nom,ville:S.logement.ville,adresse:S.logement.adresse});
   creerPieces();S.etape="maison-adresse";save();render();
 }
 
@@ -926,7 +981,7 @@ V.commencons=()=>{
   ${desk?`<div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="qr" style="width:72px;height:72px">${qrSvg(location.href.split("#")[0])}</div><span class="small muted">Continuez sur votre téléphone : ouvrez ce code, votre maison vous y attend.</span></div>`:""}
   <button class="btn ghost" style="margin-top:auto" onclick="plusTard()">Ou plus tard. La maison attend.</button>
 </div>`};
-function plusTard(){S.cree=true;S.etape="";filAjouter({type:"info",t:`La mémoire de ${lc(S.logement.nom)} commence aujourd'hui. Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière.`,ico:"maison",fait:true});save();route("#/fil")}
+function plusTard(){S.cree=true;S.etape="";S.ajout=false;S.retourVers=null;filAjouter({type:"info",t:`La mémoire de ${lc(S.logement.nom)} commence aujourd'hui. Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière.`,ico:"maison",fait:true});save();route("#/fil")}
 function envoyerAdresse(){modal(`<h2>Envoyer à l'adresse VIDOM</h2><p class="muted">Depuis votre messagerie, envoyez vos documents déjà numérisés à :</p><div class="card"><span class="mono">${h(S.logement.depot)}</span></div><div class="row wrap"><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button><a class="btn grow" href="mailto:${S.logement.depot}?subject=${encodeURIComponent("Documents de la maison")}">${I.mail} Ouvrir ma messagerie</a></div><p class="small faint">Ce qui arrive à cette adresse apparaît ici, dans le fil, en attente de votre accord.</p><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
 
 /* le tri d'une fournée */
@@ -936,7 +991,7 @@ function terminerLot(lot){
   S.derniereBatch={date:now(),items:lot.map(r=>({id:r.id,k:r.k,pieceId:r.pieceId,titre:r.k==="equip"?r.nom:(r.titre||"Photo non reconnue"),img:r.img,pdf:!!r.pdf,chemin:r.chemin||null,statut:r.statut,nees:false}))};
   S.derniereBatch.nees=n.map(c=>c.nom);
   S.lot=null;save();
-  if(!S.cree){S.cree=true;S.etape="";save();route("#/tri")}else route("#/tri");
+  if(!S.cree){S.cree=true;S.etape="";S.ajout=false;S.retourVers=null;save();route("#/tri")}else route("#/tri");
 }
 V.tri=()=>{
   const b=S.derniereBatch;if(!b)return V.fil();
@@ -1049,7 +1104,7 @@ async function fichiers(files,pieceId){
   const lot=[];
   for(const f of list){const r=trop?null:await reduire(f);const rec=await reconnaitre(f,pieceId,r&&r.url,r&&r.pdf,r&&r.chemin);rec.pieceId=rec.pieceId||pieceId||"maison";lot.push(rec)}
   if(pieceId&&pieceId!=="maison")S.pieceCourante=pieceId;
-  if(lot.length===1){S.lot=lot;if(!S.cree){S.cree=true;S.etape=""}save();route("#/reconnu")}
+  if(lot.length===1){S.lot=lot;if(!S.cree){S.cree=true;S.etape="";S.ajout=false;S.retourVers=null}save();route("#/reconnu")}
   else terminerLot(lot);
 }
 </script>
@@ -1108,7 +1163,7 @@ V.maison=()=>{
   const prochaine=CARTES.find(c=>!c.nee()&&c.id!=="transmission"&&c.id!=="echanges")||CARTES.find(c=>!c.nee());
   const carte=c=>`<a class="card" href="#/carte/${c.id}" style="flex-direction:row;align-items:center;gap:14px;padding:14px 16px"><span class="tile">${I[c.ico]}</span><span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(c.nom)}</span><span class="small muted">${h(c.sub()||"")}</span></span>${c.n&&c.n()?`<span class="chip num">${c.n()}</span>`:(c.id==="adresse"?`<span style="color:var(--sable)">${I.qr}</span>`:"")}</a>`;
   return `<div class="view" style="gap:12px">
-    <div class="split" style="align-items:flex-start"><div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(L.nom)}</h1><p class="small muted">${h(L.adresse)}, ${h(L.ville)}${L.annee?" · "+L.annee:""}${L.surface?" · "+L.surface+" m²":""}${L.dpe?" · DPE "+h(L.dpe):""} · <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerLogement()">Corriger</button></p></div>${isDesk()?"":`<a class="btn sm" href="#/reglages" aria-label="Réglages">${I.reglages}</a>`}</div>
+    <div class="split" style="align-items:flex-start"><div class="stack" style="gap:2px">${S.logements.length>1?`<button class="h" style="all:unset;cursor:pointer;font:inherit;font-size:1.45em;display:inline-flex;align-items:center;gap:6px" onclick="choisirLogement()" aria-label="Changer de logement">${h(L.nom)}<span style="opacity:.55;display:inline-flex;font-size:.7em">${I.bascule}</span></button>`:`<h1 class="h" style="font-size:1.45em">${h(L.nom)}</h1>`}<p class="small muted">${h(L.adresse)}, ${h(L.ville)}${L.annee?" · "+L.annee:""}${L.surface?" · "+L.surface+" m²":""}${L.dpe?" · DPE "+h(L.dpe):""} · <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerLogement()">Corriger</button></p></div>${isDesk()?"":`<a class="btn sm" href="#/reglages" aria-label="Réglages">${I.reglages}</a>`}</div>
     <div class="card" style="padding:12px 16px 8px;gap:6px">
       ${S.plan?`<img class="plan" src="${S.plan}" alt="Le plan de la maison">`:""}
       ${dessinMaison({mw:S.plan?220:300})}
@@ -1283,15 +1338,17 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
   <div class="card" style="gap:0;padding:4px 16px">
     <button class="line" style="width:100%;text-align:left" onclick="corrigerLogement()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(S.logement.nom)}</span><span class="small muted">Nom, année, surface, classe énergétique</span></span>${I.fleche}</button>
     <button class="line" style="width:100%;text-align:left" onclick="modal('<h2>Votre compte</h2><p class=muted>'+h(S.compte.email||'Sans courriel')+'</p><p class=\\'small faint\\'>Votre compte et la mémoire de votre logement sont enregistrés pour de vrai, et retrouvés sur chacun de vos appareils quand vous vous connectez.</p><button class=\\'btn\\' onclick=closeModal()>Fermer</button>')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Votre compte</span><span class="small muted">${h(S.compte.email||"—")}</span></span>${I.fleche}</button>
+    <button class="line" style="width:100%;text-align:left" onclick="choisirLogement()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Vos logements</span><span class="small muted">${S.logements.length>1?S.logements.length+" logements sur ce compte":"Un seul pour l'instant"} · ajouter un logement</span></span>${I.fleche}</button>
     <a class="line" href="#/adresse-vidom"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Adresse VIDOM et QR</span><span class="small muted mono">${h(S.logement.depot)}</span></span>${I.fleche}</a>
   </div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Taille du texte</p><div class="row">${[["normal","Normal"],["grand","Grand"],["tres-grand","Très grand"]].map(([k,n])=>`<button class="chip btn-chip ${S.reglages.texte===k?"on":""}" onclick="S.reglages.texte='${k}';document.documentElement.dataset.texte='${k}';save();render()">${n}</button>`).join("")}</div></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Donner accès à un tiers</p><p class="small muted">Notaire, agent, artisan, assureur : chacun ne voit que ce qui le concerne.</p><button class="btn" onclick="choisirTiers()">${I.echanges} Ouvrir un accès</button></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">La maison change de mains</p><p class="small muted">Le jour venu, et seulement ce jour-là, la rubrique Transmission apparaît.</p><div class="row"><button class="btn grow" onclick="changerDeMains('vente')">Je vends</button><button class="btn grow" onclick="changerDeMains('depart')">Je pars</button></div></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre mémoire vous appartient</p><div class="row wrap"><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter ma mémoire</button><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Mon avis sur la maquette VIDOM")}&body=${encodeURIComponent("Écran : "+location.hash+"\n\n")}">${I.mail} Donner mon avis</a></div><p class="small faint">${S.docs.length} documents · ${S.equipements.length} équipements · ${S.fil.length} moments dans le fil.</p></div>
-  <div class="card" style="gap:8px"><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le fil.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'localStorage.removeItem(KEY);location.hash=&quot;&quot;;location.reload()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
-  <p class="small faint" style="text-align:center">VIDOM — maquette du 11 septembre 2026. Tout reste sur votre appareil.</p>
+  <div class="card" style="gap:8px"><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le fil.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'toutEffacer()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
+  <p class="small faint" style="text-align:center">VIDOM — maquette du 15 septembre 2026. Votre mémoire est enregistrée sur votre compte et retrouvée sur chacun de vos appareils.</p>
 </div>`;
+function toutEffacer(){try{Object.keys(localStorage).filter(k=>k===KEY||k.startsWith(KEY+":")).forEach(k=>localStorage.removeItem(k))}catch(e){}location.hash="";location.reload()}
 function emporter(){const data=JSON.stringify(S,null,2);const b=new Blob([data],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`vidom-${slug(S.logement.nom||"maison")}-${today()}.json`;document.body.appendChild(a);a.click();a.remove();toast("Votre mémoire est téléchargée")}
 </script>
 <script>
@@ -1346,9 +1403,9 @@ function render(){
   if(!S.cree){
     document.body.classList.remove("app");
     const e=S.etape||"bienvenue";
-    const pre=e==="bienvenue"||e==="compte"?"VIDOM":(e==="adresse"?"Commençons":h(S.logement.nom||"VIDOM"));
+    const pre=e==="bienvenue"||e==="compte"?"VIDOM":(e==="adresse"?(S.ajout?"Un logement de plus":"Commençons"):h(S.logement.nom||"VIDOM"));
     const right=e==="maison-adresse"||e==="commencons"?`<span class="chip">Premier jour</span>`:"";
-    const back=e==="compte"?`<button class="back" onclick="S.etape='bienvenue';save();render()">${I.retour}</button>`:e==="adresse"?`<button class="back" onclick="S.etape='compte';save();render()">${I.retour}</button>`:e==="maison-adresse"?`<button class="back" onclick="S.etape='adresse';save();render()">${I.retour}</button>`:e==="commencons"?`<button class="back" onclick="S.etape='maison-adresse';save();render()">${I.retour}</button>`:"";
+    const back=e==="compte"?`<button class="back" onclick="S.etape='bienvenue';save();render()">${I.retour}</button>`:e==="adresse"?`<button class="back" onclick="${S.ajout?"annulerAjout()":"S.etape='compte';save();render()"}">${I.retour}</button>`:e==="maison-adresse"?`<button class="back" onclick="S.etape='adresse';save();render()">${I.retour}</button>`:e==="commencons"?`<button class="back" onclick="S.etape='maison-adresse';save();render()">${I.retour}</button>`:"";
     app.innerHTML=`<div class="col"><div class="top"><span class="row">${back}<span class="t">${pre}</span></span>${right}</div>${(V[e]||V.bienvenue)()}</div>`;
     return;
   }
@@ -1364,11 +1421,11 @@ function render(){
     const rt=name==="maison"?"Le fil":titre;
     const rr=name==="maison"?"":retour;
     app.innerHTML=`<div class="desk">
-      <div class="pane left"><div class="topbar"><span class="t">${h(S.logement.nom)}</span><span class="small muted">${h(S.logement.ville)}</span></div>${V.maison()}</div>
+      <div class="pane left"><div class="topbar">${boutonLogement(S.logement.nom,"")}<span class="small muted">${h(S.logement.ville)}</span></div>${V.maison()}</div>
       <div class="pane right"><div class="topbar"><span class="row">${rr&&rr!=="#/fil"&&rightName!=="fil"?`<a class="back" href="${rr}">${I.retour}</a>`:(rightName!=="fil"&&rightName!=="maison"?`<a class="back" href="#/fil">${I.retour}</a>`:"")}<span class="t">${rt}</span></span><span class="actions"><label class="btn primary file">${I.plus} Ajouter<input type="file" accept="image/*,.pdf" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><button class="btn" onclick="ajouterDesk()" aria-label="Photographier ou continuer sur le téléphone">${I.camera}</button><a class="btn" href="#/reglages" aria-label="Réglages">${I.reglages}</a></span></div>${rightHtml}</div>
     </div>`;
   }else{
-    app.innerHTML=`<div class="col"><div class="top"><span class="row">${retour?`<a class="back" href="${retour}">${I.retour}</a>`:""}<span class="t">${name==="fil"?h(S.logement.nom):titre}</span></span>${name==="fil"?`<span class="chip">${h(phraseCourte())}</span>`:""}</div>${html}${nav(name)}</div>`;
+    app.innerHTML=`<div class="col"><div class="top"><span class="row">${retour?`<a class="back" href="${retour}">${I.retour}</a>`:""}${name==="fil"?boutonLogement(S.logement.nom,""):`<span class="t">${titre}</span>`}</span>${name==="fil"?`<span class="chip">${h(phraseCourte())}</span>`:""}</div>${html}${nav(name)}</div>`;
   }
   const dv=document.querySelector(".pane.right")||window;
   if(render.lastRoute!==location.hash){window.scrollTo(0,0);render.lastRoute=location.hash}
