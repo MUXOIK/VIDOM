@@ -357,11 +357,17 @@ const MOIS=["janvier","février","mars","avril","mai","juin","juillet","août","
 const pad=n=>String(n).padStart(2,"0");
 const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const today=()=>iso(new Date());
-const now=()=>{const d=new Date();return iso(d)+"T"+pad(d.getHours())+":"+pad(d.getMinutes())};
-function dateFr(s){if(!s)return"";const [y,m,d]=s.slice(0,10).split("-").map(Number);return `${d===1?"1er":d} ${MOIS[m-1]} ${y}`}
+const now=()=>{const d=new Date(),o=-d.getTimezoneOffset(),a=Math.abs(o);return iso(d)+"T"+pad(d.getHours())+":"+pad(d.getMinutes())+(o<0?"-":"+")+pad(Math.floor(a/60))+":"+pad(a%60)};
+const jourLocal=s=>{const d=String(s).length>10?dateDe(s):null;return d?iso(d):String(s).slice(0,10)}; // le jour tel qu'on le vit ici
+function dateFr(s){if(!s)return"";const [y,m,d]=jourLocal(s).split("-").map(Number);return `${d===1?"1er":d} ${MOIS[m-1]} ${y}`}
 function moisFr(s){const [y,m]=s.slice(0,7).split("-").map(Number);return `${MOIS[m-1]} ${y}`}
-function heure(s){return s&&s.length>10?s.slice(11).replace(":"," h "):""}
-function joursDepuis(s){const a=new Date(s.slice(0,10)),b=new Date(today());return Math.round((b-a)/86400000)}
+function dateDe(s){ // accepte "2026-09-15T08:12", "2026-09-15 06:12:00+00", "…+00:00" ; renvoie null si illisible
+  if(!s)return null;
+  let v=String(s).trim().replace(" ","T").replace(/([+-]\d{2})$/,"$1:00");
+  const d=new Date(v);return isNaN(d.getTime())?null:d;
+}
+function heure(s){const d=dateDe(s);return d?pad(d.getHours())+" h "+pad(d.getMinutes()):""}
+function joursDepuis(s){const a=new Date(jourLocal(s)),b=new Date(today());return Math.round((b-a)/86400000)}
 function shiftDate(s,jours){const d=new Date(s.slice(0,10));d.setDate(d.getDate()+jours);return iso(d)}
 const euros=n=>n==null?"":new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
 function toast(t){const e=document.getElementById("toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("on"),2600)}
@@ -703,7 +709,12 @@ async function traduireDocument(d){ // best-effort : relit le document en demand
       fileBase64=await fileVersBase64(blob);
     }
     const {data,error}=await supa.functions.invoke("extract-document",{body:{fileBase64,mimeType,traduire:true}});
-    if(error||!data||!data.fields)return;
+    if(error||!data||!data.fields){
+      const r=await raisonEchec(error);
+      if(r)console.error("extract-document :",r);
+      if(serviceNonConfigure(r))toast("La traduction n'est pas encore configurée.");
+      return;
+    }
     const c=data.fields;
     if(c.langue_originale)d.langueOriginale=c.langue_originale;
     if(c.titre)d.titre=c.titre;
@@ -801,9 +812,15 @@ function pousserRappels(){
   if(dus.length&&!dejaUn){const r=dus[0];filAjouter({type:"rappel",t:r.t,rappel:r.id,pro:r.pro||"",ico:"cloche",info:!!r.info})}
 }
 
-/* une question du jour, les premiers jours seulement */
+/* une question du jour, les premiers jours seulement.
+   Règle : VIDOM ne demande jamais ce que la maison lui a déjà dit. Chaque question porte sa condition. */
+const estAnnexe=p=>{
+  const t=(p.type||"").toLowerCase(),n=(p.nom||"").toLowerCase();
+  if(t==="garage"||t==="cave"||t==="combles")return true;
+  return /parking|annexe|d[ée]pendance|atelier|abri|grenier|box|remise|grange|cellier|garage|cave/.test(n);
+};
 const QUESTIONS=[
-  {q:"annexes",t:"Avez-vous un parking, une cave ou une annexe ?",boutons:[["Oui, ajouter","oui"],["Non","non"]]},
+  {q:"annexes",t:"Avez-vous un parking, une cave ou une annexe ?",boutons:[["Oui, ajouter","oui"],["Non","non"]],cond:()=>!S.pieces.some(estAnnexe)},
   {q:"notaire",t:"Votre notaire a-t-il l'adresse VIDOM de la maison ? Ce qu'il y enverra arrivera ici.",boutons:[["Partager l'adresse","partager"],["Plus tard","plus-tard"]]},
   {q:"manque",t:"Il manque le diagnostic électrique. Le demander au diagnostiqueur ?",boutons:[["Demander","demander"],["Plus tard","plus-tard"]],cond:()=>S.docs.length>=3&&!S.docs.some(d=>d.titre==="Diagnostic électrique")},
 ];
@@ -834,13 +851,24 @@ function memoireLogement(){ // résumé compact des vraies données du logement,
     travaux:S.travaux.map(t=>({id:t.id,titre:t.titre,par:t.par,date:t.date,montant:t.montant})),
   };
 }
+async function raisonEchec(error){ // le message que la fonction a vraiment renvoyé, quand il y en a un
+  try{const r=error&&error.context;if(r&&typeof r.clone==="function"){const c=await r.clone().json();if(c&&typeof c.error==="string")return c.error}}catch(e){}
+  return "";
+}
+const serviceNonConfigure=r=>/configur|cl[ée] api/i.test(r||"");
 async function demander(texte){
   const q=(texte||"").trim();if(!q)return;
   const e={type:"qa",q,fait:true,ico:"bulle"};
   if(!supa){e.rep="Indisponible pour l'instant.";e.manque=true;filAjouter(e);return}
   try{
     const {data,error}=await supa.functions.invoke("demander-maison",{body:{question:q,memoire:memoireLogement()}});
-    if(error||!data||typeof data.rep!=="string"){e.rep="Cela n'a pas fonctionné, réessayez.";e.manque=true}
+    if(error||!data||typeof data.rep!=="string"){
+      const r=await raisonEchec(error);
+      if(r)console.error("demander-maison :",r);
+      // inutile d'inviter à réessayer quand rien ne changera au prochain essai
+      e.rep=serviceNonConfigure(r)?"VIDOM ne sait pas encore répondre aux questions : le service de réponse n'est pas configuré.":"Cela n'a pas fonctionné, réessayez.";
+      e.manque=true;
+    }
     else{
       e.rep=data.rep;e.manque=!!data.manque;
       if(data.refType==="doc"&&S.docs.some(d=>d.id===data.refId))e.doc=data.refId;
@@ -1441,7 +1469,7 @@ function changerDeMains(motif){S.transmission={motif,d:today()};naissances();fil
 V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Réglages</h1>
   <div class="card" style="gap:0;padding:4px 16px">
     <button class="line" style="width:100%;text-align:left" onclick="corrigerLogement()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(S.logement.nom)}</span><span class="small muted">Nom, année, surface, classe énergétique</span></span>${I.fleche}</button>
-    <button class="line" style="width:100%;text-align:left" onclick="modal('<h2>Votre compte</h2><p class=muted>'+h(S.compte.email||'Sans courriel')+'</p><p class=\\'small faint\\'>Votre compte et la mémoire de votre logement sont enregistrés pour de vrai, et retrouvés sur chacun de vos appareils quand vous vous connectez.</p><button class=\\'btn\\' onclick=closeModal()>Fermer</button>')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Votre compte</span><span class="small muted">${h(S.compte.email||"—")}</span></span>${I.fleche}</button>
+    <button class="line" style="width:100%;text-align:left" onclick="montrerCompte()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Votre compte</span><span class="small muted">${h(S.compte.email||"—")}</span></span>${I.fleche}</button>
     <button class="line" style="width:100%;text-align:left" onclick="choisirLogement()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Vos logements</span><span class="small muted">${S.logements.length>1?S.logements.length+" logements sur ce compte":"Un seul pour l'instant"} · ajouter un logement</span></span>${I.fleche}</button>
     <a class="line" href="#/adresse-vidom"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Adresse VIDOM et QR</span><span class="small muted mono">${h(S.logement.depot)}</span></span>${I.fleche}</a>
   </div>
@@ -1453,6 +1481,23 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Repartir de zéro sur cet appareil</p><p class="small muted">N'efface que cet appareil. Vos logements restent sur votre compte et reviennent à la prochaine connexion.</p><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le fil. Vos logements restent sur votre compte.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'toutEffacer()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
   <p class="small faint" style="text-align:center">VIDOM — maquette du 15 septembre 2026. Votre mémoire est enregistrée sur votre compte et retrouvée sur chacun de vos appareils.</p>
 </div>`;
+function montrerCompte(){
+  modal(`<h2>Votre compte</h2><p class="muted">${h(S.compte.email||"Sans courriel")}</p>
+  <p class="small faint">Votre compte et la mémoire de vos logements sont enregistrés pour de vrai, et retrouvés sur chacun de vos appareils quand vous vous connectez.</p>
+  <button class="btn" onclick="confirmerDeconnexion()">${I.cle} Se déconnecter</button>
+  <button class="btn ghost" onclick="closeModal()">Fermer</button>`);
+}
+function confirmerDeconnexion(){
+  modal(`<h2>Se déconnecter ?</h2>
+  <p class="muted">Cet appareil oublie vos logements. Rien n'est effacé : votre mémoire reste sur votre compte, et vous la retrouvez en vous reconnectant.</p>
+  <button class="btn primary big" onclick="seDeconnecter()">Se déconnecter</button>
+  <button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+}
+async function seDeconnecter(){
+  clearTimeout(pousserTout_timer);hydrateEnCours=true; // plus rien ne part vers le compte une fois la porte fermée
+  try{if(supa)await supa.auth.signOut()}catch(e){}
+  toutEffacer(); // efface cet appareil et recharge : on revient à l'écran d'accueil
+}
 function toutEffacer(){try{Object.keys(localStorage).filter(k=>k===KEY||k.startsWith(KEY+":")).forEach(k=>localStorage.removeItem(k))}catch(e){}location.hash="";location.reload()}
 function emporter(){const data=JSON.stringify(S,null,2);const b=new Blob([data],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`vidom-${slug(S.logement.nom||"maison")}-${today()}.json`;document.body.appendChild(a);a.click();a.remove();toast("Votre mémoire est téléchargée")}
 </script>
