@@ -1176,10 +1176,32 @@ V.maison=()=>{
 };
 function corrigerLogement(){const L=S.logement;modal(`<h2>Corriger</h2><p class="muted">Ce que VIDOM a trouvé à l'adresse. Vous restez seul maître de la mémoire de votre logement.</p><label class="f"><span>Nom de la maison</span><input class="input" id="ln" value="${h(L.nom)}"></label><div class="grid2"><label class="f"><span>Année</span><input class="input" id="la" inputmode="numeric" value="${L.annee||""}"></label><label class="f"><span>Surface (m²)</span><input class="input" id="ls" inputmode="numeric" value="${L.surface||""}"></label></div><label class="f"><span>Classe énergétique</span><select class="input" id="ld">${"ABCDEFG".split("").map(c=>`<option ${L.dpe===c?"selected":""}>${c}</option>`).join("")}<option value="" ${!L.dpe?"selected":""}>Inconnue</option></select></label><p class="small faint">Source : ce que VIDOM a trouvé à l'adresse${L.dpeDate?" (diagnostic du "+h(L.dpeDate)+")":""}.</p><button class="btn primary big" onclick="L=S.logement;L.nom=document.getElementById('ln').value.trim()||L.nom;L.annee=+document.getElementById('la').value||null;L.surface=+document.getElementById('ls').value||null;L.dpe=document.getElementById('ld').value;closeModal();save();render()">Enregistrer</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
 async function planFichier(files){const f=files[0];if(!f)return;const img=await reduire(f);if(img&&img.url){S.plan=img.url;filAjouter({type:"info",t:"Le plan de la maison est conservé. Le dessin s'appuie dessus.",ico:"plan",fait:true});save();render();toast("Plan conservé")}}
-function ajouterPiece(){modal(`<h2>Une pièce de plus</h2><div class="row wrap">${[...TYPES_PIECES,...AUTRES_PIECES].map(t=>`<button class="chip btn-chip" onclick="creerPiece('${t.type}','${h(t.nom)}')">${h(t.nom)}</button>`).join("")}</div><label class="f"><span>Ou un autre nom</span><div class="row"><input class="input" id="pn" placeholder="Atelier, véranda…"><button class="btn" onclick="creerPiece('autre',document.getElementById('pn').value.trim())">Ajouter</button></div></label><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
-function creerPiece(type,nom){if(!nom)return;const n=S.pieces.filter(p=>p.type===type).length;const def=[...TYPES_PIECES,...AUTRES_PIECES].find(t=>t.type===type);
+let ajoutPieces={};
+function ajouterPiece(){
+  ajoutPieces={};
+  const ligne=t=>`<div class="step"><span>${h(t.nom)}</span><span class="ctl"><button aria-label="Moins" onclick="compterAjout('${t.type}',-1)">${I.moins}</button><b class="num" id="aj-${t.type.replace(/\s+/g,'_')}">0</b><button aria-label="Plus" onclick="compterAjout('${t.type}',1)">${I.plus}</button></span></div>`;
+  modal(`<h2>Des pièces de plus</h2><p class="small muted">Combien de chaque ? Les pièces existantes restent en place.</p>
+  <div class="card" style="gap:0;padding:4px 16px">${[...TYPES_PIECES,...AUTRES_PIECES].map(ligne).join("")}</div>
+  <label class="f"><span>Ou un autre nom</span><input class="input" id="pn" placeholder="Atelier, véranda…" oninput="compterAjout()"></label>
+  <button class="btn primary big" id="aj-ok" onclick="ajouterPiecesOk()">Ajouter</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+}
+function compterAjout(t,d){
+  if(t){ajoutPieces[t]=Math.max(0,(ajoutPieces[t]||0)+d);const b=document.getElementById("aj-"+t.replace(/\s+/g,"_"));if(b)b.textContent=ajoutPieces[t];}
+  const total=Object.values(ajoutPieces).reduce((a,n)=>a+n,0)+((document.getElementById("pn")?.value||"").trim()?1:0);
+  const ok=document.getElementById("aj-ok");if(ok)ok.textContent=total?`Ajouter ${total} pièce${total>1?"s":""}`:"Ajouter";
+}
+function ajouterPiecesOk(){
+  let n=0;
+  [...TYPES_PIECES,...AUTRES_PIECES].forEach(t=>{for(let i=0;i<(ajoutPieces[t.type]||0);i++){creerPiece(t.type,t.nom,true);n++}});
+  const autre=(document.getElementById("pn")?.value||"").trim();
+  if(autre){creerPiece("autre",autre,true);n++}
+  if(!n){toast("Indiquez au moins une pièce.");return}
+  closeModal();save();render();toast(n>1?`${n} pièces ajoutées`:"Pièce ajoutée");
+}
+function creerPiece(type,nom,silencieux){if(!nom)return;const n=S.pieces.filter(p=>p.type===type).length;const def=[...TYPES_PIECES,...AUTRES_PIECES].find(t=>t.type===type);
   if(def&&n===1){const p0=S.pieces.find(p=>p.type===type);if(p0.nom===def.nom)p0.nom=def.nom+" 1"}
-  S.pieces.push({id:uid(),type,nom:def&&n>0?`${def.nom} ${n+1}`:nom,photos:[]});S.comptage[type]=(S.comptage[type]||0)+1;closeModal();save();render();toast("Pièce ajoutée")}
+  S.pieces.push({id:uid(),type,nom:def&&n>0?`${def.nom} ${n+1}`:nom,photos:[]});S.comptage[type]=(S.comptage[type]||0)+1;
+  if(silencieux)return;closeModal();save();render();toast("Pièce ajoutée")}
 
 V.piece=id=>{
   const p=pieceParId(id);if(!p)return V.maison();
