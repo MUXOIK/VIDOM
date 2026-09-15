@@ -622,25 +622,28 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
       })),{onConflict:"id"});
       const photosEq=S.equipements.filter(e=>e.chemin).map(e=>({
         id:"ph-"+e.id,logement_id:lig.id,equipement_id:e.id,piece_id:(e.piece&&e.piece!=="maison")?e.piece:null,
-        type_document:"photo",titre:"Photo de l'équipement",chemin_stockage:e.chemin,mime_type:e.pdf?"application/pdf":"image/jpeg",
+        type_document:"photo",titre:"Photo de l'équipement",nom_fichier:e.chemin.split("/").pop(),chemin_stockage:e.chemin,mime_type:e.pdf?"application/pdf":"image/jpeg",
         source:"manuel",uploaded_by:session.user.id
       }));
       if(photosEq.length)await supa.from("documents").upsert(photosEq,{onConflict:"id"});
     }
     if(S.docs.length){
-      const lignesDoc=S.docs.map(d=>{
-        const eq=(d.lie&&typeof equipParLie==="function")?equipParLie(d.lie):null;
-        const iv=d.travaux?S.travaux.find(t=>t.titre===d.travaux):null;
-        return {
-          id:d.id,logement_id:lig.id,piece_id:(d.piece&&d.piece!=="maison")?d.piece:null,
-          equipement_id:eq?eq.id:(S.equipements.some(e=>e.id===d.lie)?d.lie:null),intervention_id:iv?iv.id:null,
-          type_document:d.type||"autre",titre:d.titre||null,chemin_stockage:d.chemin||null,
-          mime_type:d.chemin?(d.pdf?"application/pdf":"image/jpeg"):null,
-          date_document:d.date?d.date.slice(0,10):null,fournisseur:d.fournisseur||null,montant_ttc:d.montant,
-          date_garantie_fin:d.garantie||null,source:d.recu==="adresse"?"adresse_vidom":"manuel",uploaded_by:session.user.id
-        };
-      });
-      await supa.from("documents").upsert(lignesDoc,{onConflict:"id"});
+      const avecFichier=S.docs.filter(d=>d.chemin); // chemin_stockage est obligatoire en base : un document dont la photo n'est pas encore déposée attend le prochain envoi
+      if(avecFichier.length){
+        const lignesDoc=avecFichier.map(d=>{
+          const eq=(d.lie&&typeof equipParLie==="function")?equipParLie(d.lie):null;
+          const iv=d.travaux?S.travaux.find(t=>t.titre===d.travaux):null;
+          return {
+            id:d.id,logement_id:lig.id,piece_id:(d.piece&&d.piece!=="maison")?d.piece:null,
+            equipement_id:eq?eq.id:(S.equipements.some(e=>e.id===d.lie)?d.lie:null),intervention_id:iv?iv.id:null,
+            type_document:d.type||"autre",titre:d.titre||null,nom_fichier:d.chemin.split("/").pop(),chemin_stockage:d.chemin,
+            mime_type:d.pdf?"application/pdf":"image/jpeg",
+            date_document:d.date?d.date.slice(0,10):null,fournisseur:d.fournisseur||null,montant_ttc:d.montant,
+            date_garantie_fin:d.garantie||null,source:d.recu==="adresse"?"adresse_vidom":"manuel",uploaded_by:session.user.id
+          };
+        });
+        await supa.from("documents").upsert(lignesDoc,{onConflict:"id"});
+      }
     }
     if(S.rappels.length)await supa.from("rappels").upsert(S.rappels.map(r=>({id:r.id,logement_id:lig.id,texte:r.t,equipement_id:S.equipements.some(e=>e.id===r.equip)?r.equip:null,date_echeance:r.du||null,fait:!!r.fait,info:!!r.info})),{onConflict:"id"});
     if(S.expediteursOk.length)await supa.from("expediteurs_autorises").upsert(S.expediteursOk.map(exp=>({logement_id:lig.id,expediteur:exp})),{onConflict:"logement_id,expediteur"});
@@ -649,7 +652,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
       await supa.from("fil_activite").upsert(lignesFil,{onConflict:"id"});
     }
     await supa.from("etat_logement").upsert({logement_id:lig.id,etat:{nees:S.nees,questionsPosees:S.questionsPosees,dernierJour:S.dernierJour,reserveServie:S.reserveServie},maj_le:new Date().toISOString()},{onConflict:"logement_id"});
-  }catch(e){ /* réessaiera au prochain enregistrement, ou à la reconnexion */ }
+  }catch(e){ console.error("VIDOM : l'enregistrement en ligne a échoué, réessaiera au prochain enregistrement.",e) }
   pousserTout_actif=false;
   if(pousserTout_rejoue){pousserTout_rejoue=false;syncDiffere()}
 }
@@ -1022,7 +1025,7 @@ V.adresse=()=>{
     ${AUTRES_PIECES.filter(t=>c[t.type]).map(t=>ligne(t.type,t.nom)).join("")}
     <div class="step" style="border:0"><button class="btn ghost" style="padding:0;gap:8px" onclick="autrePiece()">${I.plus} Autre pièce (bureau, cave, jardin…)</button></div>
   </div>
-  <button class="btn primary big" onclick="adresseOk()">Valider</button>
+  <button class="btn primary big" id="btn-valider-adresse" onclick="adresseOk()">Valider</button>
   <p class="small faint" style="text-align:center">Deux minutes. Rien à remplir d'autre.</p>
 </div>`};
 function compter(t,d){S.comptage[t]=Math.max(0,(S.comptage[t]||0)+d);save();render();}
@@ -1045,10 +1048,15 @@ function choisirAdresse(i){
   S.logement._ban=f;
   document.getElementById("sugg").innerHTML="";save();
 }
+let adresseOkEnCours=false;
 async function adresseOk(){
   const v=(document.getElementById("adr")?.value||S.logement.adresseSaisie||"").trim();
   if(!v){toast("L'adresse, d'abord.");document.getElementById("adr")?.focus();return}
   if(!Object.values(S.comptage).some(n=>n>0)){toast("Au moins une pièce.");return}
+  if(adresseOkEnCours)return; // un double clic pendant la vérification en ligne ne doit jamais créer les pièces deux fois
+  adresseOkEnCours=true;
+  const btn=document.getElementById("btn-valider-adresse");if(btn){btn.disabled=true;btn.textContent="Un instant…"}
+  try{
   S.logement.id=S.logement.id||uid();
   const f=S.logement._ban&&S.logement._ban.properties&&S.logement._ban.properties.label===v?S.logement._ban:null;
   if(f){
@@ -1067,6 +1075,7 @@ async function adresseOk(){
   await enrichirAdresse();
   if(!S.logements.some(l=>l.id===S.logement.id))S.logements.push({id:S.logement.id,nom:S.logement.nom,ville:S.logement.ville,adresse:S.logement.adresse});
   creerPieces();S.etape="maison-adresse";save();render();
+  }finally{adresseOkEnCours=false}
 }
 
 V["maison-adresse"]=()=>`<div class="view fadein" style="gap:14px;padding-top:8px">
