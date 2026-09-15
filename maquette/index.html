@@ -294,6 +294,58 @@ async function annulerAjout(){ // on renonce : retour au logement qu'on regardai
   if(!id){S.etape="compte";save();render();return}
   S=etatPour(id);await hydrate(id);save();location.hash="#/fil";render();
 }
+function oublierLogement(id){ // retire de cet appareil la mémoire d'un logement qui n'est plus sur le compte
+  if(!id)return;
+  try{localStorage.removeItem(cleCache(id))}catch(e){}
+  if(S.logement.id===id){const compte=S.compte,reglages=S.reglages,liste=S.logements;S=etatInitial();S.compte=compte;S.reglages=reglages;S.logements=liste;if(compte&&compte.email)S.etape="adresse"} // le compte reste connecté : on repart directement de l'adresse
+}
+function supprimerLogement(){ // efface pour de bon la mémoire d'un logement, sur le compte et sur tous les appareils
+  const nom=S.logement.nom||"cette maison";
+  modal(`<h2>Supprimer ${h(nom)} ?</h2>
+  <p class="muted">Toute la mémoire de cette maison s'efface de votre compte : les pièces, les équipements, les documents et leurs fichiers, les artisans, les travaux, le fil. Sur cet appareil et sur tous les autres.</p>
+  <p class="small faint">C'est définitif : VIDOM ne saura pas la retrouver. Vous pouvez d'abord « Emporter ma mémoire » pour en garder une copie.</p>
+  <label class="f"><span>Écrivez <b>${h(nom)}</b> pour confirmer</span><input class="input" id="sup-nom" autocomplete="off" autocapitalize="off" oninput="supprimerVerif()"></label>
+  <button class="btn terra big" id="sup-ok" disabled onclick="supprimerLogementOk()">Supprimer définitivement</button>
+  <button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+  setTimeout(()=>document.getElementById("sup-nom")?.focus(),50);
+}
+function supprimerVerif(){
+  const attendu=(S.logement.nom||"cette maison").trim().toLowerCase();
+  const v=(document.getElementById("sup-nom")?.value||"").trim().toLowerCase();
+  const b=document.getElementById("sup-ok");if(b)b.disabled=(v!==attendu);
+}
+async function supprimerLogementOk(){
+  const id=S.logement.id,nom=S.logement.nom||"cette maison";
+  const b=document.getElementById("sup-ok");if(b){b.disabled=true;b.textContent="Suppression…"}
+  const rendre=()=>{if(b){b.disabled=false;b.textContent="Supprimer définitivement"}};
+  clearTimeout(pousserTout_timer);hydrateEnCours=true; // rien ne doit repartir vers le compte pendant l'effacement
+  if(supa&&id){
+    try{
+      // les fichiers d'abord : une fois le logement effacé, plus personne n'a le droit d'y toucher
+      const {data:fichiers}=await supa.storage.from("logement-files").list(id,{limit:1000});
+      const chemins=(fichiers||[]).map(f=>`${id}/${f.name}`);
+      if(chemins.length)await supa.storage.from("logement-files").remove(chemins);
+      const {error}=await supa.from("logements").delete().eq("id",id);
+      if(error){hydrateEnCours=false;rendre();toast("Cela n'a pas fonctionné : "+error.message);return}
+    }catch(e){hydrateEnCours=false;rendre();toast("Cela n'a pas fonctionné. Réessayez dans un instant.");return}
+  }
+  try{localStorage.removeItem(cleCache(id))}catch(e){}
+  const restants=(S.logements||[]).filter(l=>l.id!==id);
+  const compte=S.compte,reglages=S.reglages;
+  closeModal();
+  if(restants.length){ // il reste au moins une maison : on ouvre la première
+    const suivant=restants[0].id;
+    S.logements=restants;S.logement.id=null; // etatPour ne doit pas remettre de côté celui qu'on vient d'effacer
+    S=etatPour(suivant);S.logements=restants;S.compte=compte;S.reglages=reglages;
+    if(!S.logement.nom){S.logement.nom=restants[0].nom||"";S.logement.ville=S.logement.ville||restants[0].ville||"";S.logement.adresse=S.logement.adresse||restants[0].adresse||""} // de quoi afficher tout de suite, hydrate complète
+    document.getElementById("app").innerHTML=`<div class="view center" style="min-height:100vh"><p class="muted">Un instant, VIDOM retrouve votre maison…</p></div>`;
+    await hydrate(suivant);save();location.hash="#/fil";render();
+  }else{ // plus aucune maison : on revient au premier jour, le compte reste
+    S=etatInitial();S.compte=compte;S.reglages=reglages;S.logements=[];S.etape="adresse";
+    hydrateEnCours=false;save();location.hash="";render();
+  }
+  toast(nom+" a été supprimée");
+}
 function boutonLogement(nom,classe){ // le nom de la maison en haut : touchable dès qu'il y a plusieurs logements
   return S.logements.length>1?`<button class="${classe}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="choisirLogement()" aria-label="Changer de logement"><span class="t">${h(nom)}</span><span style="opacity:.6;display:inline-flex">${I.bascule}</span></button>`:`<span class="${classe}">${h(nom)}</span>`;
 }
@@ -439,8 +491,13 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
   try{
     const {data:membres}=await supa.from("logement_membres").select("logement_id,date_debut,logements(id,nom,ville,adresse)").eq("user_id",session.user.id).order("date_debut",{ascending:true});
     const liste=(membres||[]).filter(m=>m.logements).map(m=>({id:m.logement_id,nom:m.logements.nom||"",ville:m.logements.ville||"",adresse:m.logements.adresse||""}));
+    const avant=Array.isArray(S.logements)?S.logements:[]; // la liste du compte telle que cet appareil la connaissait
+    const efface=id=>!!id&&avant.some(l=>l.id===id)&&!liste.some(l=>l.id===id); // était sur le compte, n'y est plus : supprimé ailleurs
+    if(efface(S.logement.id))oublierLogement(S.logement.id); // on ne ressuscite pas une maison effacée depuis un autre appareil
     S.logements=liste;
-    if(!liste.length){save();return} // compte réel, mais pas encore de logement créé : on reste sur l'installation
+    if(!liste.length){ // compte réel, mais plus aucun logement : on reste (ou on revient) sur l'installation
+      if(S.cree&&!S.logement.id){S.cree=false;S.etape="adresse"}
+      save();return}
     if(S.ajout&&!S.cree){save();return} // un logement de plus est en train d'être créé : on ne l'interrompt pas
     // le logement à ouvrir : celui demandé, sinon celui qu'on regardait sur cet appareil, sinon le premier du compte
     const connu=id=>liste.some(l=>l.id===id);
@@ -1367,7 +1424,8 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Donner accès à un tiers</p><p class="small muted">Notaire, agent, artisan, assureur : chacun ne voit que ce qui le concerne.</p><button class="btn" onclick="choisirTiers()">${I.echanges} Ouvrir un accès</button></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">La maison change de mains</p><p class="small muted">Le jour venu, et seulement ce jour-là, la rubrique Transmission apparaît.</p><div class="row"><button class="btn grow" onclick="changerDeMains('vente')">Je vends</button><button class="btn grow" onclick="changerDeMains('depart')">Je pars</button></div></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre mémoire vous appartient</p><div class="row wrap"><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter ma mémoire</button><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Mon avis sur la maquette VIDOM")}&body=${encodeURIComponent("Écran : "+location.hash+"\n\n")}">${I.mail} Donner mon avis</a></div><p class="small faint">${S.docs.length} documents · ${S.equipements.length} équipements · ${S.fil.length} moments dans le fil.</p></div>
-  <div class="card" style="gap:8px"><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le fil.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'toutEffacer()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Supprimer ce logement</p><p class="small muted">La mémoire de ${h(S.logement.nom||"cette maison")} s'efface de votre compte, sur tous vos appareils. Les autres logements ne bougent pas.</p><button class="btn terra" onclick="supprimerLogement()">Supprimer ${h(S.logement.nom||"ce logement")}</button></div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Repartir de zéro sur cet appareil</p><p class="small muted">N'efface que cet appareil. Vos logements restent sur votre compte et reviennent à la prochaine connexion.</p><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le fil. Vos logements restent sur votre compte.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'toutEffacer()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
   <p class="small faint" style="text-align:center">VIDOM — maquette du 15 septembre 2026. Votre mémoire est enregistrée sur votre compte et retrouvée sur chacun de vos appareils.</p>
 </div>`;
 function toutEffacer(){try{Object.keys(localStorage).filter(k=>k===KEY||k.startsWith(KEY+":")).forEach(k=>localStorage.removeItem(k))}catch(e){}location.hash="";location.reload()}
