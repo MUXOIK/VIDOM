@@ -140,7 +140,9 @@ label.f>span{font-size:.85em;color:var(--ardoise)}
 .drop{position:fixed;inset:0;background:rgba(95,122,106,.18);border:4px dashed var(--sauge);z-index:60;display:flex;align-items:center;justify-content:center;font-size:1.4em;font-weight:600;color:var(--sauge-f);pointer-events:none}
 .fadein{animation:fade .35s ease}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.fadein{animation:none}.toast{transition:none}}
+.spin{width:38px;height:38px;border-radius:50%;border:4px solid var(--bois-c);border-top-color:var(--sauge);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.fadein{animation:none}.toast{transition:none}.spin{animation:none}}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.95em}
 .kv dt{color:var(--ardoise)}.kv dd{margin:0}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -1116,7 +1118,7 @@ V.tri=()=>{
   </div>
   ${b.nees&&b.nees.length?`<div class="card soft" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">${b.nees.length===1?"Une rubrique vient d'apparaître":`${["","","Deux","Trois","Quatre","Cinq","Six"][b.nees.length]||b.nees.length} rubriques viennent d'apparaître`}</p><p class="small muted">${h(b.nees.join(", "))}.</p></div>`:""}
   <a class="btn primary big" href="#/maison">Voir ma maison ${I.fleche}</a>
-  <button class="btn ghost" onclick="corrigerLot()">Corriger une pièce</button>
+  <button class="btn ghost" onclick="corrigerLot()">Un objet n'est pas dans la bonne pièce ? Le ranger</button>
 </div>`};
 function revoirInconnus(){const b=S.derniereBatch;const inc=b.items.filter(i=>i.statut!=="range");modal(`<h2>Photos non reconnues</h2><p class="muted">VIDOM n'a pas su lire ces photos. Dites-lui ce que c'est, ou laissez-les.</p>${inc.map(i=>`<div class="card" style="flex-direction:row;align-items:center"><div class="photo" style="width:64px;min-height:64px;padding:0;flex:0 0 auto">${i.pdf?"":(i.img?`<img src="${i.img}" alt="">`:"")}</div><span class="stack grow" style="flex:1 1 auto"><span class="small b">Photo du ${dateFr(b.date)}</span></span><button class="btn sm" onclick="closeModal();corrigerInconnu('${i.id}')">Dire ce que c'est</button></div>`).join("")}<button class="btn" onclick="closeModal()">Laisser pour l'instant</button>`)}
 function corrigerInconnu(id){const b=S.derniereBatch;const i=b.items.find(x=>x.id===id);modal(`<h2>Qu'est-ce que c'est ?</h2>${formCorrection({pieceId:S.pieceCourante||"maison",k:"doc",nom:""})}<button class="btn primary big" onclick="appliquerInconnu('${id}')">Ranger</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
@@ -1207,12 +1209,34 @@ function reduire(file){return new Promise(res=>{
   }catch(e){URL.revokeObjectURL(url);res(null)}};
   img.onerror=()=>{URL.revokeObjectURL(url);res(null)};img.src=url;
 })}
+const MOTS_PIECES={ // mots-clés reconnus dans le nom d'un équipement ou d'un document → type de pièce ; ne joue que pour un import général (sans pièce précise)
+  cuisine:["lave-vaisselle","réfrigérateur","frigo","congélateur","congelateur","four","hotte","plaque de cuisson","cuisinière","cuisiniere","micro-ondes","évier","evier"],
+  "salle de bain":["baignoire","douche","lavabo","chauffe-eau","chauffe eau","ballon d'eau chaude"],
+  chambre:["lit","matelas","armoire","dressing"],
+  salon:["télévision","television","canapé","canape","cheminée","cheminee"],
+  buanderie:["lave-linge","lave linge","sèche-linge","seche-linge","sèchoir","sechoir"],
+  bureau:["ordinateur","imprimante"],
+};
+function suggererPiece(rec){ // propose une pièce à partir de ce que VIDOM a reconnu ; ne tranche que si une seule pièce de ce type existe dans la maison
+  if(rec.k!=="equip"&&rec.k!=="doc")return null;
+  const texte=slug(`${rec.nom||""} ${rec.titre||""}`);
+  for(const type in MOTS_PIECES){
+    if(MOTS_PIECES[type].some(m=>texte.includes(slug(m)))){
+      const candidats=S.pieces.filter(p=>p.type===type);
+      if(candidats.length===1)return candidats[0].id;
+    }
+  }
+  return null;
+}
 async function fichiers(files,pieceId){
   const list=[...files].slice(0,30);if(!list.length)return;
-  closeModal();toast(list.length>1?`${list.length} fichiers reçus. VIDOM regarde…`:"VIDOM regarde…");
+  closeModal();
+  const maj=i=>{const el=document.getElementById("prog-txt");if(el)el.textContent=list.length>1?`VIDOM regarde vos documents… (${i}/${list.length})`:"VIDOM regarde…"};
+  modal(`<div class="stack" style="align-items:center;padding:26px 10px;gap:16px"><div class="spin" aria-hidden="true"></div><p class="b" id="prog-txt" style="text-align:center">${list.length>1?`VIDOM regarde vos documents… (0/${list.length})`:"VIDOM regarde…"}</p></div>`);
   const trop=S.equipements.length+S.docs.length>40;
-  const lot=[];
-  for(const f of list){const r=trop?null:await reduire(f);const rec=await reconnaitre(f,pieceId,r&&r.url,r&&r.pdf,r&&r.chemin);rec.pieceId=rec.pieceId||pieceId||"maison";lot.push(rec)}
+  const lot=[];let i=0;
+  for(const f of list){const r=trop?null:await reduire(f);const rec=await reconnaitre(f,pieceId,r&&r.url,r&&r.pdf,r&&r.chemin);rec.pieceId=rec.pieceId||pieceId||"maison";if(pieceId==="maison")rec.pieceId=suggererPiece(rec)||rec.pieceId;lot.push(rec);i++;maj(i)}
+  closeModal();
   if(pieceId&&pieceId!=="maison")S.pieceCourante=pieceId;
   if(lot.length===1){S.lot=lot;if(!S.cree){S.cree=true;S.etape="";S.ajout=false;S.retourVers=null}save();route("#/reconnu")}
   else terminerLot(lot);
@@ -1353,7 +1377,7 @@ V.equipement=id=>{
   const docs=docsLies(e);
   return `<div class="view" style="gap:12px">
     ${e.img?`<div class="photo" style="min-height:${e.pdf?"420px":"130px"}">${vignette(e)}</div>`:""}
-    <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(e.nom)}</h1><p class="muted">${h(e.marque)} ${h(e.modele)} · ${h(nomPiece(e.piece))}</p></div>
+    <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(e.nom)}</h1><p class="muted">${h(e.marque)} ${h(e.modele)} · ${h(nomPiece(e.piece))} <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerItem('${e.id}')">Changer de pièce</button></p></div>
     <div class="card"><dl class="kv">${e.ref?`<dt>Référence</dt><dd class="num">${h(e.ref)}</dd>`:""}${e.achat?`<dt>Acheté</dt><dd>${dateFr(e.achat)}</dd>`:""}${e.garantie?`<dt>Garantie</dt><dd>${joursDepuis(e.garantie)<0?"jusqu'au "+dateFr(e.garantie):"terminée le "+dateFr(e.garantie)}</dd>`:""}${e.installateur?`<dt>Installé par</dt><dd>${h(e.installateur)}</dd>`:""}${e.entretiens&&e.entretiens.length?`<dt>Entretiens</dt><dd>${e.entretiens.map(x=>dateFr(x.d)+(x.par?" · "+h(x.par):"")).join("<br>")}</dd>`:""}<dt>État</dt><dd>${e.etat==="bon"?"Bon":h(e.etat)}</dd></dl></div>
     <div class="grid2">${e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" disabled>Pas de notice</button>`}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
     ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents reliés</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
