@@ -46,6 +46,8 @@ svg.i{width:20px;height:20px;flex:0 0 auto}
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(14px + env(safe-area-inset-top)) 20px 8px}
 .top .t{font-size:.8em;color:var(--ardoise);font-weight:600;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw}
 .top .back{display:inline-flex;align-items:center;gap:6px;color:var(--sauge-f);font-weight:600;min-height:44px}
+.aide{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;border:1px solid var(--bois);background:var(--blanc);color:var(--sauge-f);flex:0 0 auto}.aide svg{width:20px;height:20px}.aide:hover{border-color:var(--sauge)}
+.top .chip{overflow:hidden;text-overflow:ellipsis;max-width:48vw}
 .view{flex:1 1 auto;display:flex;flex-direction:column;gap:14px;padding:6px 18px 24px}
 .view.center{justify-content:center;padding-bottom:120px}
 .nav{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:var(--blanc);border-top:1px solid var(--bois-c)}
@@ -176,6 +178,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 const VS='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
 const I={
   camera:`<svg class="i" ${VS}><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
+  aide:`<svg class="i" ${VS}><circle cx="12" cy="12" r="9"/><path d="M9.6 9.6a2.4 2.4 0 1 1 3.4 2.2c-.7.3-1 .8-1 1.5"/><circle cx="12" cy="16.5" r=".4"/></svg>`,
   bulle:`<svg class="i" ${VS}><path d="M4 5h16v11H9l-5 4z"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.4"/><circle cx="12" cy="15.6" r=".4"/></svg>`,
   maison:`<svg class="i" ${VS}><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>`,
   check:`<svg class="i" ${VS} stroke-width="2"><path d="M5 12l4 4 10-10"/></svg>`,
@@ -584,6 +587,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
     S.cree=true;S.etape="";S.ajout=false;S.retourVers=null;
     if(!S.logement.depot&&S.logement.nom){try{S.logement.depot=await allouerDepot(S.logement.nom)}catch(e){}} // un logement créé avant l'adresse VIDOM (VIDOM-mobile) en reçoit une
     hydrateEnCours=false;save();
+    verifierEnvoiEnAttente();
   }catch(e){/* pas grave : on continue avec la dernière version connue, en local */}
   finally{hydrateEnCours=false}
 }
@@ -638,7 +642,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
             equipement_id:eq?eq.id:(S.equipements.some(e=>e.id===d.lie)?d.lie:null),intervention_id:iv?iv.id:null,
             type_document:d.type||"autre",titre:d.titre||null,nom_fichier:d.chemin.split("/").pop(),chemin_stockage:d.chemin,
             mime_type:d.pdf?"application/pdf":"image/jpeg",
-            date_document:d.date?d.date.slice(0,10):null,fournisseur:d.fournisseur||null,montant_ttc:d.montant,
+            date_document:d.date?d.date.slice(0,10):null,date_echeance:d.echeance?d.echeance.slice(0,10):null,fournisseur:d.fournisseur||null,montant_ttc:d.montant,
             date_garantie_fin:d.garantie||null,source:d.recu==="adresse"?"adresse_vidom":"manuel",uploaded_by:session.user.id
           };
         });
@@ -655,6 +659,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
   }catch(e){ console.error("VIDOM : l'enregistrement en ligne a échoué, réessaiera au prochain enregistrement.",e) }
   pousserTout_actif=false;
   if(pousserTout_rejoue){pousserTout_rejoue=false;syncDiffere()}
+  verifierEnvoiEnAttente();
 }
 </script>
 <script>
@@ -693,7 +698,7 @@ async function reconnaitre(file,pieceId,dataUrl,pdf,chemin){
         achat:today(),garantie:"",installateur:"",notice:false,sav:"",etat:"bon",entretien:false});
     }else if(c&&c.kind==="document"){
       Object.assign(rec,{k:"doc",type:c.type||"autre",titre:c.titre||"Document",date:c.date_document||today(),
-        fournisseur:c.fournisseur||"",montant:c.montant_ttc??null,lie:"",travaux:"",garantie:""});
+        fournisseur:c.fournisseur||"",montant:c.montant_ttc??null,echeance:c.date_echeance||"",lie:"",travaux:"",garantie:""});
     }else{
       rec.k="inconnu";rec.titre="Photo non reconnue";
     }
@@ -747,13 +752,40 @@ function ranger(rec){ // C'est bien ça
     if(rec.garantie&&joursDepuis(rec.garantie)<0&&joursDepuis(rec.garantie)>-200)S.rappels.push({id:uid(),t:`La garantie de ${lc(rec.nom)} ${rec.marque} expire le ${dateFr(rec.garantie)}.`,equip:e.id,du:rec.garantie,fait:false,info:true});
   }else if(rec.k==="doc"){
     const cible=rec.lie?equipParLie(rec.lie):null; // si l'équipement existe déjà, on relie par identifiant tout de suite
-    const d={id:rec.id,piece:rec.pieceId,type:rec.type,titre:rec.titre,date:rec.date,fournisseur:rec.fournisseur,montant:rec.montant,lie:cible?cible.id:(rec.lie||""),travaux:rec.travaux||"",garantie:rec.garantie||"",img:rec.img,pdf:!!rec.pdf,chemin:rec.chemin||null,recu:rec.recu||"photo",dateRecu:rec.date0||rec.date};
+    const d={id:rec.id,piece:rec.pieceId,type:rec.type,titre:rec.titre,date:rec.date,fournisseur:rec.fournisseur,montant:rec.montant,echeance:rec.echeance||"",lie:cible?cible.id:(rec.lie||""),travaux:rec.travaux||"",garantie:rec.garantie||"",img:rec.img,pdf:!!rec.pdf,chemin:rec.chemin||null,recu:rec.recu||"photo",dateRecu:rec.date0||rec.date};
     S.docs.push(d);
     if(rec.fournisseur&&RESERVE.pros[rec.fournisseur])connaitrePro(rec.fournisseur,rec.travaux?rec.travaux:(rec.type==="facture"?"Facture reçue":"Document reçu"),rec.date);
     if(rec.travaux){let t=S.travaux.find(t=>t.titre===rec.travaux);if(!t){t={id:uid(),titre:rec.travaux,par:rec.fournisseur,date:rec.date,montant:0,docs:[]};S.travaux.push(t)}t.docs.push(d.id);if(rec.type==="facture")t.montant=rec.montant;if(rec.date>t.date)t.date=rec.date}
+    if(d.type==="assurance")suivreAssurance(d); // D-151, 16 septembre 2026
   }
   if(rec.pieceId&&rec.pieceId!=="maison"&&rec.img){const p=pieceParId(rec.pieceId);if(p&&p.photos.length<6)p.photos.push(rec.img)}
   else if(rec.pieceId&&rec.pieceId!=="maison"){const p=pieceParId(rec.pieceId);if(p)p.photos.push(null)}
+}
+// D-151 (16 septembre 2026, à la suite de A16 — entretien avec une amie assureuse) : à chaque document d'assurance
+// déposé, on compare le tarif au dernier connu du même contrat et à l'évolution de l'indice de référence, et on
+// programme un rappel de vérification deux mois avant l'échéance. Pour la France, l'indice retenu est l'indice FFB
+// (indice du coût de la construction, Fédération Française du Bâtiment), qui sert de base aux assureurs pour réviser
+// les contrats d'habitation. Faute de source branchée à ce jour pour lire sa vraie valeur trimestrielle,
+// HAUSSE_FFB_TYPIQUE_ANNUELLE est une estimation à ajuster — reste ouvert au registre (A16/D-151), tout comme
+// l'indice équivalent hors de France. Message volontairement prudent : on signale un écart, on n'affirme jamais un
+// calcul exact.
+const HAUSSE_FFB_TYPIQUE_ANNUELLE=0.03, MARGE_AVANT_SIGNALEMENT=1.5;
+function suivreAssurance(d){
+  const echeance=d.echeance||shiftDate(d.date,365); // à défaut d'échéance explicite (rare), un an après la date du document
+  d.echeance=echeance;
+  const precedents=S.docs.filter(x=>x.type==="assurance"&&x.id!==d.id&&x.montant!=null).sort((a,b)=>b.date.localeCompare(a.date));
+  const precedent=precedents.find(x=>x.fournisseur&&d.fournisseur&&x.fournisseur===d.fournisseur)||precedents[0];
+  if(precedent&&precedent.montant>0&&d.montant!=null){
+    const hausse=(d.montant-precedent.montant)/precedent.montant;
+    const anneesEcoulees=Math.max(1,joursDepuis(precedent.date)/365);
+    const seuil=HAUSSE_FFB_TYPIQUE_ANNUELLE*anneesEcoulees*MARGE_AVANT_SIGNALEMENT;
+    if(hausse>seuil&&!S.rappels.some(r=>r.hausseDoc===d.id)){
+      S.rappels.push({id:uid(),t:`Le tarif de votre assurance (${d.fournisseur||"votre assureur"}) est passé de ${precedent.montant} € à ${d.montant} €, soit une hausse de ${Math.round(hausse*100)} %, plus que ce qu'une revalorisation habituelle expliquerait. Vérifiez ce montant auprès de votre assureur.`,hausseDoc:d.id,du:today(),fait:false,info:true});
+    }
+  }
+  if(!S.rappels.some(r=>r.docAssurance===d.id)){
+    S.rappels.push({id:uid(),t:"Avez-vous reçu l'avis d'échéance de votre assurance habitation ? C'est le moment de vérifier le montant par rapport à l'an dernier.",docAssurance:d.id,du:shiftDate(echeance,-60),fait:false});
+  }
 }
 const lc=s=>s.charAt(0).toLowerCase()+s.slice(1);
 function connaitrePro(nom,motif,date){
@@ -1286,7 +1318,7 @@ V.fil=()=>{
   const nAfaire=S.fil.filter(e=>(e.type==="rappel"||e.type==="question"||e.type==="recu")&&!e.fait).length;
   return `<div class="view" style="gap:12px">
     <div class="row wrap" style="gap:6px">${[["tout","Tout"],["afaire",nAfaire?`À faire · ${nAfaire}`:"À faire"],["documents","Documents"],["souvenirs","Souvenirs"]].map(([k,n])=>`<button class="chip btn-chip ${filtreFil===k?"on":""}" style="padding:6px 12px" onclick="filtreFil='${k}';render()">${n}</button>`).join("")}</div>
-    ${vide?`<div class="card soft" style="gap:8px"><p class="b" style="color:var(--sauge-f)">Rien encore.</p><p class="muted">Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière. Ou envoyez un document à l'adresse VIDOM de la maison.</p><label class="btn primary file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label></div>`:""}
+    ${vide?`<div class="card soft" style="gap:8px"><p class="b" style="color:var(--sauge-f)">Rien encore.</p><p class="muted">Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière. Ou envoyez un document à l'adresse VIDOM de la maison.</p><label class="btn primary file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label><button class="btn ghost sm" onclick="ouvrirAide()">${I.aide} Tout ce que VIDOM sait faire</button></div>`:""}
     ${!vide&&!entrees.length?`<p class="small faint" style="text-align:center;padding:20px 0">Rien de ce côté pour l'instant.</p>`:""}
     ${groupes.map(g=>`<div class="sep"><span>${h(g.g)}</span><i></i></div>${g.l.map(entreeFil).join("")}`).join("")}
     <div style="flex:1 1 auto"></div>
@@ -1396,7 +1428,7 @@ V.equipement=id=>{
 function voirNotice(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Notice — ${h(e.marque)} ${h(e.modele)}</h2><div class="book"><p class="small muted">Retrouvée sur le site du fabricant à partir de la référence ${h(e.ref)}.</p><p style="margin-top:10px"><b>Mise en service.</b> Raccordez l'appareil, vérifiez le niveau, lancez un premier cycle à vide.</p><p><b>Entretien.</b> Nettoyez le filtre une fois par mois. Détartrez tous les six mois.</p><p><b>En cas de panne.</b> Le code affiché indique la cause : E15, fuite ; E22, filtre obstrué ; E24, évacuation.</p></div><div class="row"><button class="btn primary grow" onclick="closeModal();toast('Notice conservée dans Documents')">Conserver dans Documents</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
 function sav(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Service après-vente ${h(e.marque)}</h2><p class="muted">Retrouvé à partir de la référence ${h(e.ref)}. ${e.garantie&&joursDepuis(e.garantie)<0?"L'appareil est encore sous garantie.":"L'appareil n'est plus sous garantie."}</p><a class="btn primary big" href="tel:${e.sav.replace(/\s/g,"")}">${I.telephone} ${h(e.sav)}</a><p class="small faint">Ayez sous la main : la référence ${h(e.ref)}, la date d'achat (${dateFr(e.achat)}) et la facture, qui est dans la mémoire de la maison.</p><button class="btn" onclick="closeModal()">Fermer</button>`)}
 function probleme(id){const e=S.equipements.find(x=>x.id===id);const garanti=e.garantie&&joursDepuis(e.garantie)<0;const pro=S.pros.find(p=>p.nom===e.installateur);modal(`<h2>Un problème avec ${h(lc(e.nom))} ?</h2><p class="muted">${garanti?"Il est sous garantie : le service après-vente d'abord.":(pro?`${h(pro.nom)} connaît cet appareil : la maison le propose en premier.`:"Voici par où commencer.")}</p><div class="stack">${garanti&&e.sav?`<button class="btn primary big" onclick="closeModal();sav('${e.id}')">${I.telephone} Appeler le SAV</button>`:""}${pro?`<button class="btn ${garanti?"":"primary"} big" onclick="closeModal();contacter('${h(pro.nom)}')">${I.gens} Recontacter ${h(pro.nom)}</button>`:""}<button class="btn big" onclick="closeModal();trouverPro('${h(e.nom)}')">Trouver un professionnel</button><button class="btn big" onclick="closeModal();sinistre('${e.id}')">Déclarer un sinistre à l'assureur</button></div><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
-function sinistre(id){const e=S.equipements.find(x=>x.id===id);const ass=S.docs.find(d=>d.type==="contrat");modal(`<h2>Déclaration de sinistre</h2><p class="muted">VIDOM prépare le dossier avec ce que la maison sait. Vous relisez, vous envoyez.</p><div class="book"><p class="b">${h(S.logement.nom)} — ${h(S.logement.adresse)}, ${h(S.logement.cp)} ${h(S.logement.ville)}</p><p class="small muted">${ass?"Contrat : "+h(ass.fournisseur)+", attestation du "+dateFr(ass.date):"Attestation d'assurance : à photographier"}</p><p style="margin-top:8px"><b>Équipement concerné :</b> ${h(e.nom)} ${h(e.marque)} ${h(e.modele)}, ${e.achat?"acheté le "+dateFr(e.achat):""}${e.installateur?", installé par "+h(e.installateur):""}.</p><p><b>Pièces jointes :</b> facture d'achat, photos, ${e.notice?"notice":""}.</p></div><div class="row"><a class="btn primary grow" href="mailto:?subject=${encodeURIComponent("Déclaration de sinistre — "+S.logement.adresse)}" onclick="closeModal();filAjouter({type:'info',t:'Déclaration de sinistre préparée pour '+'${h(lc(e.nom))}'+'. Envoyée depuis votre messagerie.',ico:'envoi',fait:true});render()">${I.envoi} Envoyer</a><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
+function sinistre(id){const e=id?S.equipements.find(x=>x.id===id):null;const quoi=e?lc(e.nom):"la maison";const ass=S.docs.find(d=>d.type==="contrat");modal(`<h2>Déclaration de sinistre</h2><p class="muted">VIDOM prépare le dossier avec ce que la maison sait. Vous relisez, vous envoyez.</p><div class="book"><p class="b">${h(S.logement.nom)} — ${h(S.logement.adresse)}, ${h(S.logement.cp)} ${h(S.logement.ville)}</p><p class="small muted">${ass?"Contrat : "+h(ass.fournisseur)+", attestation du "+dateFr(ass.date):"Attestation d'assurance : à photographier"}</p>${e?`<p style="margin-top:8px"><b>Équipement concerné :</b> ${h(e.nom)} ${h(e.marque)} ${h(e.modele)}, ${e.achat?"acheté le "+dateFr(e.achat):""}${e.installateur?", installé par "+h(e.installateur):""}.</p>`:""}<p><b>Pièces jointes :</b> ${e?"facture d'achat, photos"+(e.notice?", notice":""):"photos, devis ou factures des réparations"}.</p></div><div class="row"><a class="btn primary grow" href="mailto:?subject=${encodeURIComponent("Déclaration de sinistre — "+S.logement.adresse)}" onclick="closeModal();filAjouter({type:'info',t:'Déclaration de sinistre préparée pour '+'${h(quoi)}'+'. Envoyée depuis votre messagerie.',ico:'envoi',fait:true});render()">${I.envoi} Envoyer</a><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
 
 function vDocuments(){
   const vue=S.reglages.docsPar||"type";
@@ -1436,9 +1468,99 @@ V.pro=id=>{const p=S.pros.find(x=>x.id===id);if(!p)return vArtisans();const docs
     <div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ce qu'il a fait ici</p>${p.interventions.map(i=>`<div class="line"><span>${h(i.motif)}</span><span class="small muted">${dateFr(i.d)}</span></div>`).join("")}</div>
     ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ses documents</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
     <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre appréciation</p>${p.avis.length?p.avis.map(a=>`<p class="small">${"★".repeat(a.n)}${"☆".repeat(5-a.n)} <span class="muted">${h(a.t)} · ${dateFr(a.d)}</span></p>`).join(""):`<p class="small muted">Elle reste dans la mémoire de la maison et se transmet avec elle. L'artisan ne la voit jamais.</p>`}<div class="row">${[1,2,3,4,5].map(n=>`<button class="btn sm" onclick="noter('${p.id}',${n})">${"★".repeat(n)}</button>`).join("")}</div></div>
-    <button class="btn primary big" onclick="contacter('${h(p.nom)}')">${I.telephone} Recontacter</button>
+    <div class="row wrap"><button class="btn primary grow" onclick="contacter('${h(p.nom)}')">${I.telephone} Recontacter</button><button class="btn grow" onclick="recommanderArtisan('${p.id}')">${I.envoi} Recommander</button></div>
   </div>`};
 function noter(id,n){const p=S.pros.find(x=>x.id===id);p.avis.push({n,t:"Par vous",d:today()});save();render();toast("Appréciation conservée")}
+
+/* ================= l'envoi : recommander un artisan à un autre logement (D-153 à D-157, A17) ================= */
+function recommanderArtisan(id){
+  const p=S.pros.find(x=>x.id===id);if(!p)return;
+  const texte=`${S.logement.nom} vous recommande ${p.nom}, ${lc(p.metier||"un professionnel")}. Il a gardé sa fiche dans VIDOM, la mémoire de son logement.`;
+  modal(`<h2>Recommander ${h(p.nom)}</h2><p class="muted">La personne reçoit sa fiche, sans compte ni installation. Elle pourra ensuite la garder pour son propre logement, si elle le souhaite.</p>
+    <label class="f"><span>À qui (facultatif)</span><input class="input" id="destNom" placeholder="Prénom ou nom"></label>
+    <label class="f"><span>Le message</span><textarea class="input" id="destMsg" rows="4">${h(texte)}</textarea></label>
+    <button class="btn primary big" onclick="envoyerRecommandation('${id}')">${I.envoi} Envoyer</button>
+    <button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+}
+async function envoyerRecommandation(id){
+  if(!supa){toast("Fonction indisponible hors connexion.");return}
+  const p=S.pros.find(x=>x.id===id);if(!p)return;
+  const destNom=(document.getElementById("destNom")?.value||"").trim();
+  const message=(document.getElementById("destMsg")?.value||"").trim();
+  closeModal();toast("Un instant…");
+  try{
+    const {data,error}=await supa.from("envois").insert({logement_id:S.logement.id,artisan_id:id,destinataire_nom:destNom||null,message:message||null}).select("code").single();
+    if(error||!data){toast("Cela n'a pas fonctionné.");return}
+    const lien=`${location.origin}${location.pathname}#/e/${data.code}`;
+    const texteComplet=`${message}\n\n${lien}`;
+    filAjouter({type:"info",t:`Vous avez recommandé ${p.nom} à ${destNom||"quelqu'un"}.`,ico:"gens",fait:true});
+    if(navigator.share){navigator.share({title:"Une recommandation VIDOM",text:message,url:lien}).catch(()=>{})}
+    else{
+      modal(`<h2>Le lien à envoyer</h2><div class="card"><span class="mono" style="word-break:break-all">${h(lien)}</span></div>
+        <p class="small muted">Envoyez-le depuis votre messagerie ou vos messages. La page qu'il ouvre ne montre que cette fiche, sans compte.</p>
+        <div class="row wrap"><button class="btn primary grow" onclick="copier('${h(lien)}')">Copier le lien</button><a class="btn grow" href="sms:?&body=${encodeURIComponent(texteComplet)}">SMS</a><a class="btn grow" href="mailto:?subject=${encodeURIComponent("Une recommandation de "+(S.logement.nom||"VIDOM"))}&body=${encodeURIComponent(texteComplet)}">${I.mail} Courriel</a></div>
+        <button class="btn ghost" onclick="closeModal()">Fermer</button>`);
+    }
+  }catch(e){toast("Cela n'a pas fonctionné.")}
+}
+
+/* ================= l'envoi : la page ouverte par le destinataire, sans compte ================= */
+async function renderEnvoiPublic(code){
+  const app=document.getElementById("app");
+  document.body.classList.remove("app");
+  app.innerHTML=`<div class="view center fadein" style="min-height:100vh"><p class="muted">Un instant…</p></div>`;
+  if(!supa||!code){app.innerHTML=`<div class="view center" style="min-height:100vh;text-align:center;padding:0 20px"><p class="muted">Ce lien n'est pas disponible pour l'instant.</p></div>`;return}
+  let res=null;
+  try{const {data,error}=await supa.rpc("lire_envoi",{p_code:code});if(!error)res=data}catch(e){}
+  if(!res||res.introuvable){
+    app.innerHTML=`<div class="view center fadein" style="min-height:100vh;gap:8px;text-align:center;padding:0 24px"><h1 class="h" style="font-size:1.3em">Ce lien n'est plus valable.</h1><p class="muted">Il a peut-être déjà servi, ou son délai est passé.</p></div>`;return}
+  const a=res.artisan||{};
+  const avis=Array.isArray(res.avis)?res.avis:[];
+  const moy=avis.length?Math.round(avis.reduce((s,x)=>s+(x.note||0),0)/avis.length):null;
+  app.innerHTML=`<div class="view fadein" style="gap:16px;padding:24px 20px;max-width:440px;margin:0 auto">
+    <p class="small muted" style="text-align:center">VIDOM · la mémoire numérique du logement</p>
+    <div class="card soft" style="gap:6px;text-align:center"><p class="muted">${h(res.origine_nom||"Un logement")} vous recommande</p><h1 class="h" style="font-size:1.5em">${h(a.nom||"")}</h1><p class="muted">${h(a.metier||"")}${a.ville?" · "+h(a.ville):""}</p>${moy?`<p style="letter-spacing:2px">${"★".repeat(moy)}${"☆".repeat(5-moy)}</p>`:""}</div>
+    ${res.message?`<div class="card"><p class="small" style="white-space:pre-wrap">${h(res.message)}</p></div>`:""}
+    <div class="row wrap">${a.telephone?`<a class="btn grow" href="tel:${h(a.telephone).replace(/\s/g,"")}">${I.telephone} ${h(a.telephone)}</a>`:""}${a.email?`<a class="btn grow" href="mailto:${a.email}">${I.mail} Écrire</a>`:""}</div>
+    ${res.garde_le?`<p class="small muted" style="text-align:center">Déjà gardée dans une mémoire de logement.</p>`:`<button class="btn primary big" onclick="garderEnvoi('${code}')">Garder cette fiche dans la mémoire de mon logement</button><p class="small faint" style="text-align:center">Rien ne s'installe pour l'ouvrir. Cela ne crée un compte que si vous choisissez de la garder.</p>`}
+  </div>`;
+}
+async function garderEnvoi(code){
+  let session=null;
+  try{const {data}=await supa.auth.getSession();session=data&&data.session}catch(e){}
+  if(session&&S.cree&&S.logement&&S.logement.id){
+    toast("Un instant…");
+    try{
+      const {data,error}=await supa.rpc("garder_envoi",{p_code:code,p_logement_id:S.logement.id});
+      if(error){toast("Cela n'a pas fonctionné : "+error.message);return}
+      const art=data&&data.artisan;
+      if(art&&!S.pros.some(x=>x.id===art.id)){S.pros.push({id:art.id,nom:art.nom,metier:art.metier||"",tel:art.telephone||"",mail:art.email||"",ville:art.ville||"",interventions:[],avis:[]});save()}
+      location.hash=art?("#/pro/"+art.id):"#/carte/pro";render();
+      toast(`Gardé dans la mémoire de ${S.logement.nom}`);
+    }catch(e){toast("Cela n'a pas fonctionné.")}
+    return;
+  }
+  try{localStorage.setItem("vidom_envoi_attente",code)}catch(e){}
+  S.etape="compte";save();location.hash="";render();
+}
+async function verifierEnvoiEnAttente(){
+  let code=null;try{code=localStorage.getItem("vidom_envoi_attente")}catch(e){}
+  if(!code||!supa||!S.cree||!S.logement||!S.logement.id)return;
+  try{
+    const {data,error}=await supa.rpc("garder_envoi",{p_code:code,p_logement_id:S.logement.id});
+    if(error){
+      if(/introuvable|expiré/i.test(error.message||"")){try{localStorage.removeItem("vidom_envoi_attente")}catch(e){}}
+      return;
+    }
+    try{localStorage.removeItem("vidom_envoi_attente")}catch(e){}
+    const art=data&&data.artisan;
+    if(art&&!S.pros.some(x=>x.id===art.id)){
+      S.pros.push({id:art.id,nom:art.nom,metier:art.metier||"",tel:art.telephone||"",mail:art.email||"",ville:art.ville||"",interventions:[],avis:[]});
+      save();filAjouter({type:"info",t:`${art.nom} a rejoint la mémoire de votre logement : vous l'avez gardé depuis une recommandation.`,ico:"gens",fait:true});
+      render();toast("Fiche gardée dans votre maison");
+    }
+  }catch(e){}
+}
 function trouverPro(quoi){const connus=S.pros;modal(`<h2>Trouver un professionnel</h2>${connus.length?`<p class="small b" style="color:var(--sauge-f)">Ceux que la maison connaît</p><div class="card" style="gap:0;padding:4px 16px">${connus.map(p=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();contacter('${h(p.nom)}')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(p.nom)}</span><span class="small muted">${h(p.metier)}</span></span>${I.telephone}</button>`).join("")}</div>`:""}<p class="small b" style="color:var(--sauge-f)">Près de chez vous</p><div class="card" style="gap:0;padding:4px 16px">${[["Atelier Saint-Servan","Plombier-chauffagiste","Saint-Malo"],["Élec'Côte","Électricien","Saint-Malo"],["Menuiserie Rance","Menuisier","Dinard"]].map(x=>`<div class="line"><span class="stack" style="gap:0"><span class="b">${x[0]}</span><span class="small muted">${x[1]} · ${x[2]}</span></span><span class="chip neutre">Inconnu de la maison</span></div>`).join("")}</div><p class="small faint">Un professionnel inconnu n'entre dans la maison qu'après une première intervention.</p><button class="btn" onclick="closeModal()">Fermer</button>`)}
 
 function vTravaux(){return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Travaux</h1>
@@ -1505,6 +1627,7 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
     <button class="line" style="width:100%;text-align:left" onclick="montrerCompte()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Votre compte</span><span class="small muted">${h(S.compte.email||"—")}</span></span>${I.fleche}</button>
     <button class="line" style="width:100%;text-align:left" onclick="choisirLogement()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Vos logements</span><span class="small muted">${S.logements.length>1?S.logements.length+" logements sur ce compte":"Un seul pour l'instant"} · ajouter un logement</span></span>${I.fleche}</button>
     <a class="line" href="#/adresse-vidom"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Adresse VIDOM et QR</span><span class="small muted mono">${h(S.logement.depot)}</span></span>${I.fleche}</a>
+    <button class="line" style="width:100%;text-align:left" onclick="ouvrirAide()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Aide</span><span class="small muted">Tout ce que VIDOM sait faire, et par où commencer</span></span>${I.fleche}</button>
   </div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Taille du texte</p><div class="row">${[["normal","Normal"],["grand","Grand"],["tres-grand","Très grand"]].map(([k,n])=>`<button class="chip btn-chip ${S.reglages.texte===k?"on":""}" onclick="S.reglages.texte='${k}';document.documentElement.dataset.texte='${k}';save();render()">${n}</button>`).join("")}</div></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Donner accès à un tiers</p><p class="small muted">Notaire, agent, artisan, assureur : chacun ne voit que ce qui le concerne.</p><button class="btn" onclick="choisirTiers()">${I.echanges} Ouvrir un accès</button></div>
@@ -1512,7 +1635,7 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre mémoire vous appartient</p><div class="row wrap"><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter ma mémoire</button><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Mon avis sur la maquette VIDOM")}&body=${encodeURIComponent("Écran : "+location.hash+"\n\n")}">${I.mail} Donner mon avis</a></div><p class="small faint">${S.docs.length} documents · ${S.equipements.length} équipements · ${S.fil.length} moments dans le fil.</p></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Supprimer ce logement</p><p class="small muted">La mémoire de ${h(S.logement.nom||"cette maison")} s'efface de votre compte, sur tous vos appareils. Les autres logements ne bougent pas.</p><button class="btn terra" onclick="supprimerLogement()">Supprimer ${h(S.logement.nom||"ce logement")}</button></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Repartir de zéro sur cet appareil</p><p class="small muted">N'efface que cet appareil. Vos logements restent sur votre compte et reviennent à la prochaine connexion.</p><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le fil. Vos logements restent sur votre compte.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'toutEffacer()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
-  <p class="small faint" style="text-align:center">VIDOM — maquette du 15 septembre 2026. Votre mémoire est enregistrée sur votre compte et retrouvée sur chacun de vos appareils.</p>
+  <p class="small faint" style="text-align:center">VIDOM — maquette du 16 septembre 2026. Votre mémoire est enregistrée sur votre compte et retrouvée sur chacun de vos appareils.</p>
 </div>`;
 function montrerCompte(){
   modal(`<h2>Votre compte</h2><p class="muted">${h(S.compte.email||"Sans courriel")}</p>
@@ -1533,6 +1656,152 @@ async function seDeconnecter(){
 }
 function toutEffacer(){try{Object.keys(localStorage).filter(k=>k===KEY||k.startsWith(KEY+":")).forEach(k=>localStorage.removeItem(k))}catch(e){}location.hash="";location.reload()}
 function emporter(){const data=JSON.stringify(S,null,2);const b=new Blob([data],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`vidom-${slug(S.logement.nom||"maison")}-${today()}.json`;document.body.appendChild(a);a.click();a.remove();toast("Votre mémoire est téléchargée")}
+</script>
+<script>
+/* ================= l'aide : tout ce que VIDOM sait faire (16 septembre 2026) =================
+   Chaque entrée : ce que vous voulez faire, en une phrase ; comment VIDOM s'y prend ; et où cela mène.
+   go : une page (#/…) ou un geste. Sans go : pas encore construit, cadenas (D-112). */
+const AIDE=[
+  {t:"Garder",l:[
+    {q:"Entrer une facture, un devis, un document",c:"Photographiez-le ou importez-le : VIDOM lit la date, le montant, l'artisan, et le range.",k:"facture devis document photo importer scanner papier garder conserver",go:()=>aideFichier("image/*,.pdf")},
+    {q:"Photographier un appareil (son étiquette)",c:"Marque, modèle, garantie : VIDOM les lit sur l'étiquette et retrouve la notice.",k:"appareil équipement étiquette lave-vaisselle lave-linge chaudière four frigo réfrigérateur notice garantie électroménager",go:()=>aideFichier("image/*",true)},
+    {q:"Envoyer un document par courriel à la maison",c:"Chaque logement a son adresse VIDOM. Ce qui y arrive vous est proposé dans le fil ; rien n'entre sans vous.",k:"courriel email mail adresse vidom envoyer transférer boîte",go:"#/adresse-vidom"},
+    {q:"Garder mon contrat d'assurance",c:"Photographiez l'attestation ou le contrat : VIDOM suit l'échéance, vous prévient deux mois avant, et compare le tarif.",k:"assurance contrat attestation échéance tarif prime habitation",go:()=>aideFichier("image/*,.pdf")},
+    {q:"Ajouter le plan de la maison",c:"Une photo du plan suffit. Le dessin de la maison s'appuie dessus.",k:"plan dessin croquis",go:()=>aideFichier("image/*",false,f=>planFichier(f))},
+    {q:"Ajouter une pièce",c:"Une chambre de plus, un garage, une cave, une annexe.",k:"pièce chambre garage cave annexe parking grenier combles",go:()=>ajouterPiece()},
+    {q:"Corriger le nom, l'année, la surface de la maison",c:"Ce que VIDOM a trouvé à l'adresse se corrige à la main.",k:"corriger nom année surface dpe classe énergétique",go:()=>corrigerLogement()},
+    {q:"Ranger un document ou un appareil dans une autre pièce",c:"Ouvrez sa fiche, puis « Changer de pièce ».",k:"ranger déplacer changer de pièce classer rangement",go:"#/carte/documents"},
+    {q:"Un document dans une langue étrangère",c:"Photographiez-le, puis cochez « Document en langue étrangère » : VIDOM traduit le titre pour le ranger, l'original reste intact.",k:"langue étrangère traduire traduction hébreu anglais espagnol",go:()=>aideFichier("image/*,.pdf")},
+  ]},
+  {t:"Retrouver",l:[
+    {q:"Poser une question à la maison",c:"« Où est la notice du four ? », « Qui est venu pour la chaudière ? » : la maison répond avec le document.",k:"question demander chercher où est qui quand parler",go:()=>aideDemander()},
+    {q:"Retrouver un document",c:"Tout ce qui est conservé, par pièce et par date.",k:"document retrouver acte diagnostic facture papier",go:"#/carte/documents"},
+    {q:"Voir la notice ou la garantie d'un appareil",c:"Chaque appareil a sa fiche : notice, garantie, service après-vente, entretiens.",k:"notice garantie appareil équipement sav mode d'emploi",go:"#/carte/equipements"},
+    {q:"Savoir quelles garanties expirent bientôt",c:"La maison compte pour vous.",k:"garantie expire bientôt fin",go:()=>aideQuestion("Quelles garanties expirent bientôt ?")},
+    {q:"Voir ce qu'il reste à faire",c:"Rappels, questions, documents à trier : tout ce qui vous attend, au même endroit.",k:"à faire rappel tâche entretien attendre",go:()=>{filtreFil="afaire";route("#/fil")}},
+    {q:"Relire l'histoire de la maison",c:"Remonter le fil, c'est relire ce qui s'est passé, année après année.",k:"histoire fil chronologie passé",go:()=>{filtreFil="tout";route("#/fil")}},
+    {q:"Voir les souvenirs",c:"Il y a un an, la maison…",k:"souvenir anniversaire",go:()=>{filtreFil="souvenirs";route("#/fil")}},
+    {q:"Voir ce que VIDOM sait de la parcelle",c:"Cadastre, altitude, bâtiment : ce que les registres publics disent de l'adresse.",k:"parcelle cadastre altitude risques registre public terrain",go:"#/adresse-vidom"},
+  ]},
+  {t:"Faire faire",l:[
+    {q:"Recontacter un artisan",c:"Ceux que la maison connaît, avec leurs interventions passées. L'appel part de votre téléphone.",k:"artisan recontacter appeler téléphoner plombier électricien chauffagiste couvreur",go:"#/carte/artisans"},
+    {q:"Trouver un professionnel",c:"Ceux que la maison connaît passent avant un inconnu.",k:"trouver professionnel artisan chercher dépanneur",go:()=>trouverPro()},
+    {q:"Noter un artisan",c:"Après une intervention, votre appréciation reste attachée à sa fiche.",k:"noter avis note artisan appréciation",go:"#/carte/artisans"},
+    {q:"Envoyer la fiche d'un artisan à un ami",c:"Il reçoit la fiche sans compte ni installation, et pourra la garder pour son propre logement.",k:"recommander envoyer fiche artisan ami voisin partager transmettre",go:()=>aideRecommander()},
+    {q:"Un appareil en panne",c:"Sous garantie, le service après-vente d'abord ; sinon l'artisan qui connaît l'appareil.",k:"panne problème cassé marche plus réparer dépanner",go:()=>aideEquipement(id=>probleme(id),"Lequel ?")},
+    {q:"Contacter le service après-vente",c:"Retrouvé à partir de la référence lue sur l'étiquette.",k:"sav service après-vente fabricant",go:()=>aideEquipement(id=>{const e=S.equipements.find(x=>x.id===id);if(e&&e.sav)sav(id);else route("#/equipement/"+id)},"Pour quel appareil ?")},
+    {q:"Ouvrir un chantier, suivre des travaux",c:"Devis, factures, ce que ça a coûté : chaque document photographié vient s'y ranger.",k:"travaux chantier rénovation devis coût entreprise",go:()=>ouvrirChantier()},
+    {q:"Voir ce que les travaux ont coûté",c:"Le total connu, chantier par chantier.",k:"travaux coût total dépenses prix",go:"#/carte/travaux"},
+  ]},
+  {t:"Assurance et sinistre",l:[
+    {q:"Déclarer un sinistre",c:"VIDOM prépare la déclaration avec ce que la maison sait : contrat, appareil, factures. Vous relisez, vous envoyez.",k:"sinistre dégât des eaux fuite incendie tempête effraction déclarer assureur assurance",go:()=>declarerSinistre()},
+    {q:"Donner accès à mon assureur",c:"Il voit la fiche du logement, les équipements et le dossier sinistre, pour un temps.",k:"assureur accès assurance",go:()=>ouvrirAcces("assureur")},
+    {q:"Vérifier mon contrat et son échéance",c:"Photographiez le dernier avis d'échéance : VIDOM compare le tarif et programme le rappel.",k:"échéance contrat assurance tarif renouvellement avis",go:()=>aideFichier("image/*,.pdf")},
+  ]},
+  {t:"Partager, donner accès",l:[
+    {q:"Donner accès au notaire, à l'agent, à un artisan…",c:"Chacun ne voit que ce qui le concerne, pour un temps, et vous voyez qui a vu quoi.",k:"accès notaire agent immobilier artisan assureur acquéreur tiers partager ouvrir",go:()=>choisirTiers()},
+    {q:"Donner accès à mon gestionnaire locatif",c:"Le temps du mandat, il agit au nom du logement : équipements, artisans, travaux, documents.",k:"gestionnaire locatif mandat agence gestion location",go:()=>ouvrirAcces("gestionnaire")},
+    {q:"Voir qui a vu quoi, fermer un accès",c:"Le journal des ouvertures, et la porte pour refermer.",k:"accès journal fermer qui a vu",go:"#/carte/echanges"},
+    {q:"Partager l'adresse VIDOM de la maison",c:"À donner au notaire, au syndic, aux artisans : ils envoient, vous décidez.",k:"adresse vidom partager donner courriel",go:()=>partagerAdresse()},
+    {q:"Imprimer l'étiquette de la maison",c:"À coller sur le tableau électrique. L'artisan la scanne, sa facture arrive ici.",k:"étiquette qr imprimer coller code",go:()=>etiquette()},
+    {q:"Accepter un expéditeur sans qu'on me demande",c:"Pour ceux dont vous gardez toujours les envois.",k:"expéditeur accepter automatique toujours garder",go:"#/adresse-vidom"},
+  ]},
+  {t:"Vendre, partir, transmettre",l:[
+    {q:"Vendre la maison",c:"La rubrique Transmission apparaît : le dossier de vente, le livre du logement, et le tri du dernier jour.",k:"vendre vente acheteur acquéreur notaire",go:()=>aideChangerDeMains("vente")},
+    {q:"Préparer le dossier de vente",c:"Acte, diagnostics, travaux, équipements et garanties — pour le notaire, l'agent, l'acquéreur.",k:"dossier de vente notaire diagnostics vendre",go:()=>aideTransmission("vente")},
+    {q:"Le livre du logement, le carnet d'entretien",c:"Son histoire année par année, et ce qui est à faire, quand. Gratuits, toujours.",k:"livre logement carnet entretien histoire",go:()=>aideTransmission("livre")},
+    {q:"Quitter la maison",c:"Sa mémoire peut continuer sans vous. Vous triez ce qui reste, ce qui part, ce qui s'efface.",k:"partir quitter déménager déménagement",go:()=>aideChangerDeMains("depart")},
+    {q:"Emporter ma mémoire",c:"Tout ce que la maison sait, dans un fichier à vous. Votre mémoire vous appartient.",k:"emporter télécharger exporter sauvegarde fichier",go:()=>emporter()},
+  ]},
+  {t:"Louer, accueillir",l:[
+    {q:"Louer ma maison secondaire, accueillir des invités",c:"Un mode d'emploi pour l'invité (wifi, chauffage, poêle), configuré une fois, régénéré à chaque séjour.",k:"louer location maison secondaire invité mode d'emploi wifi airbnb saisonnier vacances"},
+    {q:"Un locataire dans le logement",c:"Sa propre mémoire, personnelle et portable, rattachée au logement le temps du bail.",k:"locataire bail location louer"},
+    {q:"Mon syndic, ma copropriété",c:"Les parties communes, le syndic, les voisins.",k:"syndic copropriété immeuble parties communes voisin appartement"},
+  ]},
+  {t:"Vos logements, votre compte",l:[
+    {q:"Ajouter un autre logement",c:"Un même compte, plusieurs mémoires : chaque logement garde la sienne, avec sa propre adresse VIDOM.",k:"ajouter logement second appartement maison plusieurs nouveau",go:()=>choisirLogement()},
+    {q:"Changer de logement",c:"Passer de l'un à l'autre.",k:"changer logement basculer autre",go:()=>choisirLogement()},
+    {q:"Retrouver ma maison sur un autre appareil",c:"Téléphone ou ordinateur : connectez-vous avec le même compte, vous retrouvez la même maison.",k:"autre appareil téléphone ordinateur tablette synchroniser installer",go:()=>aideAutreAppareil()},
+    {q:"Agrandir le texte",c:"Normal, grand, très grand.",k:"texte taille agrandir lire police lunettes",go:"#/reglages"},
+    {q:"Se déconnecter",c:"Cet appareil oublie vos logements. Rien n'est effacé.",k:"déconnecter compte mot de passe sortir",go:()=>montrerCompte()},
+    {q:"Supprimer ce logement",c:"Sa mémoire s'efface de votre compte, sur tous vos appareils.",k:"supprimer effacer logement",go:()=>supprimerLogement()},
+    {q:"Donner mon avis sur VIDOM",c:"Un courriel à contact@vidom.fr, avec l'écran où vous êtes.",k:"avis retour contact bug problème suggestion idée",go:()=>{location.href="mailto:contact@vidom.fr?subject="+encodeURIComponent("Mon avis sur la maquette VIDOM")+"&body="+encodeURIComponent("Écran : "+location.hash+"\n\n")}},
+  ]},
+];
+AIDE.forEach((s,i)=>s.l.forEach((e,j)=>e.id=i+"-"+j));
+const AIDE_VIDES=new Set("je veux voudrais voudrai vais souhaite une un le la les des de du mon ma mes comment faire pour et à en avec ce cette que qui quoi est il y a ou vous on se sa son ses dans sur au aux faut dois puis peut peux veut me moi nous notre nos comment où".split(" "));
+const aideNorm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[’']/g," ");
+function aideMots(q){return aideNorm(q).split(/[^a-z0-9]+/).filter(m=>m.length>1&&!AIDE_VIDES.has(m)).map(m=>m.replace(/(s|x)$/,""))}
+function aideCherche(q){
+  const mots=aideMots(q);
+  if(!mots.length)return AIDE;
+  const texte=e=>aideNorm(e.q+" "+e.c+" "+(e.k||""));
+  const filtre=test=>AIDE.map(s=>({t:s.t,l:s.l.filter(e=>test(texte(e)))})).filter(s=>s.l.length);
+  const tous=filtre(t=>mots.every(m=>t.includes(m)));
+  return tous.length?tous:filtre(t=>mots.some(m=>t.includes(m)));
+}
+let aideQ="";
+const boutonAide=()=>`<button class="aide" onclick="ouvrirAide()" aria-label="Aide : tout ce que VIDOM sait faire" title="Aide">${I.aide}</button>`;
+function ouvrirAide(q){
+  aideQ=q||"";
+  modal(`<div class="split"><h2 style="margin:0">Que voulez-vous faire ?</h2><button class="btn ghost sm" onclick="closeModal()" aria-label="Fermer">${I.croix}</button></div>
+  <p class="small muted">Tout ce que VIDOM sait faire, et par où commencer. Choisissez, ou écrivez ce que vous cherchez.</p>
+  <input class="input" id="aide-q" placeholder="Une facture, un sinistre, vendre…" autocomplete="off" value="${h(aideQ)}" oninput="aideQ=this.value;aideRendre()" aria-label="Chercher dans l'aide">
+  <div id="aide-liste" class="stack" style="gap:12px"></div>`);
+  aideRendre();
+  if(isDesk())setTimeout(()=>{const i=document.getElementById("aide-q");if(i)i.focus()},50);
+}
+function aideRendre(){
+  const box=document.getElementById("aide-liste");if(!box)return;
+  const sections=aideCherche(aideQ);
+  const ligne=e=>`<button class="line" style="width:100%;text-align:left" onclick="aideAller('${e.id}')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(e.q)}</span><span class="small muted">${h(e.c)}</span></span>${e.go?I.fleche:`<span class="chip neutre">${I.cadenas} Bientôt</span>`}</button>`;
+  box.innerHTML=sections.length
+    ?sections.map(s=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(s.t)}</p>${s.l.map(ligne).join("")}</div>`).join("")
+    :`<div class="card soft" style="gap:8px"><p class="small">Rien de ce nom dans l'aide. La maison, elle, saura peut-être répondre.</p><button class="btn primary" onclick="aideQuestion(aideQ)">${I.bulle} Demander à la maison</button></div>`;
+}
+function aideAller(id){
+  const e=AIDE.flatMap(s=>s.l).find(x=>x.id===id);if(!e)return;
+  closeModal();
+  if(!e.go){aideBientot(e);return}
+  if(typeof e.go==="string")route(e.go);else e.go();
+}
+function aideBientot(e){modal(`<h2>Pas encore.</h2><p class="muted"><b>${h(e.q)}</b> — VIDOM saura le faire dans une version à venir. ${h(e.c)}</p><p class="small faint">La version test grandit avec ce que vous lui demandez. Dites-nous si cela vous manque.</p><div class="row"><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("VIDOM — "+e.q)}" onclick="closeModal()">${I.mail} Cela me manque</a><button class="btn ghost" onclick="closeModal()">Fermer</button></div>`)}
+/* les gestes que l'aide déclenche */
+function aideFichier(accept,capture,fn){ // ouvre le choix de fichier depuis n'importe quel écran
+  const inp=document.createElement("input");inp.type="file";inp.accept=accept||"image/*";inp.multiple=!fn;inp.className="sr";
+  if(capture&&!isDesk())inp.setAttribute("capture","environment");
+  document.body.appendChild(inp);
+  inp.onchange=()=>{const f=inp.files;if(f&&f.length){if(fn)fn(f);else fichiers(f,S.pieceCourante||"maison")}setTimeout(()=>inp.remove(),1000)};
+  inp.click();
+}
+function aideDemander(){route("#/fil");setTimeout(()=>{const i=document.querySelector(".ask input");if(i){i.focus();i.scrollIntoView({block:"center"})}},80)}
+function aideQuestion(q){closeModal();if(!(q||"").trim())return;filtreFil="tout";if(parseHash().name!=="fil")location.hash="#/fil";poserQuestion(q)}
+function aideRecommander(){
+  if(!S.pros.length){modal(`<h2>Pas encore d'artisan</h2><p class="muted">La maison ne connaît encore aucun professionnel. Photographiez une facture : l'artisan qui l'a signée entre dans sa mémoire, et vous pourrez envoyer sa fiche.</p><button class="btn primary" onclick="closeModal();aideFichier('image/*,.pdf')">${I.camera} Photographier une facture</button><button class="btn ghost" onclick="closeModal()">Fermer</button>`);return}
+  if(S.pros.length===1){recommanderArtisan(S.pros[0].id);return}
+  modal(`<h2>Quel artisan ?</h2><div class="card" style="gap:0;padding:4px 16px">${S.pros.map(p=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();recommanderArtisan('${p.id}')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(p.nom)}</span><span class="small muted">${h(p.metier||"")}</span></span>${I.fleche}</button>`).join("")}</div><button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+}
+function aideEquipement(fn,titre){
+  if(!S.equipements.length){modal(`<h2>Pas encore d'appareil</h2><p class="muted">La maison ne connaît encore aucun appareil. Photographiez son étiquette : marque, modèle et garantie entrent dans sa mémoire.</p><button class="btn primary" onclick="closeModal();aideFichier('image/*',true)">${I.camera} Photographier une étiquette</button><button class="btn ghost" onclick="closeModal()">Fermer</button>`);return}
+  if(S.equipements.length===1){fn(S.equipements[0].id);return}
+  aideEquipement.fn=fn;
+  modal(`<h2>${h(titre||"Quel appareil ?")}</h2><div class="card" style="gap:0;padding:4px 16px">${S.equipements.map(e=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();aideEquipement.fn('${e.id}')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(e.nom)}</span><span class="small muted">${h(e.marque||"")} · ${h(nomPiece(e.piece))}</span></span>${I.fleche}</button>`).join("")}</div><button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+}
+function declarerSinistre(){
+  const ligne=(t,s,oc)=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();${oc}"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(t)}</span><span class="small muted">${h(s)}</span></span>${I.fleche}</button>`;
+  modal(`<h2>Déclarer un sinistre</h2><p class="muted">Sur quoi ? VIDOM prépare la déclaration avec ce que la maison sait.</p><div class="card" style="gap:0;padding:4px 16px">${ligne("La maison elle-même","Dégât des eaux, toiture, tempête, effraction…","sinistre(null)")}${S.equipements.map(e=>ligne(e.nom,(e.marque||"")+" · "+nomPiece(e.piece),`sinistre('${e.id}')`)).join("")}</div><button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+}
+function aideChangerDeMains(motif){
+  if(S.transmission){route("#/carte/transmission");return}
+  const vente=motif==="vente";
+  modal(`<h2>${vente?"Vous vendez la maison ?":"Vous quittez la maison ?"}</h2><p class="muted">${vente?"La rubrique Transmission apparaît : le dossier de vente pour le notaire et l'acquéreur, le livre du logement, et le tri du dernier jour. Rien ne part sans votre geste.":"La rubrique Transmission apparaît : ce qui reste à la maison, ce qui part avec vous, ce qui s'efface. Rien ne part sans votre geste."}</p><div class="row"><button class="btn primary grow" onclick="closeModal();changerDeMains('${motif}')">${vente?"Je vends":"Je pars"}</button><button class="btn grow" onclick="closeModal()">Pas maintenant</button></div>`);
+}
+function aideTransmission(quoi){
+  if(quoi==="livre"){ouvrirDossier("livre");return}
+  if(S.transmission){route("#/carte/transmission");setTimeout(()=>ouvrirDossier("vente"),150);return}
+  modal(`<h2>Le dossier de vente</h2><p class="muted">Il se prépare le jour où la maison change de mains, avec tout ce qu'elle sait : acte, diagnostics, travaux, équipements, garanties. Pour le notaire, l'agent, l'acquéreur.</p><div class="row"><button class="btn primary grow" onclick="closeModal();aideChangerDeMains('vente')">Je vends</button><button class="btn grow" onclick="closeModal()">Pas maintenant</button></div>`);
+}
+function aideAutreAppareil(){const url=location.href.split("#")[0];modal(`<h2>Sur un autre appareil</h2><div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="qr" style="width:96px;height:96px">${qrSvg(url)}</div><span class="small muted">Ouvrez ce code avec l'appareil photo de votre téléphone, ou tapez l'adresse sur votre ordinateur, puis connectez-vous avec le même compte : vous retrouvez la même maison.</span></div><div class="card"><span class="mono small">${h(url)}</span></div><button class="btn" onclick="closeModal()">Fermer</button>`)}
 </script>
 <script>
 /* ================= navigation et rendu ================= */
@@ -1582,7 +1851,9 @@ async function reinitialiserOk(){
 function render(){
   document.documentElement.dataset.texte=S.reglages.texte||"normal";
   const app=document.getElementById("app");
-  if(parseHash().name==="reinitialiser"||location.hash.indexOf("type=recovery")>-1){renderReinitialiser();return}
+  const _hh=parseHash();
+  if(_hh.name==="e"){renderEnvoiPublic(_hh.arg);return}
+  if(_hh.name==="reinitialiser"||location.hash.indexOf("type=recovery")>-1){renderReinitialiser();return}
   if(!S.cree){
     document.body.classList.remove("app");
     const e=S.etape||"bienvenue";
@@ -1605,10 +1876,10 @@ function render(){
     const rr=name==="maison"?"":retour;
     app.innerHTML=`<div class="desk">
       <div class="pane left"><div class="topbar">${boutonLogement(S.logement.nom,"")}<span class="small muted">${h(S.logement.ville)}</span></div>${V.maison()}</div>
-      <div class="pane right"><div class="topbar"><span class="row">${rr&&rr!=="#/fil"&&rightName!=="fil"?`<a class="back" href="${rr}">${I.retour}</a>`:(rightName!=="fil"&&rightName!=="maison"?`<a class="back" href="#/fil">${I.retour}</a>`:"")}<span class="t">${rt}</span></span><span class="actions"><label class="btn primary file">${I.plus} Ajouter<input type="file" accept="image/*,.pdf" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><button class="btn" onclick="ajouterDesk()" aria-label="Photographier ou continuer sur le téléphone">${I.camera}</button><a class="btn" href="#/reglages" aria-label="Réglages">${I.reglages}</a></span></div>${rightHtml}</div>
+      <div class="pane right"><div class="topbar"><span class="row">${rr&&rr!=="#/fil"&&rightName!=="fil"?`<a class="back" href="${rr}">${I.retour}</a>`:(rightName!=="fil"&&rightName!=="maison"?`<a class="back" href="#/fil">${I.retour}</a>`:"")}<span class="t">${rt}</span></span><span class="actions"><label class="btn primary file">${I.plus} Ajouter<input type="file" accept="image/*,.pdf" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><button class="btn" onclick="ajouterDesk()" aria-label="Photographier ou continuer sur le téléphone">${I.camera}</button><button class="btn" onclick="ouvrirAide()" aria-label="Aide">${I.aide}</button><a class="btn" href="#/reglages" aria-label="Réglages">${I.reglages}</a></span></div>${rightHtml}</div>
     </div>`;
   }else{
-    app.innerHTML=`<div class="col"><div class="top"><span class="row">${retour?`<a class="back" href="${retour}">${I.retour}</a>`:""}${name==="fil"?boutonLogement(S.logement.nom,""):`<span class="t">${titre}</span>`}</span>${name==="fil"?`<span class="chip">${h(phraseCourte())}</span>`:""}</div>${html}${nav(name)}</div>`;
+    app.innerHTML=`<div class="col"><div class="top"><span class="row">${retour?`<a class="back" href="${retour}">${I.retour}</a>`:""}${name==="fil"?boutonLogement(S.logement.nom,""):`<span class="t">${titre}</span>`}</span><span class="row" style="gap:8px">${name==="fil"?`<span class="chip">${h(phraseCourte())}</span>`:""}${boutonAide()}</span></div>${html}${nav(name)}</div>`;
   }
   const dv=document.querySelector(".pane.right")||window;
   if(render.lastRoute!==location.hash){window.scrollTo(0,0);render.lastRoute=location.hash}
