@@ -1174,7 +1174,7 @@ function appliquerInconnu(id){const b=S.derniereBatch;const i=b.items.find(x=>x.
   const rec={id:uid(),date:now(),img:i.img,pdf:!!i.pdf,chemin:i.chemin||null,k,pieceId:p,nom,marque:"",modele:"",ref:"",achat:today(),garantie:"",notice:false,sav:"",etat:"bon",titre:nom,type:"autre",fournisseur:"",montant:null,etranger:etr};ranger(rec);naissances();i.statut="range";i.titre=nom;i.pieceId=p;closeModal();save();render();toast("Rangé dans "+nomPiece(p));if(etr&&k==="doc"){const d=S.docs.find(x=>x.id===rec.id);if(d)traduireDocument(d)}}
 function formCorrection(rec){return `<label class="f"><span>C'est</span><select class="input" id="ck"><option value="equip" ${rec.k==="equip"?"selected":""}>Un équipement</option><option value="doc" ${rec.k==="doc"?"selected":""}>Un document</option></select></label><label class="f"><span>Son nom</span><input class="input" id="cn" value="${h(rec.nom||rec.titre||"")}" placeholder="Par exemple : four, facture de plomberie"></label><label class="f"><span>Dans</span><select class="input" id="cp"><option value="maison" ${rec.pieceId==="maison"?"selected":""}>La maison entière</option>${S.pieces.map(p=>`<option value="${p.id}" ${rec.pieceId===p.id?"selected":""}>${h(p.nom)}</option>`).join("")}</select></label><label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="cetr" ${rec.etranger?"checked":""}><span class="small">Document en langue étrangère (traduit automatiquement pour le classement)</span></label>`}
 function corrigerLot(){const b=S.derniereBatch;modal(`<h2>Corriger</h2><p class="muted">Touchez ce qui n'est pas au bon endroit.</p><div class="card" style="gap:0;padding:4px 16px">${b.items.filter(i=>i.statut==="range").map(i=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();corrigerItem('${i.id}')"><span class="stack" style="gap:0"><span class="b">${h(i.titre)}</span><span class="small muted">${h(i.pieceId==="maison"?"La maison entière":nomPiece(i.pieceId))}</span></span>${I.fleche}</button>`).join("")}</div><button class="btn" onclick="closeModal()">Fermer</button>`)}
-function corrigerItem(id){const e=S.equipements.find(x=>x.id===id),d=S.docs.find(x=>x.id===id);const o=e||d;if(!o)return;modal(`<h2>Corriger</h2>${formCorrection({pieceId:o.piece,k:e?"equip":"doc",nom:e?e.nom:d.titre,etranger:d?d.etranger:false})}<button class="btn primary big" onclick="appliquerCorrection('${id}')">Enregistrer</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
+function corrigerItem(id){const e=S.equipements.find(x=>x.id===id),d=S.docs.find(x=>x.id===id);const o=e||d;if(!o)return;modal(`<h2>Changer de pièce</h2>${formCorrection({pieceId:o.piece,k:e?"equip":"doc",nom:e?e.nom:d.titre,etranger:d?d.etranger:false})}<button class="btn primary big" onclick="appliquerCorrection('${id}')">Enregistrer</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
 function appliquerCorrection(id){const p=document.getElementById("cp").value,nom=document.getElementById("cn").value.trim();const etr=!!document.getElementById("cetr")?.checked;const e=S.equipements.find(x=>x.id===id),d=S.docs.find(x=>x.id===id);if(e){e.piece=p;if(nom)e.nom=nom}if(d){d.piece=p;if(nom)d.titre=nom;const etaitEtranger=d.etranger;d.etranger=etr;if(etr&&!etaitEtranger)traduireDocument(d)}
   if(S.derniereBatch){const i=S.derniereBatch.items.find(x=>x.id===id);if(i){i.pieceId=p;if(nom)i.titre=nom}}closeModal();save();render();toast("Corrigé")}
 
@@ -1274,6 +1274,23 @@ function suggererPiece(rec){ // propose une pièce à partir de ce que VIDOM a r
       const candidats=S.pieces.filter(p=>p.type===type);
       if(candidats.length===1)return candidats[0].id;
     }
+  }
+  return null;
+}
+const MOTS_METIER={ // mots-clés reconnus dans le nom d'un équipement → métier à chercher pour « Trouver un professionnel »
+  plombier:["évier","evier","lavabo","baignoire","douche","robinet","wc","toilettes","fuite","chauffe-eau","chauffe eau","ballon d'eau chaude"],
+  chauffagiste:["chaudière","chaudiere","chauffage","radiateur","pompe à chaleur","pompe a chaleur"],
+  climaticien:["climatisation","clim"],
+  "électricien":["tableau électrique","tableau electrique","prise","disjoncteur","électrique","electrique"],
+  "réparateur électroménager":["four","plaque de cuisson","cuisinière","cuisiniere","hotte","micro-ondes","lave-vaisselle","réfrigérateur","refrigerateur","frigo","congélateur","congelateur","lave-linge","sèche-linge","seche-linge"],
+  serrurier:["serrure","verrou","clé","cle"],
+  menuisier:["fenêtre","fenetre","volet","porte","placard","parquet"],
+  couvreur:["toiture","toit","gouttière","gouttiere","tuile"],
+};
+function suggererMetier(nom){ // devine le métier à chercher à partir du nom d'un équipement (D-166)
+  const texte=slug(nom||"");
+  for(const metier in MOTS_METIER){
+    if(MOTS_METIER[metier].some(m=>texte.includes(slug(m))))return metier;
   }
   return null;
 }
@@ -1428,9 +1445,9 @@ V.equipement=id=>{
     ${e.img?`<div class="photo" style="min-height:${e.pdf?"420px":"130px"}">${vignette(e)}</div>`:""}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(e.nom)}</h1><p class="muted">${h(e.marque)} ${h(e.modele)} · ${h(nomPiece(e.piece))} <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerItem('${e.id}')">Changer de pièce</button></p></div>
     <div class="card"><dl class="kv">${e.ref?`<dt>Référence</dt><dd class="num">${h(e.ref)}</dd>`:""}${e.achat?`<dt>Acheté</dt><dd>${dateFr(e.achat)}</dd>`:""}${e.garantie?`<dt>Garantie</dt><dd>${joursDepuis(e.garantie)<0?"jusqu'au "+dateFr(e.garantie):"terminée le "+dateFr(e.garantie)}</dd>`:""}${e.installateur?`<dt>Installé par</dt><dd>${h(e.installateur)}</dd>`:""}${e.entretiens&&e.entretiens.length?`<dt>Entretiens</dt><dd>${e.entretiens.map(x=>dateFr(x.d)+(x.par?" · "+h(x.par):"")).join("<br>")}</dd>`:""}<dt>État</dt><dd>${e.etat==="bon"?"Bon":h(e.etat)}</dd></dl></div>
-    <div class="grid2">${e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" disabled>Pas de notice</button>`}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
+    <div class="grid2">${e.img?`<button class="btn" onclick="voirEquipement('${e.id}')">Voir la photo</button>`:""}${e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" disabled>Pas de notice</button>`}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
     ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents reliés</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
-    <p class="small faint">Notice et service après-vente retrouvés à partir de la référence lue sur l'étiquette. <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerItem('${e.id}')">Corriger</button></p>
+    <p class="small faint">Notice et service après-vente retrouvés à partir de la référence lue sur l'étiquette.</p>
   </div>`;
 };
 function voirNotice(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Notice — ${h(e.marque)} ${h(e.modele)}</h2><div class="book"><p class="small muted">Retrouvée sur le site du fabricant à partir de la référence ${h(e.ref)}.</p><p style="margin-top:10px"><b>Mise en service.</b> Raccordez l'appareil, vérifiez le niveau, lancez un premier cycle à vide.</p><p><b>Entretien.</b> Nettoyez le filtre une fois par mois. Détartrez tous les six mois.</p><p><b>En cas de panne.</b> Le code affiché indique la cause : E15, fuite ; E22, filtre obstrué ; E24, évacuation.</p></div><div class="row"><button class="btn primary grow" onclick="closeModal();toast('Notice conservée dans Documents')">Conserver dans Documents</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
@@ -1461,9 +1478,11 @@ V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();cons
   return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:${d.pdf?"420px":"160px"}">${vignette(d)}</div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">${h(d.titre)}</h1><p class="muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</p></div>
     <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd>${d.langueOriginale?`<dt>Langue d'origine</dt><dd>${h(d.langueOriginale)} · titre traduit automatiquement pour le classement</dd>`:(d.etranger?`<dt>Langue d'origine</dt><dd class="muted">Traduction en cours…</dd>`:"")}</dl></div>
-    <div class="row wrap">${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Corriger</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
+    <div class="row wrap">${d.img?`<button class="btn" onclick="voirDocument('${d.id}')">Voir</button>`:""}${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Changer de pièce</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
   </div>`};
 function retirerDoc(id){modal(`<h2>Retirer ce document ?</h2><p class="muted">Il disparaît vraiment de la mémoire de la maison.</p><div class="row"><button class="btn terra grow" onclick="S.docs=S.docs.filter(d=>d.id!=='${id}');closeModal();save();route('#/carte/documents');toast('Retiré')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+function voirDocument(id){const d=S.docs.find(x=>x.id===id);if(!d||!d.img)return;modal(`<h2>${h(d.titre)}</h2>${d.pdf?`<embed src="${d.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${d.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2);display:block">`}<button class="btn" onclick="closeModal()">Fermer</button>`)}
+function voirEquipement(id){const e=S.equipements.find(x=>x.id===id);if(!e||!e.img)return;modal(`<h2>${h(e.nom)}</h2>${e.pdf?`<embed src="${e.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${e.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2);display:block">`}<button class="btn" onclick="closeModal()">Fermer</button>`)}
 
 function vArtisans(){
   return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Les artisans de la maison</h1><p class="muted">Ceux qui la connaissent déjà. Ils passent toujours avant un inconnu.</p>
@@ -1570,7 +1589,39 @@ async function verifierEnvoiEnAttente(){
     }
   }catch(e){}
 }
-function trouverPro(quoi){const connus=S.pros;modal(`<h2>Trouver un professionnel</h2>${connus.length?`<p class="small b" style="color:var(--sauge-f)">Ceux que la maison connaît</p><div class="card" style="gap:0;padding:4px 16px">${connus.map(p=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();contacter('${h(p.nom)}')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(p.nom)}</span><span class="small muted">${h(p.metier)}</span></span>${I.telephone}</button>`).join("")}</div>`:""}<p class="small b" style="color:var(--sauge-f)">Près de chez vous</p><div class="card" style="gap:0;padding:4px 16px">${[["Atelier Saint-Servan","Plombier-chauffagiste","Saint-Malo"],["Élec'Côte","Électricien","Saint-Malo"],["Menuiserie Rance","Menuisier","Dinard"]].map(x=>`<div class="line"><span class="stack" style="gap:0"><span class="b">${x[0]}</span><span class="small muted">${x[1]} · ${x[2]}</span></span><span class="chip neutre">Inconnu de la maison</span></div>`).join("")}</div><p class="small faint">Un professionnel inconnu n'entre dans la maison qu'après une première intervention.</p><button class="btn" onclick="closeModal()">Fermer</button>`)}
+let PROS_TROUVES=[]; // derniers résultats réels de « Trouver un professionnel » (Google Places), pour les boutons de la modale
+function trouverPro(quoi){
+  const connus=S.pros,metier=suggererMetier(quoi);
+  modal(`<h2>Trouver un professionnel</h2>${connus.length?`<p class="small b" style="color:var(--sauge-f)">Ceux que la maison connaît</p><div class="card" style="gap:0;padding:4px 16px">${connus.map(p=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();contacter('${h(p.nom)}')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(p.nom)}</span><span class="small muted">${h(p.metier)}</span></span>${I.telephone}</button>`).join("")}</div>`:""}<p class="small b" style="color:var(--sauge-f)">Près de chez vous</p><div class="card" id="pro-proches" style="gap:0;padding:4px 16px"><div class="stack" style="align-items:center;padding:16px 4px;gap:10px"><div class="spin" aria-hidden="true"></div><p class="small muted" style="text-align:center">VIDOM cherche autour de vous…</p></div></div><p class="small faint">Un professionnel inconnu n'entre dans la maison qu'après une première intervention.</p><button class="btn" onclick="closeModal()">Fermer</button>`);
+  chargerProsProches(metier);
+}
+async function chargerProsProches(metier){
+  const zone=document.getElementById("pro-proches");
+  const lat=S.logement.latitude,lon=S.logement.longitude;
+  if(lat==null||lon==null){if(zone)zone.innerHTML=`<p class="small muted" style="padding:6px 0">L'adresse du logement n'est pas encore localisée.</p>`;return}
+  try{
+    const {data,error}=await supa.functions.invoke("trouver-professionnels",{body:{latitude:lat,longitude:lon,metier}});
+    const z=document.getElementById("pro-proches");if(!z)return; // modale refermée entre-temps
+    if(error||!data||data.error){z.innerHTML=`<p class="small muted" style="padding:6px 0">La recherche autour de vous n'a pas pu aboutir.</p>`;if(error||data?.error)console.error("trouver-professionnels :",error||data.error);return}
+    PROS_TROUVES=(data.resultats||[]).map(r=>({...r,metier:data.metier}));
+    if(!PROS_TROUVES.length){z.innerHTML=`<p class="small muted" style="padding:6px 0">Aucun professionnel trouvé à proximité.</p>`;return}
+    z.innerHTML=PROS_TROUVES.map((p,i)=>`<button class="line" style="width:100%;text-align:left" onclick="contactReel(${i})"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(p.nom)}</span><span class="small muted">${h(p.adresse)}${p.note?` · ${p.note}★`+(p.avis?` (${p.avis})`:""):""}</span></span>${I.telephone}</button>`).join("");
+  }catch(e){
+    console.error("trouver-professionnels :",e);
+    const z=document.getElementById("pro-proches");if(z)z.innerHTML=`<p class="small muted" style="padding:6px 0">La recherche autour de vous n'a pas pu aboutir.</p>`;
+  }
+}
+function contactReel(i){
+  const p=PROS_TROUVES[i];if(!p)return;
+  modal(`<h2>${h(p.nom)}</h2><p class="muted">${h(p.adresse)}${p.note?` · ${p.note}★`+(p.avis?` (${p.avis} avis)`:""):""}</p>
+    <div class="stack">${p.telephone?`<a class="btn primary big" href="tel:${p.telephone.replace(/\s/g,"")}">${I.telephone} ${h(p.telephone)}</a>`:""}${p.site?`<a class="btn big" href="${h(p.site)}" target="_blank" rel="noopener">Voir le site</a>`:""}</div>
+    <button class="btn" onclick="closeModal();garderProReel(${i})">Garder dans ma maison</button>
+    <button class="btn ghost" onclick="closeModal()">Fermer</button>`);
+}
+function garderProReel(i){
+  const p=PROS_TROUVES[i];if(!p)return;
+  if(!S.pros.some(x=>x.nom===p.nom)){S.pros.push({id:uid(),nom:p.nom,metier:p.metier||"Professionnel",tel:p.telephone||"",mail:"",ville:p.adresse||"",interventions:[],avis:[]});save();render();toast("Gardé dans votre maison")}
+}
 
 function vTravaux(){return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Travaux</h1>
   ${S.travaux.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="card" style="gap:6px"><div class="split"><span class="b">${h(t.titre)}</span><span class="chip num">${t.montant?euros(t.montant):"devis"}</span></div><p class="small muted">${h(t.par)} · ${dateFr(t.date)}</p><div class="stack" style="gap:0">${t.docs.map(id=>S.docs.find(d=>d.id===id)).filter(Boolean).map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span style="flex:1 1 auto">${h(d.titre)}</span>${I.fleche}</a>`).join("")}</div></div>`).join("")}
