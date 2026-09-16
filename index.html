@@ -246,7 +246,7 @@ const KEY="vidom-maquette-v1";
 const etatInitial=()=>({
   v:1,cree:false,etape:"bienvenue",compte:{email:""},
   logement:{id:null,nom:"",adresse:"",cp:"",ville:"",annee:null,surface:null,dpe:"",dpeDate:"",depot:"",
-    latitude:null,longitude:null,numeroCadastral:"",classeClimat:"",altitude:null,rnbId:"",rnbStatut:"",surfaceEmpriseSol:null,risquesNaturels:null},
+    latitude:null,longitude:null,numeroCadastral:"",classeClimat:"",altitude:null,rnbId:"",rnbStatut:"",surfaceEmpriseSol:null,risquesNaturels:null,canalAcquisition:null},
   comptage:{cuisine:1,salon:1,chambre:2,"salle de bain":1},pieces:[],plan:null,
   equipements:[],docs:[],pros:[],travaux:[],acces:[],journalAcces:[],
   fil:[],rappels:[],reserveServie:[],nees:["adresse"],
@@ -254,6 +254,7 @@ const etatInitial=()=>({
   reglages:{texte:"normal"},expediteursOk:[],
   lot:null,derniereBatch:null,pieceCourante:null,idc:1,
   logements:[],ajout:false,retourVers:null, // les logements du compte (un même compte peut en avoir plusieurs), et l'ajout en cours
+  guideInvite:null,sejoursInvites:[], // le mode d'emploi invité (D-157) : configuration durable + liens de séjour
 });
 let S=null;
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
@@ -261,6 +262,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}syncDi
 S=load()||etatInitial();
 if(!S.v){S=etatInitial()}
 if(!Array.isArray(S.logements))S.logements=[]; // états enregistrés avant le multi-logement
+(function(){try{const p=new URLSearchParams(location.search).get("canal");if(p)localStorage.setItem("vidom_canal_attente",p)}catch(e){}})(); // ?canal=xxx sur le lien d'entrée : consommé à la création du logement
 
 /* ================= plusieurs logements pour un même compte =================
    S reste la mémoire d'UN logement (celui qu'on regarde). Chaque logement quitté est mis de côté sur l'appareil,
@@ -516,7 +518,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
     if(S.cree&&S.logement.id&&!connu(S.logement.id)){ // ce que l'appareil regarde n'est pas (encore) dans le compte : on ne l'écrase pas, la synchro suivra
       save();return}
     if(S.logement.id&&S.logement.id!==logementId){mettreDeCote();S=etatPour(logementId)}
-    const [{data:logement},{data:pieces},{data:equipements},{data:artisans},{data:interventions},{data:documents},{data:rappels},{data:expediteurs},{data:fil},{data:etatRow}]=await Promise.all([
+    const [{data:logement},{data:pieces},{data:equipements},{data:artisans},{data:interventions},{data:documents},{data:rappels},{data:expediteurs},{data:fil},{data:etatRow},{data:guideInviteRow},{data:sejoursInvitesRows}]=await Promise.all([
       supa.from("logements").select("*").eq("id",logementId).maybeSingle(),
       supa.from("pieces").select("*").eq("logement_id",logementId),
       supa.from("equipements").select("*").eq("logement_id",logementId),
@@ -527,6 +529,8 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
       supa.from("expediteurs_autorises").select("*").eq("logement_id",logementId),
       supa.from("fil_activite").select("*").eq("logement_id",logementId).order("horodatage",{ascending:false}).limit(300),
       supa.from("etat_logement").select("*").eq("logement_id",logementId).maybeSingle(),
+      supa.from("guides_invites").select("*").eq("logement_id",logementId).maybeSingle(),
+      supa.from("sejours_invites").select("*").eq("logement_id",logementId).order("cree_le",{ascending:false}),
     ]);
     if(!logement){save();return}
     const chemins=(documents||[]).map(d=>d.chemin_stockage).filter(Boolean);
@@ -579,6 +583,8 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
     S.rappels=(rappels||[]).map(r=>({id:r.id,t:r.texte,equip:r.equipement_id||"",pro:"",du:r.date_echeance||"",fait:!!r.fait,info:!!r.info}));
     S.expediteursOk=(expediteurs||[]).map(e=>e.expediteur);
     S.fil=(fil||[]).map(f=>({id:f.id,d:f.horodatage,fait:!!f.fait,type:f.type,...(f.donnees||{})}));
+    S.guideInvite=guideInviteRow?{equipementIds:guideInviteRow.equipement_ids||[],message:guideInviteRow.message_accueil||""}:null;
+    S.sejoursInvites=(sejoursInvitesRows||[]).map(s=>({id:s.id,nom:s.nom_invite||"",code:s.code,debut:s.debut,fin:s.fin,creeLe:s.cree_le,ouvertLe:s.ouvert_le,revoqueLe:s.revoque_le}));
     if(etatRow&&etatRow.etat){
       const et=etatRow.etat;
       if(et.nees)S.nees=et.nees;if(et.questionsPosees)S.questionsPosees=et.questionsPosees;
@@ -611,7 +617,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
       latitude:lig.latitude??null,longitude:lig.longitude??null,numero_cadastral:lig.numeroCadastral||null,
       classe_climat:/^[A-G]$/.test(lig.classeClimat)?lig.classeClimat:null,altitude:lig.altitude??null,
       rnb_id:lig.rnbId||null,rnb_statut:lig.rnbStatut||null,surface_emprise_sol:lig.surfaceEmpriseSol??null,
-      risques_naturels:lig.risquesNaturels||null,
+      risques_naturels:lig.risquesNaturels||null,canal_acquisition:lig.canalAcquisition||null,
     },{onConflict:"id"});
     if(S.pieces.length)await supa.from("pieces").upsert(S.pieces.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,type_piece:p.type||null})),{onConflict:"id"});
     if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null})),{onConflict:"id"});
@@ -754,7 +760,7 @@ function ranger(rec){ // C'est bien ça
     const cible=rec.lie?equipParLie(rec.lie):null; // si l'équipement existe déjà, on relie par identifiant tout de suite
     const d={id:rec.id,piece:rec.pieceId,type:rec.type,titre:rec.titre,date:rec.date,fournisseur:rec.fournisseur,montant:rec.montant,echeance:rec.echeance||"",lie:cible?cible.id:(rec.lie||""),travaux:rec.travaux||"",garantie:rec.garantie||"",img:rec.img,pdf:!!rec.pdf,chemin:rec.chemin||null,recu:rec.recu||"photo",dateRecu:rec.date0||rec.date};
     S.docs.push(d);
-    if(rec.fournisseur&&RESERVE.pros[rec.fournisseur])connaitrePro(rec.fournisseur,rec.travaux?rec.travaux:(rec.type==="facture"?"Facture reçue":"Document reçu"),rec.date);
+    if(rec.fournisseur)connaitrePro(rec.fournisseur,rec.travaux?rec.travaux:(rec.type==="facture"?"Facture reçue":"Document reçu"),rec.date); // D-164 : tout fournisseur reconnu sur un document devient un contact connu de la maison, pas seulement ceux de la démonstration
     if(rec.travaux){let t=S.travaux.find(t=>t.titre===rec.travaux);if(!t){t={id:uid(),titre:rec.travaux,par:rec.fournisseur,date:rec.date,montant:0,docs:[]};S.travaux.push(t)}t.docs.push(d.id);if(rec.type==="facture")t.montant=rec.montant;if(rec.date>t.date)t.date=rec.date}
     if(d.type==="assurance")suivreAssurance(d); // D-151, 16 septembre 2026
   }
@@ -1090,6 +1096,7 @@ async function adresseOk(){
   const btn=document.getElementById("btn-valider-adresse");if(btn){btn.disabled=true;btn.textContent="Un instant…"}
   try{
   S.logement.id=S.logement.id||uid();
+  if(!S.logement.canalAcquisition){let _c=null;try{_c=localStorage.getItem("vidom_canal_attente")}catch(e){}if(_c){S.logement.canalAcquisition=_c;try{localStorage.removeItem("vidom_canal_attente")}catch(e){}}}
   const f=S.logement._ban&&S.logement._ban.properties&&S.logement._ban.properties.label===v?S.logement._ban:null;
   if(f){
     const p=f.properties;
@@ -1258,6 +1265,7 @@ const MOTS_PIECES={ // mots-clés reconnus dans le nom d'un équipement ou d'un 
   buanderie:["lave-linge","lave linge","sèche-linge","seche-linge","sèchoir","sechoir"],
   bureau:["ordinateur","imprimante"],
 };
+const MOTS_INVITE=["wifi","wi-fi","internet","box","routeur","modem","chauffage","poêle","poele","cheminée","cheminee","clim","climatisation","chaudière","chaudiere","digicode","alarme","portail","volet"]; // équipements à proposer par défaut dans le mode d'emploi invité (D-157)
 function suggererPiece(rec){ // propose une pièce à partir de ce que VIDOM a reconnu ; ne tranche que si une seule pièce de ce type existe dans la maison
   if(rec.k!=="equip"&&rec.k!=="doc")return null;
   const texte=slug(`${rec.nom||""} ${rec.titre||""}`);
@@ -1541,6 +1549,7 @@ async function garderEnvoi(code){
     return;
   }
   try{localStorage.setItem("vidom_envoi_attente",code)}catch(e){}
+  try{localStorage.setItem("vidom_canal_attente","envoi")}catch(e){}
   S.etape="compte";save();location.hash="";render();
 }
 async function verifierEnvoiEnAttente(){
@@ -1585,6 +1594,7 @@ function etiquette(){modal(`<h2>L'étiquette de la maison</h2><p class="muted">�
 function vEchanges(){
   return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Échanges et accès</h1><p class="muted">Le logement au centre. Chaque tiers ne voit que ce qui le concerne, pour un temps, et vous voyez qui a vu quoi.</p>
     ${RESERVE.tiers.map(t=>{const a=S.acces.find(x=>x.tiers===t.id&&x.ouvert);return `<div class="card" style="gap:8px"><div class="row"><span class="tile">${I[t.ico]}</span><span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(t.nom)}</span><span class="small muted">${a?`Ouvert à ${h(a.nom)} jusqu'au ${dateFr(a.fin)}`:`Voit : ${t.voit.join(", ").toLowerCase()}`}</span></span>${a?`<span class="chip">Ouvert</span>`:""}</div><div class="row wrap">${a?`<button class="btn sm" onclick="voirComme('${t.id}')">${I.oeil} Voir comme</button><button class="btn sm" onclick="fermerAcces('${a.id}')">Fermer l'accès</button>`:`<button class="btn sm primary" onclick="ouvrirAcces('${t.id}')">Ouvrir l'accès</button><button class="btn sm" onclick="voirComme('${t.id}')">${I.oeil} Voir comme</button>`}</div></div>`}).join("")}
+    ${carteGuideInvite()}
     <div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Qui a vu quoi</p>${S.journalAcces.length?S.journalAcces.slice(0,12).map(j=>`<div class="line"><span class="small">${h(j.t)}</span><span class="small muted" style="white-space:nowrap">${dateFr(j.d)} ${heure(j.d)}</span></div>`).join(""):`<p class="small muted" style="padding:6px 0">Personne n'a encore rien vu.</p>`}</div>
   </div>`;
 }
@@ -1599,6 +1609,108 @@ function voirComme(tid){const t=RESERVE.tiers.find(x=>x.id===tid);const a=S.acce
   const blocs=t.voit.map(v=>{const l=v.toLowerCase();let items=[];if(l.includes("acte"))items=S.docs.filter(d=>d.type==="acte");else if(l.includes("diagnostic"))items=S.docs.filter(d=>d.type==="diagnostic");else if(l.includes("facture"))items=S.docs.filter(d=>d.type==="facture"&&d.travaux);else if(l.includes("plan"))items=S.docs.filter(d=>d.type==="plan");else if(l.includes("équipement"))items=S.equipements;else if(l.includes("travaux"))items=S.travaux;else if(l.includes("artisan"))items=S.pros;else if(l.includes("document"))items=S.docs.filter(d=>d.type!=="acte"&&d.type!=="impot"&&d.type!=="contrat");else if(l.includes("fiche"))items=[{titre:`${S.logement.nom} · ${S.logement.annee||"?"} · ${S.logement.surface||"?"} m² · DPE ${S.logement.dpe||"?"}`}];else if(l.includes("notice"))items=S.equipements.filter(e=>e.notice);else if(l.includes("intervention"))items=S.pros.flatMap(p=>p.interventions.map(i=>({titre:i.motif+" — "+p.nom})));else if(l.includes("dossier"))items=[{titre:"Le dossier, tel que vous l'aurez validé"}];return `<p class="small b" style="color:var(--sauge-f);margin-top:8px">${h(v)}</p>${items.length?items.map(i=>`<p class="small">· ${h(i.titre||i.nom)}</p>`).join(""):`<p class="small faint">— rien encore</p>`}`}).join("");
   if(a){S.journalAcces.unshift({d:now(),t:`${a.nom} a ouvert la page (simulation « voir comme »)`});save()}
   modal(`<div class="book" style="background:#E9E4DA;border-radius:8px 8px 0 0;padding:8px 12px;box-shadow:none"><span class="small mono">${a?h(a.lien):"vidom.fr/p/…"}</span></div><div class="book" style="border-radius:0 0 8px 8px"><p class="small muted">Partagé par ${h(S.compte.email||"le gardien")} avec ${h(a?a.nom:t.nom.toLowerCase())}${a?" · jusqu'au "+dateFr(a.fin):""}</p><p class="b" style="margin-top:6px">${h(S.logement.nom)}</p>${blocs}<p class="small faint" style="margin-top:10px">Ce que vous ne voyez pas n'a pas été transmis.</p></div><button class="btn" onclick="closeModal();render()">Fermer</button>`)}
+
+/* ================= mode d'emploi invité : capacité durable dans Partage (D-157, A17) ================= */
+function equipementsCandidatsInvite(){ // suggestion de départ : les équipements dont le nom évoque le wifi, le chauffage, etc.
+  return S.equipements.filter(e=>{
+    const texte=slug(`${e.nom||""} ${e.marque||""} ${e.modele||""}`);
+    return MOTS_INVITE.some(m=>texte.includes(slug(m)));
+  });
+}
+function carteGuideInvite(){
+  const g=S.guideInvite;
+  const sejoursActifs=(S.sejoursInvites||[]).filter(s=>!s.revoqueLe);
+  return `<div class="card" style="gap:8px"><div class="row"><span class="tile">${I.cle}</span><span class="stack" style="flex:1 1 auto;gap:0"><span class="b">Mode d'emploi pour vos invités</span><span class="small muted">${g?`Configuré : ${g.equipementIds.length} fiche(s) et un mot d'accueil`:"Wifi, chauffage, poêle à bois — à préparer une fois"}</span></span></div>
+    <div class="row wrap"><button class="btn sm ${g?"":"primary"}" onclick="configurerGuideInvite()">${g?"Modifier":"Configurer"}</button>${g?`<button class="btn sm primary" onclick="nouveauSejourInvite()">${I.envoi} Nouveau lien de séjour</button>`:""}</div>
+    ${sejoursActifs.length?`<div class="stack" style="gap:0;margin-top:4px">${sejoursActifs.map(s=>`<div class="line"><span class="stack" style="gap:0;flex:1 1 auto"><span class="small b">${h(s.nom||"Séjour sans nom")}</span><span class="small muted">${s.fin?"Jusqu'au "+dateFr(s.fin):"Sans date de fin"}${s.ouvertLe?" · ouvert":""}</span></span><button class="btn sm" onclick="revoquerSejour('${s.id}')">Fermer ce lien</button></div>`).join("")}</div>`:""}
+  </div>`;
+}
+function configurerGuideInvite(){
+  const deja=S.guideInvite?S.guideInvite.equipementIds:equipementsCandidatsInvite().map(e=>e.id);
+  const message=S.guideInvite?S.guideInvite.message:"";
+  const lignes=S.equipements.length?S.equipements.map(e=>`<label class="check"><input type="checkbox" value="${e.id}" ${deja.includes(e.id)?"checked":""}><span class="small">${h(e.nom)}${e.marque?" "+h(e.marque):""} · ${h(nomPiece(e.piece))}</span></label>`).join(""):`<p class="small muted">Aucun équipement enregistré pour l'instant.</p>`;
+  modal(`<h2>Le mode d'emploi de ${h(S.logement.nom)}</h2><p class="muted">Ce que vos invités verront, sans compte, le temps de leur séjour.</p>
+    <label class="f"><span>Mot d'accueil, codes wifi, consignes</span><textarea class="input" id="giMsg" rows="5" placeholder="Wifi : Freebox-1234, mot de passe soleil2026. Le chauffage se règle sur le thermostat de l'entrée.">${h(message)}</textarea></label>
+    <p class="small b" style="color:var(--sauge-f);margin-top:6px">Fiches à montrer</p>
+    <div class="card" style="gap:6px;padding:8px 16px">${lignes}</div>
+    <button class="btn primary big" onclick="enregistrerGuideInvite()">Enregistrer</button>
+    <button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+}
+async function enregistrerGuideInvite(){
+  const ids=[...document.querySelectorAll('#modal input[type=checkbox]:checked')].map(c=>c.value);
+  const message=(document.getElementById("giMsg")?.value||"").trim();
+  S.guideInvite={equipementIds:ids,message};save();closeModal();toast("Mode d'emploi enregistré");render();
+  if(!supa||!S.logement.id)return;
+  try{
+    await supa.from("guides_invites").upsert({logement_id:S.logement.id,equipement_ids:ids,message_accueil:message||null},{onConflict:"logement_id"});
+  }catch(e){}
+}
+function nouveauSejourInvite(){
+  modal(`<h2>Créer un lien pour un séjour</h2><p class="muted">Un lien à part, sans compte, valable pour ce séjour.</p>
+    <label class="f"><span>Pour qui (facultatif)</span><input class="input" id="siNom" placeholder="Prénom, ou « les locataires de juillet »"></label>
+    <label class="f"><span>Jusqu'au (facultatif)</span><input class="input" id="siFin" type="date"></label>
+    <button class="btn primary big" onclick="creerSejourInvite()">Créer le lien</button>
+    <button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+}
+async function creerSejourInvite(){
+  if(!supa||!S.logement.id){toast("Fonction indisponible hors connexion.");return}
+  const nom=(document.getElementById("siNom")?.value||"").trim();
+  const fin=document.getElementById("siFin")?.value||null;
+  closeModal();toast("Un instant…");
+  try{
+    const {data,error}=await supa.from("sejours_invites").insert({logement_id:S.logement.id,nom_invite:nom||null,fin:fin||null}).select("id,code,cree_le,fin").single();
+    if(error||!data){toast("Cela n'a pas fonctionné.");return}
+    S.sejoursInvites.unshift({id:data.id,nom,code:data.code,debut:today(),fin:data.fin,creeLe:data.cree_le,ouvertLe:null,revoqueLe:null});save();render();
+    const lien=`${location.origin}${location.pathname}#/g/${data.code}`;
+    modal(`<h2>Le lien du séjour</h2><div class="card"><span class="mono" style="word-break:break-all">${h(lien)}</span></div>
+      <p class="small muted">Envoyez-le depuis votre messagerie ou vos messages. Il ouvre le mode d'emploi de la maison, sans compte.</p>
+      <div class="row wrap"><button class="btn primary grow" onclick="copier('${h(lien)}')">Copier le lien</button><a class="btn grow" href="sms:?&body=${encodeURIComponent(lien)}">SMS</a></div>
+      <button class="btn ghost" onclick="closeModal()">Fermer</button>`);
+  }catch(e){toast("Cela n'a pas fonctionné.")}
+}
+async function revoquerSejour(id){
+  const s=S.sejoursInvites.find(x=>x.id===id);if(!s)return;
+  s.revoqueLe=now();save();render();toast("Lien fermé");
+  if(!supa)return;
+  try{await supa.from("sejours_invites").update({revoque_le:new Date().toISOString()}).eq("id",id)}catch(e){}
+}
+async function renderSejourPublic(code){
+  const app=document.getElementById("app");
+  document.body.classList.remove("app");
+  app.innerHTML=`<div class="view center fadein" style="min-height:100vh"><p class="muted">Un instant…</p></div>`;
+  if(!supa||!code){app.innerHTML=`<div class="view center" style="min-height:100vh;text-align:center;padding:0 20px"><p class="muted">Ce lien n'est pas disponible pour l'instant.</p></div>`;return}
+  let res=null;
+  try{const {data,error}=await supa.rpc("lire_sejour_invite",{p_code:code});if(!error)res=data}catch(e){}
+  if(!res||res.introuvable){
+    app.innerHTML=`<div class="view center fadein" style="min-height:100vh;gap:8px;text-align:center;padding:0 24px"><h1 class="h" style="font-size:1.3em">Ce lien n'est plus valable.</h1><p class="muted">Le séjour est peut-être déjà terminé.</p></div>`;return}
+  try{localStorage.setItem("vidom_canal_attente","mode_emploi_invite")}catch(e){}
+  const eqs=Array.isArray(res.equipements)?res.equipements:[];
+  app.innerHTML=`<div class="view fadein" style="gap:16px;padding:24px 20px;max-width:440px;margin:0 auto">
+    <p class="small muted" style="text-align:center">VIDOM · la mémoire numérique du logement</p>
+    <h1 class="h" style="font-size:1.4em;text-align:center">${h(res.logement_nom||"Bienvenue")}</h1>
+    ${res.message?`<div class="card soft"><p class="small" style="white-space:pre-wrap">${h(res.message)}</p></div>`:""}
+    ${eqs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Pour vous servir des équipements</p>${eqs.map(e=>`<div class="line" style="align-items:flex-start"><span class="stack" style="gap:2px"><span class="b">${h(e.categorie||"Équipement")}${e.marque?" "+h(e.marque):""}${e.modele?" "+h(e.modele):""}</span>${e.localisation?`<span class="small muted">${h(e.localisation)}</span>`:""}${e.notes?`<span class="small">${h(e.notes)}</span>`:""}${e.service_apres_vente?`<span class="small muted">SAV : ${h(e.service_apres_vente)}</span>`:""}</span></div>`).join("")}</div>`:""}
+    ${res.fin?`<p class="small faint" style="text-align:center">Valable jusqu'au ${dateFr(res.fin)}.</p>`:""}
+    <button class="btn primary big" onclick="location.hash='';S.etape='compte';save();render()">Découvrir VIDOM</button>
+  </div>`;
+}
+
+/* ================= panneau admin (D-159, D-160) : comptes, logements, canaux d'acquisition ================= */
+async function panneauAdmin(){
+  if(!supa){toast("Fonction indisponible hors connexion.");return}
+  modal(`<h2>Panneau admin</h2><p class="muted">Un instant…</p>`);
+  try{
+    const {data,error}=await supa.rpc("mesure_admin");
+    if(error||!data){modal(`<h2>Panneau admin</h2><p class="muted">Cela n'a pas fonctionné : ${h(error?error.message:"réponse vide")}</p><button class="btn" onclick="closeModal()">Fermer</button>`);return}
+    const canaux=data.par_canal||{};
+    const nomCanal=c=>c==="direct"?"Direct (sans canal connu)":c==="envoi"?"Envoi (bouche-à-oreille)":c==="mode_emploi_invite"?"Mode d'emploi invité":c;
+    const lignes=Object.keys(canaux).sort((a,b)=>canaux[b]-canaux[a]).map(c=>`<div class="line"><span class="small">${h(nomCanal(c))}</span><span class="small b num">${canaux[c]}</span></div>`).join("");
+    modal(`<h2>Panneau admin</h2>
+      <div class="card"><dl class="kv"><dt>Comptes</dt><dd class="num">${data.total_comptes}</dd><dt>Logements</dt><dd class="num">${data.total_logements}</dd><dt>Envois faits</dt><dd class="num">${data.envois_faits}</dd><dt>Envois gardés</dt><dd class="num">${data.envois_gardes}</dd><dt>Liens de séjour créés</dt><dd class="num">${data.sejours_crees}</dd></dl></div>
+      <div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Logements par canal</p>${lignes||`<p class="small muted" style="padding:6px 0">Aucun logement pour l'instant.</p>`}</div>
+      <button class="btn" onclick="closeModal()">Fermer</button>`);
+  }catch(e){modal(`<h2>Panneau admin</h2><p class="muted">Cela n'a pas fonctionné.</p><button class="btn" onclick="closeModal()">Fermer</button>`)}
+}
 
 /* ================= transmission ================= */
 function vTransmission(){const T=S.transmission;
@@ -1635,6 +1747,7 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre mémoire vous appartient</p><div class="row wrap"><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter ma mémoire</button><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Mon avis sur la maquette VIDOM")}&body=${encodeURIComponent("Écran : "+location.hash+"\n\n")}">${I.mail} Donner mon avis</a></div><p class="small faint">${S.docs.length} documents · ${S.equipements.length} équipements · ${S.fil.length} moments dans le fil.</p></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Supprimer ce logement</p><p class="small muted">La mémoire de ${h(S.logement.nom||"cette maison")} s'efface de votre compte, sur tous vos appareils. Les autres logements ne bougent pas.</p><button class="btn terra" onclick="supprimerLogement()">Supprimer ${h(S.logement.nom||"ce logement")}</button></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Repartir de zéro sur cet appareil</p><p class="small muted">N'efface que cet appareil. Vos logements restent sur votre compte et reviennent à la prochaine connexion.</p><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le fil. Vos logements restent sur votre compte.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'toutEffacer()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
+  ${S.compte.email==='ambiance.oik@gmail.com'?`<div class="card soft" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Panneau admin</p><p class="small muted">Comptes, logements, et par quel canal ils sont nés.</p><button class="btn" onclick="panneauAdmin()">Voir les chiffres</button></div>`:""}
   <p class="small faint" style="text-align:center">VIDOM — maquette du 16 septembre 2026. Votre mémoire est enregistrée sur votre compte et retrouvée sur chacun de vos appareils.</p>
 </div>`;
 function montrerCompte(){
@@ -1853,6 +1966,7 @@ function render(){
   const app=document.getElementById("app");
   const _hh=parseHash();
   if(_hh.name==="e"){renderEnvoiPublic(_hh.arg);return}
+  if(_hh.name==="g"){renderSejourPublic(_hh.arg);return}
   if(_hh.name==="reinitialiser"||location.hash.indexOf("type=recovery")>-1){renderReinitialiser();return}
   if(!S.cree){
     document.body.classList.remove("app");
