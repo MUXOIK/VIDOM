@@ -627,6 +627,7 @@ async function relireFil(){
 setInterval(relireFil,45000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)relireFil()});
 window.addEventListener("focus",relireFil);
+const idPhoto=id=>String(id).replace(/^./,c=>((parseInt(c,16)+8)%16).toString(16)); // un identifiant stable pour la photo d'un équipement, dérivé du sien
 function syncDiffere(){ if(!supa)return; clearTimeout(pousserTout_timer); pousserTout_timer=setTimeout(pousserTout,900); }
 if(typeof window!=="undefined")window.addEventListener("online",()=>syncDiffere());
 async function pousserTout(){ // pousse l'état courant vers le compte réel ; échoue en silence si hors ligne, réessaiera plus tard
@@ -659,7 +660,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
         etat:["bon","moyen","a_remplacer","hors_service"].includes(e.etat)?e.etat:"bon",entretien_requis:!!e.entretien
       })),{onConflict:"id"});
       const photosEq=S.equipements.filter(e=>e.chemin).map(e=>({
-        id:"ph-"+e.id,logement_id:lig.id,equipement_id:e.id,piece_id:(e.piece&&e.piece!=="maison")?e.piece:null,
+        id:idPhoto(e.id),logement_id:lig.id,equipement_id:e.id, // D-182 : "ph-"+id n'était pas un identifiant valide, la base refusait toutes les photos d'équipement en silencepiece_id:(e.piece&&e.piece!=="maison")?e.piece:null,
         type_document:"photo",titre:"Photo de l'équipement",nom_fichier:e.chemin.split("/").pop(),chemin_stockage:e.chemin,mime_type:e.pdf?"application/pdf":"image/jpeg",
         source:"manuel",uploaded_by:session.user.id
       }));
@@ -770,7 +771,7 @@ async function reconnaitre(file,pieceId,dataUrl,pdf,chemin){
         achat:today(),garantie:"",installateur:"",notice:false,sav:"",etat:"bon",entretien:false});
     }else if(c&&c.kind==="document"){
       Object.assign(rec,{k:"doc",type:c.type||"autre",titre:c.titre||"Document",date:c.date_document||today(),
-        fournisseur:c.fournisseur||"",montant:c.montant_ttc??null,echeance:c.date_echeance||"",lie:"",travaux:"",garantie:c.date_fin_garantie||"", // D-179 : la garantie et son extension se lisent sur la facture
+        fournisseur:c.fournisseur||"",montant:c.montant_ttc??null,echeance:c.date_echeance||"",lie:"",travaux:"",appareil:c.appareil_nom?{nom:c.appareil_nom,marque:c.appareil_marque||"",modele:c.appareil_modele||""}:null,garantie:c.date_fin_garantie||"", // D-179 : la garantie et son extension se lisent sur la facture
         
         catFournisseur:c.categorie_fournisseur||"",metierFournisseur:c.metier_fournisseur||""}); // D-170
     }else{
@@ -826,6 +827,23 @@ function rubriqueFournisseur(rec){
   if(rec.catFournisseur==="commercant")return "enseigne"; // D-171 : ancien mot de la reconnaissance
   return TYPES_DOCUMENT_ARTISAN.includes(rec.type)?"artisan":CATEGORIE_PAR_TYPE_DOCUMENT[rec.type];
 }
+function relierAppareil(rec){
+  // D-182 : une facture ou une garantie qui vise un appareil précis se relie à lui ; s'il n'est pas encore connu, il naît de la facture
+  if(!rec.lie&&rec.appareil&&rec.appareil.nom&&["facture","garantie","notice"].includes(rec.type)){
+    const a=rec.appareil;const m=cleTexte(a.modele),q=cleTexte(a.marque),n=cleTexte(a.nom);
+    let eq=(m&&S.equipements.find(e=>cleTexte(e.modele)&&(cleTexte(e.modele).includes(m)||m.includes(cleTexte(e.modele)))&&(!q||!cleTexte(e.marque)||cleTexte(e.marque)===q)))
+      ||S.equipements.find(e=>cleTexte(e.nom)===n&&q&&cleTexte(e.marque)===q);
+    if(!eq&&rec.type!=="notice"){
+      eq={id:uid(),piece:rec.pieceId||"maison",nom:a.nom,marque:a.marque||"",modele:a.modele||"",ref:"",achat:"",garantie:"",installateur:"",notice:false,sav:"",etat:"bon",entretien:false,img:null,pdf:false,chemin:null,date:now(),entretiens:[],deFacture:true};
+      S.equipements.push(eq);
+    }
+    if(eq){
+      rec.lie=eq.id;
+      if(rec.type==="facture"&&rec.date)eq.achat=rec.date.slice(0,10); // la vraie date d'achat vaut mieux que le jour de la photo
+      if(rec.garantie&&(!eq.garantie||rec.garantie>eq.garantie))eq.garantie=rec.garantie;
+    }
+  }
+}
 function ranger(rec){ // C'est bien ça
   const nees=[];
   if(rec.k==="equip"){
@@ -837,6 +855,7 @@ function ranger(rec){ // C'est bien ça
     if(rec.entretien)S.rappels.push({id:uid(),t:`L'entretien annuel de ${lc(rec.nom)} est à faire ce mois-ci.`,equip:e.id,pro:rec.installateur||"",du:today(),fait:false});
     if(rec.garantie&&joursDepuis(rec.garantie)<0&&joursDepuis(rec.garantie)>-200)S.rappels.push({id:uid(),t:`La garantie de ${lc(rec.nom)} ${rec.marque} expire le ${dateFr(rec.garantie)}.`,equip:e.id,du:rec.garantie,fait:false,info:true});
   }else if(rec.k==="doc"){
+    relierAppareil(rec); // D-182
     const cible=rec.lie?equipParLie(rec.lie):null; // si l'équipement existe déjà, on relie par identifiant tout de suite
     const d={id:rec.id,piece:rec.pieceId,type:rec.type,titre:rec.titre,date:rec.date,fournisseur:rec.fournisseur,montant:rec.montant,echeance:rec.echeance||"",lie:cible?cible.id:(rec.lie||""),travaux:rec.travaux||"",garantie:rec.garantie||"",img:rec.img,pdf:!!rec.pdf,chemin:rec.chemin||null,recu:rec.recu||"photo",dateRecu:rec.date0||rec.date};
     S.docs.push(d);
@@ -1569,14 +1588,20 @@ function vRecus(){
 }
 function voirRecu(id){const e=S.fil.find(x=>x.id===id);const r=e&&e.rec;if(!r||!r.img)return;modal(`<h2>${h(r.titre||r.nom||"Ce qui a été envoyé")}</h2>${r.pdf?`<embed src="${r.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${r.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2)">`}<div class="row"><button class="btn grow" onclick="closeModal()">Fermer</button></div>`)}
 function vEquipements(){
-  const parPiece={};S.equipements.forEach(e=>{(parPiece[e.piece]=parPiece[e.piece]||[]).push(e)});
-  const ordre=Object.keys(parPiece).sort((a,b)=>a==="maison"?1:b==="maison"?-1:0);
+  const vue=S.reglages.equipsPar||"piece"; // D-182 : comme les documents, les équipements se regardent de plusieurs façons
+  const enseigneDe=e=>{const f=docsLies(e).filter(d=>d.type==="facture"&&d.fournisseur).sort((x,y)=>String(x.date).localeCompare(String(y.date)))[0];return f?f.fournisseur:"Sans enseigne connue"};
+  const cle=vue==="type"?(e=>e.nom||"Équipement"):vue==="enseigne"?enseigneDe:(e=>e.piece||"maison");
+  const par={};S.equipements.forEach(e=>{const k=cle(e);(par[k]=par[k]||[]).push(e)});
+  const dernier=vue==="piece"?"maison":"Sans enseigne connue";
+  const ordre=Object.keys(par).sort((a,b)=>a===dernier?1:b===dernier?-1:(vue==="piece"?0:a.localeCompare(b)));
+  const titre=k=>vue==="piece"?(k==="maison"?"La maison entière":nomPiece(k)):k;
   const expirent=S.equipements.filter(e=>e.garantie&&joursDepuis(e.garantie)<0&&joursDepuis(e.garantie)>-180);
   return `<div class="view" style="gap:12px">
     <h1 class="h" style="font-size:1.45em">Équipements</h1>
     ${carteDoublons("equips")}
+    ${S.equipements.length?`<div class="row">${[["piece","Par pièce"],["type","Par type"],["enseigne","Par enseigne"]].map(([k,n])=>`<button class="chip btn-chip ${vue===k?"on":""}" onclick="S.reglages.equipsPar='${k}';save();render()">${n}</button>`).join("")}</div>`:""}
     ${expirent.length?`<div class="card soft"><p class="small">${expirent.length===1?"Une garantie expire":expirent.length+" garanties expirent"} dans les six mois : ${expirent.map(e=>lc(e.nom)).join(", ")}.</p></div>`:""}
-    ${ordre.map(pid=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(pid==="maison"?"La maison entière":nomPiece(pid))}</p>${parPiece[pid].map(e=>`<a class="line" href="#/equipement/${e.id}">${I.outil}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(e.nom)}</span><span class="small muted">${h(e.marque)}${e.garantie&&joursDepuis(e.garantie)<0?" · garanti jusqu'en "+e.garantie.slice(0,4):""}</span></span>${I.fleche}</a>`).join("")}</div>`).join("")}
+    ${ordre.map(k=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(titre(k))}</p>${par[k].map(e=>`<a class="line" href="#/equipement/${e.id}">${I.outil}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(e.nom)}</span><span class="small muted">${h([e.marque,e.modele].filter(Boolean).join(" "))}${vue!=="piece"?" · "+h(e.piece==="maison"||!e.piece?"la maison":nomPiece(e.piece)):""}${e.garantie&&joursDepuis(e.garantie)<0?" · garanti jusqu'en "+e.garantie.slice(0,4):""}</span></span>${I.fleche}</a>`).join("")}</div>`).join("")}
     <label class="btn file">${I.camera} Photographier un appareil<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label>
   </div>`;
 }
@@ -1623,7 +1648,7 @@ V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();assu
   return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:${d.pdf?"420px":"160px"}">${vignette(d)}</div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">${h(d.titre)}</h1><p class="muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</p></div>
     <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd>${d.langueOriginale?`<dt>Langue d'origine</dt><dd>${h(d.langueOriginale)} · titre traduit automatiquement pour le classement</dd>`:(d.etranger?`<dt>Langue d'origine</dt><dd class="muted">Traduction en cours…</dd>`:"")}</dl></div>
-    <div class="row wrap">${d.img?`<button class="btn" onclick="voirDocument('${d.id}')">Voir</button>`:""}${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Changer de pièce</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
+    <div class="row wrap">${d.img?`<button class="btn" onclick="voirDocument('${d.id}')">Voir</button>`:""}${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Changer de pièce</button>${d.chemin&&!d.lie&&["facture","garantie","notice"].includes(d.type)?`<button class="btn" onclick="relireDoc('${d.id}')">Relier à son appareil</button>`:""}<button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
   </div>`};
 /* D-180 : retirer, c'est retirer pour de vrai — sur l'appareil, sur le compte et dans les fichiers gardés.
    (Avant, le document retiré revenait à la relecture du compte : la maquette n'effaçait rien en ligne.) */
@@ -1643,6 +1668,23 @@ async function effacerEnLigne({docs=[],equips=[],chemins=[]}){
     const aEffacer=uniques.filter(c=>!encore.has(c));
     if(aEffacer.length)await supa.storage.from("logement-files").remove(aEffacer);
   }catch(e){console.error("VIDOM : l'effacement en ligne a échoué.",e)}
+}
+/* D-182 : relire un document déjà gardé, pour profiter d'une lecture devenue meilleure (garantie, appareil visé). */
+async function relireDoc(id){
+  const d=S.docs.find(x=>x.id===id);if(!d||!d.chemin||!supa)return;
+  toast("VIDOM relit le document…");
+  try{
+    const {data}=await supa.storage.from("logement-files").createSignedUrl(d.chemin,600);
+    const blob=await (await fetch(data.signedUrl)).blob();
+    const file=new File([blob],d.pdf?"document.pdf":"photo.jpg",{type:d.pdf?"application/pdf":(blob.type||"image/jpeg")});
+    const lu=await reconnaitre(file,d.piece||"maison",null,d.pdf,d.chemin);
+    if(lu.k!=="doc"){toast("VIDOM n'a rien trouvé de plus.");return}
+    if(lu.garantie&&!d.garantie)d.garantie=lu.garantie;
+    if(!d.lie){const r={lie:"",appareil:lu.appareil,type:d.type,date:d.date,garantie:d.garantie||lu.garantie,pieceId:d.piece};relierAppareil(r);if(r.lie)d.lie=r.lie}
+    naissances();save();render();
+    const eq=d.lie?equipParLie(d.lie):null;
+    toast(eq?`Relié à : ${eq.nom}${eq.marque?" "+eq.marque:""}`:"Relu. Aucun appareil précis n'est visé par ce document.");
+  }catch(e){toast("La relecture a échoué. Réessayez dans un instant.")}
 }
 function retirerDoc(id){modal(`<h2>Retirer ce document ?</h2><p class="muted">Il disparaît vraiment de la mémoire de la maison.</p><div class="row"><button class="btn terra grow" onclick="retirerDocOui('${id}')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
 function retirerDocOui(id){
