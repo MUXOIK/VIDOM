@@ -196,6 +196,9 @@ bascule:`<svg class="i" ${VS} stroke-width="2" style="width:1em;height:1em"><pat
   retour:`<svg class="i" ${VS} stroke-width="2"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`,
   reglages:`<svg class="i" ${VS}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>`,
   travaux:`<svg class="i" ${VS}><path d="M3 21h18"/><path d="M5 21V9l7-5 7 5v12"/><path d="M9 21v-5h6v5"/></svg>`,
+  eclair:`<svg class="i" ${VS}><path d="M13 2L5 13h6l-1 9 8-11h-6l1-9z"/></svg>`,
+  antenne:`<svg class="i" ${VS}><circle cx="12" cy="12" r="1.6"/><path d="M12 14v7M8.8 8.8a4.5 4.5 0 0 1 6.4 0M5.9 5.9a8.6 8.6 0 0 1 12.2 0"/></svg>`,
+  panier:`<svg class="i" ${VS}><path d="M4.5 7.5h15l-1.4 11.2a1.5 1.5 0 0 1-1.5 1.3H7.4a1.5 1.5 0 0 1-1.5-1.3L4.5 7.5zM9 7.5V6a3 3 0 0 1 6 0v1.5"/></svg>`,
   cle:`<svg class="i" ${VS}><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M13 10l3 3"/></svg>`,
   cadenas:`<svg class="i" ${VS}><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
   oeil:`<svg class="i" ${VS}><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`,
@@ -551,7 +554,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
       risquesNaturels:logement.risques_naturels||null,
     });
     S.pieces=(pieces||[]).map(p=>({id:p.id,type:p.type_piece||"autre",nom:p.nom,photos:[]}));
-    S.pros=(artisans||[]).map(a=>({id:a.id,nom:a.nom,metier:a.metier||"",tel:a.telephone||"",mail:a.email||"",ville:a.ville||"",interventions:[],avis:[]}));
+    S.pros=(artisans||[]).map(a=>({id:a.id,nom:a.nom,metier:a.metier||"",tel:a.telephone||"",mail:a.email||"",ville:a.ville||"",categorie:a.categorie||"",interventions:[],avis:[]}));
     S.travaux=(interventions||[]).map(iv=>({id:iv.id,titre:iv.type_intervention||"Travaux",par:iv.artisan_nom||"",date:iv.date_intervention||"",montant:iv.cout||0,docs:(documents||[]).filter(r=>r.intervention_id===iv.id).map(r=>r.id)}));
     const photoParEquip={};const docsBruts=[];
     (documents||[]).forEach(r=>{
@@ -620,7 +623,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
       risques_naturels:lig.risquesNaturels||null,canal_acquisition:lig.canalAcquisition||null,
     },{onConflict:"id"});
     if(S.pieces.length)await supa.from("pieces").upsert(S.pieces.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,type_piece:p.type||null})),{onConflict:"id"});
-    if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null})),{onConflict:"id"});
+    if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null,categorie:p.categorie||null})),{onConflict:"id"});
     if(S.travaux.length)await supa.from("interventions").upsert(S.travaux.map(t=>({id:t.id,logement_id:lig.id,type_intervention:t.titre||"Travaux",artisan_nom:t.par||null,date_intervention:t.date||null,cout:t.montant||null})),{onConflict:"id"});
     if(S.equipements.length){
       await supa.from("equipements").upsert(S.equipements.map(e=>({
@@ -705,7 +708,8 @@ async function reconnaitre(file,pieceId,dataUrl,pdf,chemin){
         achat:today(),garantie:"",installateur:"",notice:false,sav:"",etat:"bon",entretien:false});
     }else if(c&&c.kind==="document"){
       Object.assign(rec,{k:"doc",type:c.type||"autre",titre:c.titre||"Document",date:c.date_document||today(),
-        fournisseur:c.fournisseur||"",montant:c.montant_ttc??null,echeance:c.date_echeance||"",lie:"",travaux:"",garantie:""});
+        fournisseur:c.fournisseur||"",montant:c.montant_ttc??null,echeance:c.date_echeance||"",lie:"",travaux:"",garantie:"",
+        catFournisseur:c.categorie_fournisseur||"",metierFournisseur:c.metier_fournisseur||""}); // D-170
     }else{
       rec.k="inconnu";rec.titre="Photo non reconnue";
     }
@@ -748,13 +752,24 @@ function docsLies(e){ // les documents reliés à cet équipement, par identifia
   return S.docs.filter(d=>d.lie&&(d.lie===e.id||slug(d.lie)===slug(e.nom)));
 }
 const TYPES_DOCUMENT_ARTISAN=["facture","devis","garantie","notice","diagnostic","contrat"]; // D-167 : types de document qui indiquent un vrai professionnel du logement, pas une administration ou une institution (acte notarié, document d'urbanisme, avis d'imposition, assurance, courrier...)
-const CATEGORIES_PRO=[ // D-168 : les rubriques pour les contacts qui ne sont pas des artisans, réclamées par Murielle en testant Levis
+const CATEGORIES_PRO=[ // D-168, élargi par D-171 : les rubriques pour les contacts qui ne sont pas des artisans
   {id:"notaire",nom:"Notaire",ico:"cle"},
   {id:"assureur",nom:"Assurance",ico:"doc"},
   {id:"administration",nom:"Administration",ico:"fichier"},
+  {id:"energie",nom:"Fournisseur d'énergie",ico:"eclair"},       // D-171 : électricité, gaz, eau, chauffage
+  {id:"telecom",nom:"Téléphonie et internet",ico:"antenne"},     // D-171 : box, ligne fixe, mobile
+  {id:"enseigne",nom:"Enseigne",ico:"panier"},                   // D-171 : magasins et fabricants, ceux dont on garde factures et notices
 ];
 const CATEGORIE_PAR_TYPE_DOCUMENT={acte:"notaire",assurance:"assureur",permis:"administration",certificat:"administration",proces_verbal:"administration",impot:"administration"}; // D-168 : à quelle rubrique rattacher un fournisseur reconnu sur un document qui n'est pas de ceux d'un artisan (plan, courrier, autre : on range le document, mais on ne crée aucun contact)
 const categorieDe=p=>p.categorie||"artisan"; // D-168 : les contacts créés avant cette rubrique restent des artisans
+// D-170 : la forme du papier ne dit pas le métier de celui qui l'a émis — un devis d'assurance vient d'un assureur, pas d'un
+// artisan. On suit donc d'abord ce que la reconnaissance a lu du document ; le type ne sert plus que de filet.
+const RUBRIQUE_CONNUE=["artisan",...CATEGORIES_PRO.map(c=>c.id)];
+function rubriqueFournisseur(rec){
+  if(RUBRIQUE_CONNUE.includes(rec.catFournisseur))return rec.catFournisseur;
+  if(rec.catFournisseur==="commercant")return "enseigne"; // D-171 : ancien mot de la reconnaissance
+  return TYPES_DOCUMENT_ARTISAN.includes(rec.type)?"artisan":CATEGORIE_PAR_TYPE_DOCUMENT[rec.type];
+}
 function ranger(rec){ // C'est bien ça
   const nees=[];
   if(rec.k==="equip"){
@@ -769,9 +784,9 @@ function ranger(rec){ // C'est bien ça
     const cible=rec.lie?equipParLie(rec.lie):null; // si l'équipement existe déjà, on relie par identifiant tout de suite
     const d={id:rec.id,piece:rec.pieceId,type:rec.type,titre:rec.titre,date:rec.date,fournisseur:rec.fournisseur,montant:rec.montant,echeance:rec.echeance||"",lie:cible?cible.id:(rec.lie||""),travaux:rec.travaux||"",garantie:rec.garantie||"",img:rec.img,pdf:!!rec.pdf,chemin:rec.chemin||null,recu:rec.recu||"photo",dateRecu:rec.date0||rec.date};
     S.docs.push(d);
-    if(rec.fournisseur){ // D-164, affiné par D-167 puis D-168 : un fournisseur reconnu devient un contact de la maison, dans la bonne rubrique -- artisan pour un vrai service rendu, notaire/assurance/administration pour un acte, une assurance ou un document administratif, et rien du tout pour un plan, un courrier ou un document non identifié
-      const cat=TYPES_DOCUMENT_ARTISAN.includes(rec.type)?"artisan":CATEGORIE_PAR_TYPE_DOCUMENT[rec.type];
-      if(cat)connaitrePro(rec.fournisseur,rec.travaux?rec.travaux:(rec.type==="facture"?"Facture reçue":"Document reçu"),rec.date,cat);
+    if(rec.fournisseur){ // D-164, affiné par D-167, D-168 puis D-170 : un fournisseur reconnu devient un contact de la maison, dans la bonne rubrique
+      const cat=rubriqueFournisseur(rec);
+      if(cat)connaitrePro(rec.fournisseur,rec.travaux?rec.travaux:(rec.type==="facture"?"Facture reçue":"Document reçu"),rec.date,cat,rec.metierFournisseur);
     }
     if(rec.travaux){let t=S.travaux.find(t=>t.titre===rec.travaux);if(!t){t={id:uid(),titre:rec.travaux,par:rec.fournisseur,date:rec.date,montant:0,docs:[]};S.travaux.push(t)}t.docs.push(d.id);if(rec.type==="facture")t.montant=rec.montant;if(rec.date>t.date)t.date=rec.date}
     if(d.type==="assurance")suivreAssurance(d); // D-151, 16 septembre 2026
@@ -806,11 +821,12 @@ function suivreAssurance(d){
   }
 }
 const lc=s=>s.charAt(0).toLowerCase()+s.slice(1);
-function connaitrePro(nom,motif,date,categorie){
+function connaitrePro(nom,motif,date,categorie,metier){
   let p=S.pros.find(p=>p.nom===nom);
   const ref=RESERVE.pros[nom]||{metier:"Professionnel",tel:"",mail:"",ville:""};
   if(!p){p={id:uid(),nom,...ref,categorie:categorie||"artisan",interventions:[],avis:[]};S.pros.push(p)}
   else if(categorie&&!p.categorie)p.categorie=categorie; // D-168 : on complète la rubrique si elle manquait encore
+  if(metier&&(!p.metier||p.metier==="Professionnel"))p.metier=metier; // D-170 : « Assurance habitation » vaut mieux que « Professionnel »
   if(!p.interventions.some(i=>i.motif===motif&&i.d===date))p.interventions.push({d:date,motif});
   p.interventions.sort((a,b)=>b.d.localeCompare(a.d));
   return p;
@@ -822,7 +838,7 @@ const CARTES=[
   {id:"equipements",nom:"Équipements",ico:"outil",quand:"à la première étiquette ou facture d'appareil reconnue",sub:()=>"Notices, garanties, service après-vente",nee:()=>S.equipements.length>0,n:()=>S.equipements.length},
   {id:"documents",nom:"Documents",ico:"doc",quand:"au premier document gardé",sub:()=>"Tout ce qui est conservé",nee:()=>S.docs.length>0,n:()=>S.docs.length},
   {id:"artisans",nom:"Les artisans de la maison",ico:"gens",quand:"au premier professionnel connu",sub:()=>S.pros.filter(p=>categorieDe(p)==="artisan").slice(0,3).map(p=>p.nom).join(", "),nee:()=>S.pros.some(p=>categorieDe(p)==="artisan"),n:()=>S.pros.filter(p=>categorieDe(p)==="artisan").length},
-  {id:"contacts",nom:"Notaire, assurance, démarches",ico:"fichier",quand:"au premier contact non-artisan connu",sub:()=>S.pros.filter(p=>categorieDe(p)!=="artisan").slice(0,3).map(p=>p.nom).join(", "),nee:()=>S.pros.some(p=>categorieDe(p)!=="artisan"),n:()=>S.pros.filter(p=>categorieDe(p)!=="artisan").length}, // D-168
+  {id:"contacts",nom:"Notaire, assurance, fournisseurs",ico:"fichier",quand:"au premier contact non-artisan connu",sub:()=>S.pros.filter(p=>categorieDe(p)!=="artisan").slice(0,3).map(p=>p.nom).join(", "),nee:()=>S.pros.some(p=>categorieDe(p)!=="artisan"),n:()=>S.pros.filter(p=>categorieDe(p)!=="artisan").length}, // D-168
   {id:"travaux",nom:"Travaux",ico:"travaux",quand:"au premier devis",sub:()=>"Chantiers, devis, ce que ça a coûté",nee:()=>S.travaux.length>0,n:()=>S.travaux.length},
   {id:"echanges",nom:"Échanges et accès",ico:"echanges",quand:"au premier accès ouvert à un tiers",sub:()=>"Qui voit quoi, pour combien de temps",nee:()=>S.acces.length>0,n:()=>S.acces.filter(a=>a.ouvert).length},
   {id:"transmission",nom:"Transmission",ico:"cle",quand:"le jour où la maison change de mains",sub:()=>"Les dossiers, le livre du logement",nee:()=>!!S.transmission},
@@ -1509,19 +1525,36 @@ function vArtisans(){
     <button class="btn big" onclick="trouverPro()">${I.gens} Trouver un professionnel</button>
   </div>`;
 }
-function vContactsAutres(){ // D-168 : notaire, assurance, démarches -- ce ne sont pas des artisans
+function vContactsAutres(){ // D-168, élargi par D-171 -- tous les contacts de la maison qui ne sont pas des artisans
   const groupes=CATEGORIES_PRO.map(c=>({...c,pros:S.pros.filter(p=>categorieDe(p)===c.id)})).filter(g=>g.pros.length);
-  return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Notaire, assurance, démarches</h1><p class="muted">Les contacts que la maison garde aussi, mais qui ne sont pas des artisans.</p>
+  return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Notaire, assurance, fournisseurs</h1><p class="muted">Les contacts que la maison garde aussi, mais qui ne sont pas des artisans.</p>
     ${groupes.map(g=>`<div class="stack" style="gap:2px"><p class="small b" style="color:var(--sauge-f);padding:4px 2px 0">${h(g.nom)}</p><div class="card" style="gap:0;padding:4px 16px">${g.pros.map(p=>`<a class="line" href="#/pro/${p.id}"><span class="tile" style="width:36px;height:36px;font-weight:700;font-size:.85em">${h(p.nom.split(/\s/).map(w=>w[0]).join("").slice(0,2).toUpperCase())}</span><span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(p.nom)}</span><span class="small muted">${p.interventions[0]?h(p.interventions[0].motif)+", "+dateFr(p.interventions[0].d):h(p.metier)}</span></span>${I.fleche}</a>`).join("")}</div></div>`).join("")}
   </div>`;
 }
 V.pro=id=>{const p=S.pros.find(x=>x.id===id);if(!p)return vArtisans();const docs=S.docs.filter(d=>d.fournisseur===p.nom);
-  return `<div class="view" style="gap:12px"><div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(p.nom)}</h1><p class="muted">${h(p.metier)}${p.ville?" · "+h(p.ville):""}</p></div>
+  return `<div class="view" style="gap:12px"><div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(p.nom)}</h1><p class="muted">${h(p.metier)}${p.ville?" · "+h(p.ville):""}</p>
+    <p class="small muted" style="margin-top:4px">Rangé dans « ${h(nomRubrique(categorieDe(p)))} » · <button class="btn sm ghost" style="padding:2px 6px" onclick="changerRubrique('${p.id}')">Changer</button></p></div>
     <div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ce qu'il a fait ici</p>${p.interventions.map(i=>`<div class="line"><span>${h(i.motif)}</span><span class="small muted">${dateFr(i.d)}</span></div>`).join("")}</div>
     ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ses documents</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
     <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre appréciation</p>${p.avis.length?p.avis.map(a=>`<p class="small">${"★".repeat(a.n)}${"☆".repeat(5-a.n)} <span class="muted">${h(a.t)} · ${dateFr(a.d)}</span></p>`).join(""):`<p class="small muted">Elle reste dans la mémoire de la maison et se transmet avec elle. L'artisan ne la voit jamais.</p>`}<div class="row">${[1,2,3,4,5].map(n=>`<button class="btn sm" onclick="noter('${p.id}',${n})">${"★".repeat(n)}</button>`).join("")}</div></div>
     <div class="row wrap"><button class="btn primary grow" onclick="contacter('${h(p.nom)}')">${I.telephone} Recontacter</button><button class="btn grow" onclick="recommanderArtisan('${p.id}')">${I.envoi} Recommander</button></div>
   </div>`};
+// D-170 : VIDOM se trompera parfois de rubrique. Le gardien la corrige lui-même, en deux gestes.
+const RUBRIQUES=[{id:"artisan",nom:"Artisan"},...CATEGORIES_PRO];
+const nomRubrique=cat=>(RUBRIQUES.find(r=>r.id===cat)||RUBRIQUES[0]).nom;
+function changerRubrique(id){
+  const p=S.pros.find(x=>x.id===id);if(!p)return;
+  const actuelle=categorieDe(p);
+  modal(`<h2>Où ranger ${h(p.nom)} ?</h2><p class="muted">VIDOM a deviné d'après le document reçu. C'est vous qui savez.</p>
+  <div class="row wrap">${RUBRIQUES.map(r=>`<button class="chip btn-chip ${r.id===actuelle?"on":""}" onclick="rangerPro('${p.id}','${r.id}')">${h(r.nom)}</button>`).join("")}</div>
+  <button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+}
+function rangerPro(id,cat){
+  const p=S.pros.find(x=>x.id===id);if(!p)return;
+  p.categorie=cat;
+  if(p.metier==="Professionnel"&&cat!=="artisan")p.metier=nomRubrique(cat);
+  closeModal();save();naissances();render();toast(`${p.nom} est rangé dans « ${nomRubrique(cat)} »`);
+}
 function noter(id,n){const p=S.pros.find(x=>x.id===id);p.avis.push({n,t:"Par vous",d:today()});save();render();toast("Appréciation conservée")}
 
 /* ================= l'envoi : recommander un artisan à un autre logement (D-153 à D-157, A17) ================= */
