@@ -602,6 +602,30 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
 }
 
 let pousserTout_timer=null,pousserTout_actif=false,pousserTout_rejoue=false,hydrateEnCours=false;
+/* D-176 : ce qui arrive par l'adresse VIDOM apparaît sans recharger la page. On relit le fil en ligne
+   toutes les quarante-cinq secondes et au retour sur l'onglet ; on n'ajoute que les entrées inconnues. */
+let relireFil_encours=false;
+async function relireFil(){
+  if(!supa||relireFil_encours||hydrateEnCours||!S.logement||!S.logement.id||!S.cree||document.hidden)return;
+  relireFil_encours=true;
+  try{
+    const {data:s}=await supa.auth.getSession();if(!s||!s.session)return;
+    const {data:fil}=await supa.from("fil_activite").select("*").eq("logement_id",S.logement.id).order("horodatage",{ascending:false}).limit(30);
+    const connus=new Set(S.fil.map(f=>f.id));
+    const neufs=(fil||[]).filter(f=>!connus.has(f.id)).map(f=>({id:f.id,d:f.horodatage,fait:!!f.fait,type:f.type,...(f.donnees||{})}));
+    if(neufs.length){
+      S.fil=[...neufs,...S.fil].sort((x,y)=>String(y.d).localeCompare(String(x.d)));
+      save();
+      const ae=document.activeElement;const saisie=ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+      if(!document.getElementById("modal").innerHTML&&!saisie)render();
+      const n=neufs.filter(f=>f.type==="recu"&&!f.fait).length;
+      if(n)toast(n===1?"Un document vient d'arriver par l'adresse VIDOM":n+" documents viennent d'arriver par l'adresse VIDOM");
+    }
+  }catch(e){}finally{relireFil_encours=false}
+}
+setInterval(relireFil,45000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)relireFil()});
+window.addEventListener("focus",relireFil);
 function syncDiffere(){ if(!supa)return; clearTimeout(pousserTout_timer); pousserTout_timer=setTimeout(pousserTout,900); }
 if(typeof window!=="undefined")window.addEventListener("online",()=>syncDiffere());
 async function pousserTout(){ // pousse l'état courant vers le compte réel ; échoue en silence si hors ligne, réessaiera plus tard
@@ -865,6 +889,7 @@ function connaitrePro(nom,motif,date,categorie,metier){
 /* ================= les cartes, et leur naissance ================= */
 const CARTES=[
   {id:"adresse",nom:"Adresse VIDOM",ico:"mail",quand:"",sub:()=>S.logement.depot,nee:()=>true},
+  {id:"recus",nom:"Reçu par l'adresse VIDOM",ico:"mail",quand:"au premier document envoyé à l'adresse VIDOM",sub:()=>{const n=S.fil.filter(e=>e.type==="recu"&&!e.fait).length;return n?(n===1?"Un envoi attend votre décision":n+" envois attendent votre décision"):"Ce qu'on a envoyé à la maison"},nee:()=>S.fil.some(e=>e.type==="recu"),n:()=>S.fil.filter(e=>e.type==="recu"&&!e.fait).length}, // D-177
   {id:"equipements",nom:"Équipements",ico:"outil",quand:"à la première étiquette ou facture d'appareil reconnue",sub:()=>"Notices, garanties, service après-vente",nee:()=>S.equipements.length>0,n:()=>S.equipements.length},
   {id:"documents",nom:"Documents",ico:"doc",quand:"au premier document gardé",sub:()=>"Tout ce qui est conservé",nee:()=>S.docs.length>0,n:()=>S.docs.length},
   {id:"artisans",nom:"Les artisans de la maison",ico:"gens",quand:"au premier professionnel connu",sub:()=>S.pros.filter(p=>categorieDe(p)==="artisan").slice(0,3).map(p=>p.nom).join(", "),nee:()=>S.pros.some(p=>categorieDe(p)==="artisan"),n:()=>S.pros.filter(p=>categorieDe(p)==="artisan").length},
@@ -1495,9 +1520,25 @@ V.carte=id=>{
   if(id==="adresse")return V["adresse-vidom"]();
   const c=CARTES.find(x=>x.id===id);if(!c)return V.maison();
   if(!c.nee())return `<div class="view"><div class="card dash"><p>${h(c.nom)} apparaîtra ${h(c.quand)}.</p></div><a class="btn" href="#/maison">Ma maison</a></div>`;
-  const F={equipements:vEquipements,documents:vDocuments,artisans:vArtisans,contacts:vContactsAutres,travaux:vTravaux,echanges:vEchanges,transmission:vTransmission};
+  const F={recus:vRecus,equipements:vEquipements,documents:vDocuments,artisans:vArtisans,contacts:vContactsAutres,travaux:vTravaux,echanges:vEchanges,transmission:vTransmission};
   return F[id]();
 };
+/* D-177 : le sas de réception. Tout ce qu'on a envoyé à l'adresse VIDOM, au même endroit :
+   ce qui attend une décision d'abord, puis ce qui a été gardé ou refusé. Les mêmes cartes que dans le fil. */
+function vRecus(){
+  const tous=S.fil.filter(e=>e.type==="recu");
+  const attente=tous.filter(e=>!e.fait),faits=tous.filter(e=>e.fait);
+  attente.forEach(e=>{if(e.rec)assurerImage(e.rec)});
+  const carteRecu=e=>{const r=e.rec||{};const voir=!e.fait&&r.img?`<div class="row"><button class="btn sm" onclick="voirRecu('${e.id}')">Voir ce qui a été envoyé</button></div>`:"";return entreeFil(e)+voir};
+  return `<div class="view" style="gap:12px">
+    <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">Reçu par l'adresse VIDOM</h1><p class="muted">Ce qu'on a envoyé à <b>${h(S.logement.depot||"")}</b>. Rien n'entre dans la mémoire de la maison sans vous.</p></div>
+    <p class="small b" style="color:var(--terra-f)">${attente.length?(attente.length===1?"Un envoi attend votre décision":attente.length+" envois attendent votre décision"):"Rien n'attend votre décision."}</p>
+    ${attente.map(carteRecu).join("")}
+    ${faits.length?`<p class="small b" style="color:var(--sauge-f);margin-top:6px">Déjà décidé</p>${faits.map(entreeFil).join("")}`:""}
+    <a class="btn ghost sm" href="#/carte/adresse">${I.mail} Voir et partager l'adresse VIDOM</a>
+  </div>`;
+}
+function voirRecu(id){const e=S.fil.find(x=>x.id===id);const r=e&&e.rec;if(!r||!r.img)return;modal(`<h2>${h(r.titre||r.nom||"Ce qui a été envoyé")}</h2>${r.pdf?`<embed src="${r.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${r.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2)">`}<div class="row"><button class="btn grow" onclick="closeModal()">Fermer</button></div>`)}
 function vEquipements(){
   const parPiece={};S.equipements.forEach(e=>{(parPiece[e.piece]=parPiece[e.piece]||[]).push(e)});
   const ordre=Object.keys(parPiece).sort((a,b)=>a==="maison"?1:b==="maison"?-1:0);
