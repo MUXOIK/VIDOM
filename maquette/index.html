@@ -1690,7 +1690,7 @@ V.equipement=id=>{
     <div class="grid2">${e.img?`<button class="btn" onclick="voirEquipement('${e.id}')">Voir la photo</button>`:""}${e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" disabled>Pas de notice</button>`}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
     ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents reliés</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
     <p class="small faint">Notice et service après-vente retrouvés à partir de la référence lue sur l'étiquette.</p>
-    <div class="row"><button class="btn" onclick="retirerEquip('${e.id}')">Retirer cet équipement</button></div>
+    <div class="row wrap"><button class="btn grow" onclick="relierEquipA('${e.id}')">${I.doc} Relier un document</button><button class="btn" onclick="retirerEquip('${e.id}')">Retirer cet équipement</button></div>
   </div>`;
 };
 function voirNotice(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Notice — ${h(e.marque)} ${h(e.modele)}</h2><div class="book"><p class="small muted">Retrouvée sur le site du fabricant à partir de la référence ${h(e.ref)}.</p><p style="margin-top:10px"><b>Mise en service.</b> Raccordez l'appareil, vérifiez le niveau, lancez un premier cycle à vide.</p><p><b>Entretien.</b> Nettoyez le filtre une fois par mois. Détartrez tous les six mois.</p><p><b>En cas de panne.</b> Le code affiché indique la cause : E15, fuite ; E22, filtre obstrué ; E24, évacuation.</p></div><div class="row"><button class="btn primary grow" onclick="closeModal();toast('Notice conservée dans Documents')">Conserver dans Documents</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
@@ -1722,7 +1722,7 @@ V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();assu
   return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:${d.pdf?"420px":"160px"}">${vignette(d)}</div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">${h(d.titre)}</h1><p class="muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</p></div>
     <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd>${d.langueOriginale?`<dt>Langue d'origine</dt><dd>${h(d.langueOriginale)} · titre traduit automatiquement pour le classement</dd>`:(d.etranger?`<dt>Langue d'origine</dt><dd class="muted">Traduction en cours…</dd>`:"")}</dl></div>
-    <div class="row wrap">${d.img?`<button class="btn" onclick="voirDocument('${d.id}')">Voir</button>`:""}${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Changer de pièce</button>${d.chemin&&!d.lie&&["facture","garantie","notice"].includes(d.type)?`<button class="btn" onclick="relireDoc('${d.id}')">Relier à son appareil</button>`:""}<button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
+    <div class="row wrap">${d.img?`<button class="btn" onclick="voirDocument('${d.id}')">Voir</button>`:""}${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Changer de pièce</button><button class="btn" onclick="relierDocA('${d.id}')">${d.lie?"Relier à un autre appareil":"Relier à un appareil"}</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
   </div>`};
 /* D-180 : retirer, c'est retirer pour de vrai — sur l'appareil, sur le compte et dans les fichiers gardés.
    (Avant, le document retiré revenait à la relecture du compte : la maquette n'effaçait rien en ligne.) */
@@ -1762,6 +1762,29 @@ async function relireDocInterne(d){
     const eq=d.lie?equipParLie(d.lie):null;
     toast(eq?`Relié à : ${eq.nom}${eq.marque?" "+eq.marque:""}`:"Relu. Aucun appareil précis n'est visé par ce document.");
   }catch(e){toast("La relecture a échoué. Réessayez dans un instant.")}
+}
+/* D-187 : relier à la main. VIDOM propose ; quand il se trompe ou ne trouve pas, le gardien choisit l'appareil lui-même. */
+function relierDocA(id){
+  const d=S.docs.find(x=>x.id===id);if(!d)return;const actuel=d.lie?equipParLie(d.lie):null;
+  modal(`<h2>À quel appareil relier ce document ?</h2><p class="muted">${h(d.titre)}</p>
+    <div class="stack" style="gap:0;max-height:45vh;overflow:auto">${S.equipements.length?S.equipements.map(e=>`<button class="line" style="width:100%;text-align:left" onclick="relierDocOui('${d.id}','${e.id}')">${I.outil}<span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(e.nom)} ${h(e.marque||"")}</span><span class="small muted">${h([e.modele,e.piece&&e.piece!=="maison"?nomPiece(e.piece):""].filter(Boolean).join(" · "))}</span></span>${actuel&&actuel.id===e.id?I.check:I.fleche}</button>`).join(""):`<p class="small muted">Aucun équipement n'est encore connu.</p>`}</div>
+    <div class="row wrap">${d.chemin?`<button class="btn grow" onclick="closeModal();relireDoc('${d.id}')">Laisser VIDOM chercher</button>`:""}${d.lie?`<button class="btn" onclick="relierDocOui('${d.id}','')">Ne plus relier</button>`:""}<button class="btn" onclick="closeModal()">Annuler</button></div>`);
+}
+function relierDocOui(docId,eqId){
+  const d=S.docs.find(x=>x.id===docId);if(!d)return;const e=eqId?S.equipements.find(x=>x.id===eqId):null;
+  d.lie=e?e.id:"";
+  if(e){
+    if(d.type==="facture"&&d.date)e.achat=d.date.slice(0,10);
+    if(d.garantie&&(!e.garantie||d.garantie>e.garantie))e.garantie=d.garantie;
+  }
+  closeModal();save();render();toast(e?`Relié à : ${e.nom}${e.marque?" "+e.marque:""}`:"Ce document n'est plus relié");
+}
+function relierEquipA(id){
+  const e=S.equipements.find(x=>x.id===id);if(!e)return;
+  const libres=S.docs.filter(d=>d.lie!==e.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  modal(`<h2>Quel document relier ?</h2><p class="muted">${h(e.nom)} ${h(e.marque||"")}</p>
+    <div class="stack" style="gap:0;max-height:50vh;overflow:auto">${libres.length?libres.map(d=>`<button class="line" style="width:100%;text-align:left" onclick="relierDocOui('${d.id}','${e.id}')">${I.doc}<span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</button>`).join(""):`<p class="small muted">Aucun document à relier.</p>`}</div>
+    <div class="row"><button class="btn grow" onclick="closeModal()">Annuler</button></div>`);
 }
 function retirerDoc(id){modal(`<h2>Retirer ce document ?</h2><p class="muted">Il disparaît vraiment de la mémoire de la maison.</p><div class="row"><button class="btn terra grow" onclick="retirerDocOui('${id}')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
 function retirerDocOui(id){
@@ -2328,8 +2351,8 @@ const boutonAide=()=>`<button class="aide" onclick="ouvrirAide()" aria-label="Ai
 function ouvrirAide(q){
   aideQ=q||"";
   modal(`<div class="split"><h2 style="margin:0">Que voulez-vous faire ?</h2><button class="btn ghost sm" onclick="closeModal()" aria-label="Fermer">${I.croix}</button></div>
-  <p class="small muted">Tout ce que VIDOM sait faire, et par où commencer. Choisissez, ou écrivez ce que vous cherchez.</p>
-  <input class="input" id="aide-q" placeholder="Une facture, un sinistre, vendre…" autocomplete="off" value="${h(aideQ)}" oninput="aideQ=this.value;aideRendre()" aria-label="Chercher dans l'aide">
+  <p class="small muted">Cherchez un mot dans la mémoire de la maison — un appareil, une enseigne, une année — ou ce que vous voulez faire.</p>
+  <input class="input" id="aide-q" placeholder="Lave-vaisselle, Darty, un sinistre, vendre…" autocomplete="off" value="${h(aideQ)}" oninput="aideQ=this.value;aideRendre()" aria-label="Chercher dans l'aide">
   <div id="aide-liste" class="stack" style="gap:12px"></div>`);
   aideRendre();
   if(isDesk())setTimeout(()=>{const i=document.getElementById("aide-q");if(i)i.focus()},50);
@@ -2337,10 +2360,27 @@ function ouvrirAide(q){
 function aideRendre(){
   const box=document.getElementById("aide-liste");if(!box)return;
   const sections=aideCherche(aideQ);
+  const trouves=chercherMemoire(aideQ); // D-187 : ce que la maison garde, avant ce que VIDOM sait faire
   const ligne=e=>`<button class="line" style="width:100%;text-align:left" onclick="aideAller('${e.id}')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(e.q)}</span><span class="small muted">${h(e.c)}</span></span>${e.go?I.fleche:`<span class="chip neutre">${I.cadenas} Bientôt</span>`}</button>`;
-  box.innerHTML=sections.length
-    ?sections.map(s=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(s.t)}</p>${s.l.map(ligne).join("")}</div>`).join("")
+  const blocMemoire=trouves.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Dans la mémoire de la maison · ${trouves.length}${trouves.length>=40?" et plus":""}</p>${trouves.map(r=>`<a class="line" href="${r.go}" onclick="closeModal()">${I[r.ico]||I.doc}<span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(r.t)}</span><span class="small muted">${h(r.c)}</span></span>${I.fleche}</a>`).join("")}</div>`:"";
+  box.innerHTML=(sections.length||trouves.length)
+    ?blocMemoire+sections.map(s=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(s.t)}</p>${s.l.map(ligne).join("")}</div>`).join("")
     :`<div class="card soft" style="gap:8px"><p class="small">Rien de ce nom dans l'aide. La maison, elle, saura peut-être répondre.</p><button class="btn primary" onclick="aideQuestion(aideQ)">${I.bulle} Demander à la maison</button></div>`;
+}
+/* D-187 : chercher un mot simple (« lave-vaisselle », « Darty », « 2023 ») dans tout ce que la maison garde.
+   Sans accents ni majuscules ; tous les mots doivent s'y trouver ; les appareils d'abord, puis les documents, les contacts, les pièces. */
+function chercherMemoire(q){
+  const mots=String(q||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/[^a-z0-9]+/).filter(m=>m.length>1);
+  if(!mots.length)return [];
+  const plat=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ");
+  const ok=txt=>{const p=plat(txt);const colle=p.replace(/ /g,"");return mots.every(m=>p.includes(m)||colle.includes(m))};
+  const TYPES={facture:"Facture",devis:"Devis",notice:"Notice",garantie:"Garantie",contrat:"Contrat",diagnostic:"Diagnostic",acte:"Acte",assurance:"Assurance",plan:"Plan",impot:"Impôts"};
+  const R=[];
+  S.equipements.forEach(e=>{const lies=docsLies(e);if(ok([e.nom,e.marque,e.modele,e.ref,nomPiece(e.piece),lies.map(d=>d.titre+" "+d.fournisseur).join(" ")].join(" ")))R.push({ico:"outil",t:`${e.nom}${e.marque?" "+e.marque:""}`,c:["Équipement",e.modele,e.garantie?(joursDepuis(e.garantie)<0?"garanti jusqu'au "+dateFr(e.garantie):"garantie terminée"):"",lies.length?lies.length+" document"+(lies.length>1?"s":""):""].filter(Boolean).join(" · "),go:"#/equipement/"+e.id})});
+  S.docs.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).forEach(d=>{const eq=d.lie?equipParLie(d.lie):null;if(ok([d.titre,d.fournisseur,d.type,TYPES[d.type],d.date,d.travaux,eq?eq.nom+" "+eq.marque+" "+eq.modele:"",d.montant!=null?String(Math.round(d.montant)):""].join(" ")))R.push({ico:"doc",t:d.titre,c:[TYPES[d.type]||"Document",dateFr(d.date),d.fournisseur,d.montant?euros(d.montant):""].filter(Boolean).join(" · "),go:"#/document/"+d.id})});
+  S.pros.forEach(p=>{if(ok([p.nom,p.metier,p.ville,nomRubrique(categorieDe(p))].join(" ")))R.push({ico:"gens",t:p.nom,c:[p.metier,nomRubrique(categorieDe(p))].filter(Boolean).join(" · "),go:"#/pro/"+p.id})});
+  S.pieces.forEach(pc=>{if(ok(pc.nom))R.push({ico:"maison",t:pc.nom,c:"Pièce",go:"#/piece/"+pc.id})});
+  return R.slice(0,40);
 }
 function aideAller(id){
   const e=AIDE.flatMap(s=>s.l).find(x=>x.id===id);if(!e)return;
