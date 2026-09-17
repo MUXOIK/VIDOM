@@ -586,6 +586,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
     reconstituerPhotosPieces();
     S.rappels=(rappels||[]).map(r=>({id:r.id,t:r.texte,equip:r.equipement_id||"",pro:"",du:r.date_echeance||"",fait:!!r.fait,info:!!r.info}));
     S.expediteursOk=(expediteurs||[]).map(e=>e.expediteur);
+    lireCourrielMensuel(); // D-186
     S.fil=(fil||[]).map(f=>({id:f.id,d:f.horodatage,fait:!!f.fait,type:f.type,...(f.donnees||{})}));
     S.guideInvite=guideInviteRow?{equipementIds:guideInviteRow.equipement_ids||[],message:guideInviteRow.message_accueil||""}:null;
     S.sejoursInvites=(sejoursInvitesRows||[]).map(s=>({id:s.id,nom:s.nom_invite||"",code:s.code,debut:s.debut,fin:s.fin,creeLe:s.cree_le,ouvertLe:s.ouvert_le,revoqueLe:s.revoque_le}));
@@ -860,7 +861,7 @@ function ranger(rec){ // C'est bien ça
     S.docs.forEach(d=>{if(d.lie&&d.lie!==e.id&&slug(d.lie)===slug(e.nom))d.lie=e.id});
     if(rec.installateur)connaitrePro(rec.installateur,`Installation : ${rec.nom.toLowerCase()}`,rec.achat);
     if(rec.entretien)S.rappels.push({id:uid(),t:`L'entretien annuel de ${lc(rec.nom)} est à faire ce mois-ci.`,equip:e.id,pro:rec.installateur||"",du:today(),fait:false});
-    if(rec.garantie&&joursDepuis(rec.garantie)<0&&joursDepuis(rec.garantie)>-200)S.rappels.push({id:uid(),t:`La garantie de ${lc(rec.nom)} ${rec.marque} expire le ${dateFr(rec.garantie)}.`,equip:e.id,du:rec.garantie,fait:false,info:true});
+    // (D-185 : le rappel de fin de garantie se pose désormais dans rappelsGaranties(), un mois avant, pour les documents comme pour les appareils)
   }else if(rec.k==="doc"){
     relierAppareil(rec); // D-182
     const cible=rec.lie?equipParLie(rec.lie):null; // si l'équipement existe déjà, on relie par identifiant tout de suite
@@ -983,10 +984,45 @@ async function relireRecu(id){
   }catch(err){toast("La relecture a échoué. Réessayez dans un instant.")}
   delete e.relecture;save();render();
 }
+/* D-186 : le courriel du mois. Activé par défaut ; le choix du gardien est gardé sur son compte (preferences_compte). */
+async function reglerCourrielMensuel(oui){
+  S.reglages.courrielMensuel=!!oui;save();render();toast(oui?"Vous recevrez le courriel du mois":"Vous ne recevrez plus le courriel du mois");
+  try{const {data}=await supa.auth.getSession();const u=data&&data.session&&data.session.user;if(u)await supa.from("preferences_compte").upsert({user_id:u.id,courriel_mensuel:!!oui,maj_le:new Date().toISOString()},{onConflict:"user_id"})}catch(e){}
+}
+async function lireCourrielMensuel(){ // au retour sur le compte : le choix fait sur un autre appareil
+  try{const {data}=await supa.auth.getSession();const u=data&&data.session&&data.session.user;if(!u)return;
+    const {data:p}=await supa.from("preferences_compte").select("courriel_mensuel").eq("user_id",u.id).maybeSingle();
+    if(p&&S.reglages.courrielMensuel!==p.courriel_mensuel){S.reglages.courrielMensuel=p.courriel_mensuel;save()}}catch(e){}
+}
+async function apercuCourrielMensuel(){
+  modal(`<h2>Le courriel du mois</h2><p class="muted">Un instant…</p>`);
+  try{
+    const {data,error}=await supa.functions.invoke("courriel-du-mois",{body:{apercu:true}});
+    if(error||!data)throw error||new Error("vide");
+    modal(`<h2>Le courriel du mois</h2>${data.rien?`<p class="muted">Rien à vous dire pour l'instant : aucun courriel ne partirait.</p>`:`<p class="small muted">À : ${h(data.a)} · ${h(data.sujet)}</p><div class="book" style="white-space:pre-wrap;max-height:50vh;overflow:auto">${h(data.texte)}</div>`}
+      <div class="row">${!data.rien&&data.envoi_pret?`<button class="btn primary grow" onclick="essaiCourrielMensuel()">Me l'envoyer pour voir</button>`:""}<button class="btn ${data.rien||!data.envoi_pret?"grow":""}" onclick="closeModal()">Fermer</button></div>
+      ${!data.rien&&!data.envoi_pret?`<p class="small faint">L'envoi n'est pas encore réglé côté VIDOM : l'aperçu fonctionne, le courriel ne part pas encore.</p>`:""}`);
+  }catch(e){modal(`<h2>Le courriel du mois</h2><p class="muted">L'aperçu n'est pas disponible pour l'instant.</p><div class="row"><button class="btn grow" onclick="closeModal()">Fermer</button></div>`)}
+}
+async function essaiCourrielMensuel(){
+  closeModal();toast("Envoi en cours…");
+  try{const {data,error}=await supa.functions.invoke("courriel-du-mois",{body:{essai:true}});toast(!error&&data&&data.envoye?"Envoyé à "+data.a:"L'envoi n'a pas abouti.")}catch(e){toast("L'envoi n'a pas abouti.")}
+}
 function toujoursAccepter(id,oui){const e=S.fil.find(x=>x.id===id);if(!e)return;if(oui&&e.propose&&!S.expediteursOk.includes(e.propose))S.expediteursOk.push(e.propose);e.propose=null;e.t3=oui?"Ce que cet expéditeur enverra sera gardé sans vous le demander. Vous pourrez changer d'avis dans les réglages.":"";save();render()}
 
 /* rappels dus → une seule entrée visible à la fois */
+/* D-185 : un mois avant la fin d'une garantie, VIDOM le rappelle dans le fil. Un rappel par garantie (document ou appareil),
+   reconnu à son texte, qui porte la date : une garantie prolongée donne un nouveau rappel, l'ancien ne revient pas. */
+function rappelsGaranties(){
+  if(typeof listeGaranties!=="function")return;
+  listeGaranties().filter(x=>x.enCours).forEach(x=>{
+    const t=`La garantie de ${lc(x.quoi)} se termine le ${dateFr(x.fin)}. Si quelque chose ne va pas, c'est le moment de le signaler${x.ou?" à "+x.ou:""}.`;
+    if(S.rappels.some(r=>r.t===t))return;
+    S.rappels.push({id:uid(),t,equip:x.eq?x.eq.id:"",du:shiftDate(x.fin,-30),fait:false,info:true,garantie:true});
+  });
+}
 function pousserRappels(){
+  rappelsGaranties();
   const dus=S.rappels.filter(r=>!r.fait&&r.du<=today()&&!S.fil.some(e=>e.type==="rappel"&&e.rappel===r.id&&!e.fait));
   const dejaUn=S.fil.some(e=>e.type==="rappel"&&!e.fait);
   if(dus.length&&!dejaUn){const r=dus[0];filAjouter({type:"rappel",t:r.t,rappel:r.id,pro:r.pro||"",ico:"cloche",info:!!r.info})}
@@ -1608,7 +1644,7 @@ const aRelire=()=>S.docs.filter(d=>d.chemin&&!d.relu&&!d.garantie&&!d.lie&&["fac
 function vGaranties(){
   const L=listeGaranties();const cours=L.filter(x=>x.enCours),finies=L.filter(x=>!x.enCours);const n=aRelire().length;
   const ligne=x=>`<a class="line" href="${x.doc?"#/document/"+x.doc.id:"#/equipement/"+x.eq.id}">${I.check}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(x.quoi)}</span><span class="small muted">${x.enCours?"jusqu'au "+dateFr(x.fin):"terminée le "+dateFr(x.fin)}${x.ou?" · "+h(x.ou):""}${x.enCours&&joursDepuis(x.fin)>-180?" · bientôt finie":""}</span></span>${I.fleche}</a>`;
-  return `<div class="view" style="gap:12px"><div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">Garanties</h1><p class="muted">Les garanties et les extensions de garantie lues sur vos factures, avec leur date de fin.</p></div>
+  return `<div class="view" style="gap:12px"><div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">Garanties</h1><p class="muted">Les garanties et les extensions de garantie lues sur vos factures, avec leur date de fin. VIDOM vous le rappelle un mois avant.</p></div>
     ${cours.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">En cours</p>${cours.map(ligne).join("")}</div>`:`<div class="card soft"><p class="small">Aucune garantie en cours n'est connue pour l'instant.</p></div>`}
     ${finies.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Terminées</p>${finies.map(ligne).join("")}</div>`:""}
     ${n?`<div class="card soft" style="gap:8px"><p class="small">${n===1?"Une facture gardée n'a":n+" factures gardées n'ont"} pas encore été relue${n>1?"s":""} pour y chercher une garantie et l'appareil concerné.</p><div class="row"><button class="btn sm" onclick="relireFactures()">Chercher les garanties dans ${n===1?"cette facture":"ces "+n+" factures"}</button></div><p class="small faint">Chaque relecture compte comme une lecture de document.</p></div>`:""}
@@ -2018,6 +2054,7 @@ V["adresse-vidom"]=()=>`<div class="view" style="gap:12px"><h1 class="h" style="
   <div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Tant que la réception n'est pas branchée</p><p class="small muted">Cette adresse est réelle et déjà enregistrée pour votre logement. Un e-mail envoyé ici n'arrivera dans le fil qu'une fois la réception configurée côté serveur (chez le prestataire choisi pour vidom.fr) — jusque-là, il n'arrivera simplement pas.</p></div>
   ${(S.logement.numeroCadastral||S.logement.altitude!=null||S.logement.rnbId)?`<div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Ce que VIDOM a trouvé sur votre parcelle</p>${S.logement.numeroCadastral?`<p class="small">Cadastre : ${h(S.logement.numeroCadastral)}</p>`:""}${S.logement.altitude!=null?`<p class="small">Altitude : ${Math.round(S.logement.altitude)} m</p>`:""}${S.logement.classeClimat?`<p class="small">Classe climat (GES) : ${h(S.logement.classeClimat)}</p>`:""}<p class="small faint">Source : IGN, RNB, ADEME.</p></div>`:""}
   <div class="card" style="gap:6px"><p class="small b" style="color:var(--sauge-f)">À qui la donner</p><p class="small muted">Notaire, agent immobilier, artisans, assureur, syndic, diagnostiqueur — tous ceux qui détiennent des papiers de votre logement. Ils envoient, vous décidez.</p></div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Le courriel du mois</p><p class="small muted">Une fois par mois, VIDOM vous écrit ce qui vous attend : les garanties qui se terminent bientôt, les rappels, les documents reçus à trier. Rien à dire, pas de courriel.</p><div class="row wrap"><button class="chip btn-chip ${S.reglages.courrielMensuel!==false?"on":""}" onclick="reglerCourrielMensuel(true)">Je le reçois</button><button class="chip btn-chip ${S.reglages.courrielMensuel===false?"on":""}" onclick="reglerCourrielMensuel(false)">Non merci</button><button class="btn sm" onclick="apercuCourrielMensuel()">Voir ce qu'il dirait</button></div></div>
   <div class="card" style="gap:6px"><p class="small b" style="color:var(--sauge-f)">Expéditeurs acceptés sans vous demander</p>${S.expediteursOk.length?S.expediteursOk.map(x=>`<div class="line"><span>${h(x)}</span><button class="btn sm" onclick="S.expediteursOk=S.expediteursOk.filter(y=>y!=='${h(x)}');save();render()">Me redemander</button></div>`).join(""):`<p class="small muted">Aucun. Chaque envoi vous est proposé.</p>`}</div>
   <button class="btn" onclick="etiquette()">${I.qr} Imprimer l'étiquette</button>
 </div>`;
