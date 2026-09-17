@@ -55,6 +55,8 @@ svg.i{width:20px;height:20px;flex:0 0 auto}
 .nav a svg{width:24px;height:24px}
 .nav a.on{color:var(--sauge-f);background:var(--sauge-cc)}
 .nav a.cam{color:var(--blanc);background:var(--sauge)}
+.nav a{position:relative}
+.pastille{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--terra-f);color:var(--blanc);font-size:.7em;font-weight:600;display:flex;align-items:center;justify-content:center}
 .nav a.cam.on{background:var(--sauge-f)}
 
 /* ---------- ordinateur ---------- */
@@ -291,7 +293,7 @@ async function basculerLogement(id){
   S=etatPour(id);
   document.getElementById("app").innerHTML=`<div class="view center" style="min-height:100vh"><p class="muted">Un instant, VIDOM retrouve votre maison…</p></div>`;
   await hydrate(id);save();
-  location.hash="#/fil";render();
+  location.hash=accueil();render();
 }
 function ajouterLogement(){ // rejoue le premier jour (adresse, pièces, adresse VIDOM) pour un logement de plus, sans toucher aux autres
   mettreDeCote();
@@ -303,7 +305,7 @@ function ajouterLogement(){ // rejoue le premier jour (adresse, pièces, adresse
 async function annulerAjout(){ // on renonce : retour au logement qu'on regardait
   const id=S.retourVers;
   if(!id){S.etape="compte";save();render();return}
-  S=etatPour(id);await hydrate(id);save();location.hash="#/fil";render();
+  S=etatPour(id);await hydrate(id);save();location.hash=accueil();render();
 }
 function oublierLogement(id){ // retire de cet appareil la mémoire d'un logement qui n'est plus sur le compte
   if(!id)return;
@@ -313,7 +315,7 @@ function oublierLogement(id){ // retire de cet appareil la mémoire d'un logemen
 function supprimerLogement(){ // efface pour de bon la mémoire d'un logement, sur le compte et sur tous les appareils
   const nom=S.logement.nom||"cette maison";
   modal(`<h2>Supprimer ${h(nom)} ?</h2>
-  <p class="muted">Toute la mémoire de cette maison s'efface de votre compte : les pièces, les équipements, les documents et leurs fichiers, les artisans, les travaux, le fil. Sur cet appareil et sur tous les autres.</p>
+  <p class="muted">Toute la mémoire de cette maison s'efface de votre compte : les pièces, les équipements, les documents et leurs fichiers, les artisans, les travaux, le journal. Sur cet appareil et sur tous les autres.</p>
   <p class="small faint">C'est définitif : VIDOM ne saura pas la retrouver. Vous pouvez d'abord « Emporter ma mémoire » pour en garder une copie.</p>
   <label class="f"><span>Écrivez <b>${h(nom)}</b> pour confirmer</span><input class="input" id="sup-nom" autocomplete="off" autocapitalize="off" oninput="supprimerVerif()"></label>
   <button class="btn terra big" id="sup-ok" disabled onclick="supprimerLogementOk()">Supprimer définitivement</button>
@@ -350,7 +352,7 @@ async function supprimerLogementOk(){
     S=etatPour(suivant);S.logements=restants;S.compte=compte;S.reglages=reglages;
     if(!S.logement.nom){S.logement.nom=restants[0].nom||"";S.logement.ville=S.logement.ville||restants[0].ville||"";S.logement.adresse=S.logement.adresse||restants[0].adresse||""} // de quoi afficher tout de suite, hydrate complète
     document.getElementById("app").innerHTML=`<div class="view center" style="min-height:100vh"><p class="muted">Un instant, VIDOM retrouve votre maison…</p></div>`;
-    await hydrate(suivant);save();location.hash="#/fil";render();
+    await hydrate(suivant);save();location.hash=accueil();render();
   }else{ // plus aucune maison : on revient au premier jour, le compte reste
     S=etatInitial();S.compte=compte;S.reglages=reglages;S.logements=[];S.etape="adresse";
     hydrateEnCours=false;save();location.hash="";render();
@@ -385,6 +387,9 @@ function toast(t){const e=document.getElementById("toast");e.textContent=t;e.cla
 function modal(html){document.getElementById("modal").innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal fadein" role="dialog">${html}</div></div>`;document.body.style.overflow="hidden"}
 function closeModal(){document.getElementById("modal").innerHTML="";document.body.style.overflow=""}
 const isDesk=()=>window.matchMedia("(min-width:1024px)").matches;
+// D-194 : sur le téléphone, VIDOM s'ouvre sur Ma maison — l'écran d'accueil. Sur l'ordinateur, les deux panneaux
+// sont côte à côte : Ma maison à gauche, le journal à droite ; l'accueil y reste donc le journal.
+const accueil=()=>isDesk()?"#/fil":"#/maison";
 const slug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 /* adresse VIDOM réelle : allouée et vérifiée unique en base (vidom.fr, le domaine que Murielle possède) */
 async function allouerDepot(nom){
@@ -980,6 +985,17 @@ function filDecider(id,choix){
    quand il la devine (suggererPiece), sinon « La maison entière » ; le choix se fait sur la carte, sans fenêtre de plus.
    Une fois gardé, la carte dit où c'est rangé et laisse changer de pièce. */
 function pieceProposee(rec){if(rec.pieceId&&rec.pieceId!=="maison"&&pieceParId(rec.pieceId))return rec.pieceId;const eq=pieceDeLAppareil(rec);return eq?eq.piece:(suggererPiece(rec)||"maison")} // D-193 : la pièce de l'appareil déjà connu passe avant la devinette
+function detailRecu(e){ // D-196 : ce qui a été lu sur l'envoi, l'objet du courriel et le fichier — de quoi décider sans ouvrir
+  const r=e.rec;if(!r)return "";
+  const quoi=r.k==="equip"?[`${r.nom||"Équipement"}${r.marque?" "+r.marque:""}${r.modele?" "+r.modele.split(" ")[0]:""}`]
+    :(r.k==="doc"?[r.titre,r.fournisseur&&!String(r.fournisseur).includes("@")&&!(r.titre||"").toLowerCase().includes(String(r.fournisseur).toLowerCase())?r.fournisseur:"",r.montant?euros(r.montant):"",r.date?dateFr(r.date):""]:[]);
+  const l1=quoi.filter(Boolean).join(" · ");
+  const nomFichier=r.fichier||"";
+  return `${l1?`<p class="small b" style="color:var(--sauge-f)">${h(l1)}</p>`:""}
+    ${r.objet?`<p class="small muted">Objet du courriel : « ${h(r.objet)} »</p>`:""}
+    ${nomFichier?`<p class="small faint">${h(nomFichier)}</p>`:""}
+    ${r.chemin||r.img?`<div class="row"><button class="btn sm" onclick="voirRecu('${e.id}')">${r.pdf?"Voir le document":"Voir la photo"}</button></div>`:""}`;
+}
 function choixPieceRecu(e){
   if(!S.pieces.length||!e.rec)return "";
   const sel=pieceProposee(e.rec);
@@ -1239,7 +1255,7 @@ async function compteOk(){
       const r2=await supa.auth.signInWithPassword({email,password:mdp});
       if(r2.error){modal(`<h2>Ce mot de passe ne correspond pas</h2><p class="muted">Un compte existe déjà pour ${h(email)}, mais ce mot de passe-là ne fonctionne pas pour ce compte. Vérifiez-le (touchez « Afficher » pour le voir en clair), ou recevez un lien pour en choisir un nouveau.</p><button class="btn primary big" onclick="closeModal()">Réessayer</button><button class="btn ghost" onclick="closeModal();mdpOublie()">Mot de passe oublié</button>`);return}
       S.compte.email=email;await hydrate();
-      if(S.cree)route("#/fil");else{S.etape="adresse";save();render()}
+      if(S.cree)route(accueil());else{S.etape="adresse";save();render()}
       return;
     }
     if(error){toast("Cela n'a pas fonctionné : "+error.message);return}
@@ -1348,7 +1364,7 @@ V.commencons=()=>{
   <button class="btn ghost" style="margin-top:auto" onclick="plusTard()">Ou plus tard. La maison attend.</button>
 </div>`};
 function plusTard(){S.cree=true;S.etape="";S.ajout=false;S.retourVers=null;filAjouter({type:"info",t:`La mémoire de ${lc(S.logement.nom)} commence aujourd'hui. Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière.`,ico:"maison",fait:true});save();route("#/fil")}
-function envoyerAdresse(){modal(`<h2>Envoyer à l'adresse VIDOM</h2><p class="muted">Depuis votre messagerie, envoyez vos documents déjà numérisés à :</p><div class="card"><span class="mono">${h(S.logement.depot)}</span></div><div class="row wrap"><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button><a class="btn grow" href="mailto:${S.logement.depot}?subject=${encodeURIComponent("Documents de la maison")}">${I.mail} Ouvrir ma messagerie</a></div><p class="small faint">Ce qui arrive à cette adresse apparaît ici, dans le fil, en attente de votre accord.</p><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
+function envoyerAdresse(){modal(`<h2>Envoyer à l'adresse VIDOM</h2><p class="muted">Depuis votre messagerie, envoyez vos documents déjà numérisés à :</p><div class="card"><span class="mono">${h(S.logement.depot)}</span></div><div class="row wrap"><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button><a class="btn grow" href="mailto:${S.logement.depot}?subject=${encodeURIComponent("Documents de la maison")}">${I.mail} Ouvrir ma messagerie</a></div><p class="small faint">Ce qui arrive à cette adresse apparaît ici, dans le journal, en attente de votre accord.</p><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
 
 /* le tri d'une fournée */
 function terminerLot(lot){
@@ -1410,7 +1426,7 @@ V.reconnu=()=>{
     <div class="card soft" style="gap:8px"><div class="row">${I.check}<span class="b" style="color:var(--sauge-f)">Rangé dans ${h(pn)}</span></div><p class="muted">${S.equipements.length+S.docs.length===1?"Votre maison connaît maintenant son premier élément.":"Votre maison en sait un peu plus."} ${piece==="maison"?"Continuez, ou choisissez une pièce.":"Continuez dans "+h(pn)+", ou passez à une autre pièce."}</p></div>
     ${rec.nees&&rec.nees.length?`<div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">${rec.nees.length===1?"Une rubrique vient d'apparaître":"Des rubriques viennent d'apparaître"}</p><p class="small muted">${h(rec.nees.join(", "))}.</p></div>`:""}
     <label class="btn primary big file">${I.camera} ${piece==="maison"?"Photographier autre chose":"Continuer dans "+h(pn)}<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'${piece}')"></label>
-    <div class="row"><a class="btn grow" href="#/maison">Une autre pièce</a><a class="btn grow" href="#/fil">Le fil</a></div>
+    <div class="row"><a class="btn grow" href="#/maison">Une autre pièce</a><a class="btn grow" href="#/fil">Le journal</a></div>
   </div>`;
   return `<div class="view fadein" style="gap:16px;padding-top:8px">
     <div class="photo">${vignette(rec)}<span class="chip">${h(rec.photo||"Votre photo")}</span></div>
@@ -1542,8 +1558,8 @@ function entreeFil(e){
     </div></div>`;
   }
   if(e.type==="recu"&&!e.fait)boutons=e.rec&&e.rec.k==="inconnu"
-    ?`<p class="small muted">VIDOM n'a pas su lire cette pièce jointe.</p>${choixPieceRecu(e)}<div class="row wrap"><button class="btn primary grow" onclick="relireRecu('${e.id}')" ${e.relecture?"disabled":""}>${e.relecture?"Lecture en cours…":"Relire"}</button><button class="btn" onclick="filDecider('${e.id}','garder')">La garder telle quelle</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>` // D-181
-    :`${choixPieceRecu(e)}<div class="row"><button class="btn primary grow" onclick="filDecider('${e.id}','garder')">La garder</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>`;
+    ?`<p class="small muted">VIDOM n'a pas su lire cette pièce jointe.</p>${detailRecu(e)}${choixPieceRecu(e)}<div class="row wrap"><button class="btn primary grow" onclick="relireRecu('${e.id}')" ${e.relecture?"disabled":""}>${e.relecture?"Lecture en cours…":"Relire"}</button><button class="btn" onclick="filDecider('${e.id}','garder')">La garder telle quelle</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>` // D-181
+    :`${detailRecu(e)}${choixPieceRecu(e)}<div class="row"><button class="btn primary grow" onclick="filDecider('${e.id}','garder')">La garder</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>`;
   if(e.type==="recu"&&e.fait)boutons=ouEstRange(e); // D-192
   if(e.type==="rappel"&&!e.fait)boutons=e.info?`<div class="row"><button class="btn grow" onclick="filDecider('${e.id}','fait')">Compris</button></div>`:`<div class="row wrap">${e.pro?`<button class="btn grow" onclick="filDecider('${e.id}','rappeler')">Rappeler ${h(e.pro)}</button>`:""}<button class="btn" onclick="filDecider('${e.id}','fait')">Déjà fait</button></div>`;
   if(e.type==="question"&&!e.fait)boutons=`<div class="row wrap">${e.boutons.map((b,i)=>`<button class="btn ${i===0?"primary":""} ${i===0?"grow":""}" onclick="filDecider('${e.id}','${b[1]}')">${h(b[0])}</button>`).join("")}</div>`;
@@ -1554,6 +1570,7 @@ function entreeFil(e){
 }
 V.fil=()=>{
   pousserRappels();
+  S.fil.forEach(e=>{if(e.type==="recu"&&!e.fait&&e.rec)assurerImage(e.rec)}); // D-196 : « Voir » doit marcher depuis le journal aussi
   let entrees=S.fil.slice();
   if(filtreFil==="documents")entrees=entrees.filter(e=>e.type==="recu"||(e.type==="qa"&&e.doc));
   if(filtreFil==="afaire")entrees=entrees.filter(e=>(e.type==="rappel"||e.type==="question"||e.type==="recu")&&!e.fait);
@@ -1653,7 +1670,7 @@ function vRecus(){
   const tous=S.fil.filter(e=>e.type==="recu");
   const attente=tous.filter(e=>!e.fait),faits=tous.filter(e=>e.fait);
   attente.forEach(e=>{if(e.rec)assurerImage(e.rec)});
-  const carteRecu=e=>{const r=e.rec||{};const voir=!e.fait&&r.img?`<div class="row"><button class="btn sm" onclick="voirRecu('${e.id}')">Voir ce qui a été envoyé</button></div>`:"";return entreeFil(e)+voir};
+  const carteRecu=e=>entreeFil(e); // D-196 : « Voir » vit dans la carte, ici comme dans le journal
   return `<div class="view" style="gap:12px">
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">Reçu par l'adresse VIDOM</h1><p class="muted">Ce qu'on a envoyé à <b>${h(S.logement.depot||"")}</b>. Rien n'entre dans la mémoire de la maison sans vous.</p></div>
     <p class="small b" style="color:var(--terra-f)">${attente.length?(attente.length===1?"Un envoi attend votre décision":attente.length+" envois attendent votre décision"):"Rien n'attend votre décision."}</p>
@@ -1662,7 +1679,7 @@ function vRecus(){
     <a class="btn ghost sm" href="#/carte/adresse">${I.mail} Voir et partager l'adresse VIDOM</a>
   </div>`;
 }
-function voirRecu(id){const e=S.fil.find(x=>x.id===id);const r=e&&e.rec;if(!r||!r.img)return;modal(`<h2>${h(r.titre||r.nom||"Ce qui a été envoyé")}</h2>${r.pdf?`<embed src="${r.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${r.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2)">`}<div class="row"><button class="btn grow" onclick="closeModal()">Fermer</button></div>`)}
+function voirRecu(id){const e=S.fil.find(x=>x.id===id);const r=e&&e.rec;if(!r)return;if(!r.img){assurerImage(r);toast("Un instant, VIDOM va le chercher…");return}modal(`<h2>${h(r.titre||r.nom||"Ce qui a été envoyé")}</h2>${r.pdf?`<embed src="${r.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${r.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2)">`}<div class="row"><button class="btn grow" onclick="closeModal()">Fermer</button></div>`)}
 /* D-184 : toutes les garanties et extensions de garantie au même endroit. Une garantie vient d'un document (facture, contrat de garantie)
    ou de la fiche d'un équipement ; quand les deux disent la même chose, on n'en montre qu'une, rattachée à l'appareil. */
 function listeGaranties(){
@@ -2131,9 +2148,9 @@ function ouvrirChantier(){modal(`<h2>Ouvrir un chantier</h2><label class="f"><sp
 
 /* ================= adresse VIDOM ================= */
 V["adresse-vidom"]=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">L'adresse VIDOM de votre logement</h1>
-  <div class="card soft" style="gap:12px"><div class="row" style="align-items:flex-start;gap:14px"><div class="qr" style="width:120px;height:120px">${qrSvg("mailto:"+S.logement.depot)}</div><div class="stack" style="gap:4px"><span class="mono" style="font-size:1.05em">${h(S.logement.depot)}</span><span class="small muted">Tout ce qui y est envoyé arrive dans le fil. Rien n'entre sans vous.</span></div></div>
+  <div class="card soft" style="gap:12px"><div class="row" style="align-items:flex-start;gap:14px"><div class="qr" style="width:120px;height:120px">${qrSvg("mailto:"+S.logement.depot)}</div><div class="stack" style="gap:4px"><span class="mono" style="font-size:1.05em">${h(S.logement.depot)}</span><span class="small muted">Tout ce qui y est envoyé arrive dans le journal. Rien n'entre sans vous.</span></div></div>
   <div class="row"><button class="btn primary grow" onclick="partagerAdresse()">Partager</button><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button></div></div>
-  <div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Tant que la réception n'est pas branchée</p><p class="small muted">Cette adresse est réelle et déjà enregistrée pour votre logement. Un e-mail envoyé ici n'arrivera dans le fil qu'une fois la réception configurée côté serveur (chez le prestataire choisi pour vidom.fr) — jusque-là, il n'arrivera simplement pas.</p></div>
+  <div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Tant que la réception n'est pas branchée</p><p class="small muted">Cette adresse est réelle et déjà enregistrée pour votre logement. Un e-mail envoyé ici n'arrivera dans le journal qu'une fois la réception configurée côté serveur (chez le prestataire choisi pour vidom.fr) — jusque-là, il n'arrivera simplement pas.</p></div>
   ${(S.logement.numeroCadastral||S.logement.altitude!=null||S.logement.rnbId)?`<div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Ce que VIDOM a trouvé sur votre parcelle</p>${S.logement.numeroCadastral?`<p class="small">Cadastre : ${h(S.logement.numeroCadastral)}</p>`:""}${S.logement.altitude!=null?`<p class="small">Altitude : ${Math.round(S.logement.altitude)} m</p>`:""}${S.logement.classeClimat?`<p class="small">Classe climat (GES) : ${h(S.logement.classeClimat)}</p>`:""}<p class="small faint">Source : IGN, RNB, ADEME.</p></div>`:""}
   <div class="card" style="gap:6px"><p class="small b" style="color:var(--sauge-f)">À qui la donner</p><p class="small muted">Notaire, agent immobilier, artisans, assureur, syndic, diagnostiqueur — tous ceux qui détiennent des papiers de votre logement. Ils envoient, vous décidez.</p></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">VIDOM sur votre téléphone</p><div class="row" style="align-items:center;gap:14px"><div class="qr" style="width:104px;height:104px;flex:0 0 auto">${qrSvg(location.href.split("#")[0])}</div><span class="small muted">Visez ce code avec l'appareil photo de votre téléphone, puis connectez-vous avec le même compte : vous retrouvez la même maison. Pour l'avoir comme une application, ouvrez le menu du navigateur et choisissez « Ajouter à l'écran d'accueil ».</span></div><span class="mono small" style="word-break:break-all">${h(location.href.split("#")[0])}</span></div>
@@ -2297,9 +2314,9 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Taille du texte</p><div class="row">${[["normal","Normal"],["grand","Grand"],["tres-grand","Très grand"]].map(([k,n])=>`<button class="chip btn-chip ${S.reglages.texte===k?"on":""}" onclick="S.reglages.texte='${k}';document.documentElement.dataset.texte='${k}';save();render()">${n}</button>`).join("")}</div></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Donner accès à un tiers</p><p class="small muted">Notaire, agent, artisan, assureur : chacun ne voit que ce qui le concerne.</p><button class="btn" onclick="choisirTiers()">${I.echanges} Ouvrir un accès</button></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">La maison change de mains</p><p class="small muted">Le jour venu, et seulement ce jour-là, la rubrique Transmission apparaît.</p><div class="row"><button class="btn grow" onclick="changerDeMains('vente')">Je vends</button><button class="btn grow" onclick="changerDeMains('depart')">Je pars</button></div></div>
-  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre mémoire vous appartient</p><div class="row wrap"><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter ma mémoire</button><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Mon avis sur la maquette VIDOM")}&body=${encodeURIComponent("Écran : "+location.hash+"\n\n")}">${I.mail} Donner mon avis</a></div><p class="small faint">${S.docs.length} documents · ${S.equipements.length} équipements · ${S.fil.length} moments dans le fil.</p></div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre mémoire vous appartient</p><div class="row wrap"><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter ma mémoire</button><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Mon avis sur la maquette VIDOM")}&body=${encodeURIComponent("Écran : "+location.hash+"\n\n")}">${I.mail} Donner mon avis</a></div><p class="small faint">${S.docs.length} documents · ${S.equipements.length} équipements · ${S.fil.length} moments dans le journal.</p></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Supprimer ce logement</p><p class="small muted">La mémoire de ${h(S.logement.nom||"cette maison")} s'efface de votre compte, sur tous vos appareils. Les autres logements ne bougent pas.</p><button class="btn terra" onclick="supprimerLogement()">Supprimer ${h(S.logement.nom||"ce logement")}</button></div>
-  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Repartir de zéro sur cet appareil</p><p class="small muted">N'efface que cet appareil. Vos logements restent sur votre compte et reviennent à la prochaine connexion.</p><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le fil. Vos logements restent sur votre compte.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'toutEffacer()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Repartir de zéro sur cet appareil</p><p class="small muted">N'efface que cet appareil. Vos logements restent sur votre compte et reviennent à la prochaine connexion.</p><button class="btn terra" onclick="modal('<h2>Repartir de zéro ?</h2><p class=muted>Tout ce qui est sur cet appareil s\\'efface : la maison, les photos, le journal. Vos logements restent sur votre compte.</p><div class=row><button class=\\'btn terra grow\\' onclick=\\'toutEffacer()\\'>Tout effacer</button><button class=btn onclick=closeModal()>Annuler</button></div>')">Repartir de zéro</button></div>
   ${S.compte.email==='ambiance.oik@gmail.com'?`<div class="card soft" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Panneau admin</p><p class="small muted">Comptes, logements, et par quel canal ils sont nés.</p><button class="btn" onclick="panneauAdmin()">Voir les chiffres</button></div>`:""}
   <p class="small faint" style="text-align:center">VIDOM — maquette du 16 septembre 2026. Votre mémoire est enregistrée sur votre compte et retrouvée sur chacun de vos appareils.</p>
 </div>`;
@@ -2331,7 +2348,7 @@ const AIDE=[
   {t:"Garder",l:[
     {q:"Entrer une facture, un devis, un document",c:"Photographiez-le ou importez-le : VIDOM lit la date, le montant, l'artisan, et le range.",k:"facture devis document photo importer scanner papier garder conserver",go:()=>aideFichier("image/*,.pdf")},
     {q:"Photographier un appareil (son étiquette)",c:"Marque, modèle, garantie : VIDOM les lit sur l'étiquette et retrouve la notice.",k:"appareil équipement étiquette lave-vaisselle lave-linge chaudière four frigo réfrigérateur notice garantie électroménager",go:()=>aideFichier("image/*",true)},
-    {q:"Envoyer un document par courriel à la maison",c:"Chaque logement a son adresse VIDOM. Ce qui y arrive vous est proposé dans le fil ; rien n'entre sans vous.",k:"courriel email mail adresse vidom envoyer transférer boîte",go:"#/adresse-vidom"},
+    {q:"Envoyer un document par courriel à la maison",c:"Chaque logement a son adresse VIDOM. Ce qui y arrive vous est proposé dans le journal ; rien n'entre sans vous.",k:"courriel email mail adresse vidom envoyer transférer boîte",go:"#/adresse-vidom"},
     {q:"Garder mon contrat d'assurance",c:"Photographiez l'attestation ou le contrat : VIDOM suit l'échéance, vous prévient deux mois avant, et compare le tarif.",k:"assurance contrat attestation échéance tarif prime habitation",go:()=>aideFichier("image/*,.pdf")},
     {q:"Ajouter le plan de la maison",c:"Une photo du plan suffit. Le dessin de la maison s'appuie dessus.",k:"plan dessin croquis",go:()=>aideFichier("image/*",false,f=>planFichier(f))},
     {q:"Ajouter une pièce",c:"Une chambre de plus, un garage, une cave, une annexe.",k:"pièce chambre garage cave annexe parking grenier combles",go:()=>ajouterPiece()},
@@ -2345,7 +2362,7 @@ const AIDE=[
     {q:"Voir la notice ou la garantie d'un appareil",c:"Chaque appareil a sa fiche : notice, garantie, service après-vente, entretiens.",k:"notice garantie appareil équipement sav mode d'emploi",go:"#/carte/equipements"},
     {q:"Savoir quelles garanties expirent bientôt",c:"La maison compte pour vous.",k:"garantie expire bientôt fin",go:()=>aideQuestion("Quelles garanties expirent bientôt ?")},
     {q:"Voir ce qu'il reste à faire",c:"Rappels, questions, documents à trier : tout ce qui vous attend, au même endroit.",k:"à faire rappel tâche entretien attendre",go:()=>{filtreFil="afaire";route("#/fil")}},
-    {q:"Relire l'histoire de la maison",c:"Remonter le fil, c'est relire ce qui s'est passé, année après année.",k:"histoire fil chronologie passé",go:()=>{filtreFil="tout";route("#/fil")}},
+    {q:"Relire l'histoire de la maison",c:"Remonter le journal, c'est relire ce qui s'est passé, année après année.",k:"histoire journal fil chronologie passé",go:()=>{filtreFil="tout";route("#/fil")}},
     {q:"Voir les souvenirs",c:"Il y a un an, la maison…",k:"souvenir anniversaire",go:()=>{filtreFil="souvenirs";route("#/fil")}},
     {q:"Voir ce que VIDOM sait de la parcelle",c:"Cadastre, altitude, bâtiment : ce que les registres publics disent de l'adresse.",k:"parcelle cadastre altitude risques registre public terrain",go:"#/adresse-vidom"},
   ]},
@@ -2488,7 +2505,7 @@ function aideAutreAppareil(){const url=location.href.split("#")[0];modal(`<h2>Su
 </script>
 <script>
 /* ================= navigation et rendu ================= */
-const TITRES={fil:"Le fil",maison:"Ma maison",reglages:"Réglages",carte:"Ma maison",piece:"Ma maison",equipement:"Équipements",document:"Documents",pro:"Les artisans de la maison",tri:"Le tri","adresse-vidom":"Adresse VIDOM",reconnu:"Photographier"};
+const TITRES={fil:"Le journal",maison:"Ma maison",reglages:"Réglages",carte:"Ma maison",piece:"Ma maison",equipement:"Équipements",document:"Documents",pro:"Les artisans de la maison",tri:"Le tri","adresse-vidom":"Adresse VIDOM",reconnu:"Photographier"};
 const RETOUR={carte:"#/maison",piece:"#/maison",equipement:"#/carte/equipements",document:"#/carte/documents",pro:"#/carte/artisans",reglages:"#/maison","adresse-vidom":"#/maison",tri:"#/fil",reconnu:"#/fil"};
 function parseHash(){const hh=location.hash.replace(/^#\/?/,"");const [name,...rest]=hh.split("/");return {name:name||"fil",arg:rest.join("/")}}
 function vue(name,arg){
@@ -2503,10 +2520,11 @@ function vue(name,arg){
 function nav(name){
   const on=k=>k===name?"on":"";
   const cap=isDesk()?"":'capture="environment"';
+  const n=S.fil.filter(e=>(e.type==="rappel"||e.type==="question"||e.type==="recu")&&!e.fait).length; // D-195 : ce qui attend reste visible depuis n'importe quel écran
   return `<nav class="nav">
-    <a href="#/fil" class="${on("fil")}">${I.bulle}<span>Le fil</span></a>
-    <label class="cam ${on("reconnu")}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;border-radius:var(--r);color:var(--blanc);background:var(--sauge);font-size:.8em;font-weight:500;cursor:pointer;position:relative;overflow:hidden">${I.camera}<span>Photographier</span><input class="sr" type="file" accept="image/*" ${cap} multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label>
     <a href="#/maison" class="${["maison","carte","piece","equipement","document","pro","adresse-vidom","reglages"].includes(name)?"on":""}">${I.maison}<span>Ma maison</span></a>
+    <label class="cam ${on("reconnu")}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;border-radius:var(--r);color:var(--blanc);background:var(--sauge);font-size:.8em;font-weight:500;cursor:pointer;position:relative;overflow:hidden">${I.camera}<span>Photographier</span><input class="sr" type="file" accept="image/*" ${cap} multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label>
+    <a href="#/fil" class="${on("fil")}">${I.bulle}${n?`<span class="pastille">${n>9?"9+":n}</span>`:""}<span>Le journal</span></a>
   </nav>`;
 }
 function renderReinitialiser(){
@@ -2527,7 +2545,7 @@ async function reinitialiserOk(){
     if(error){toast("Cela n'a pas fonctionné : "+error.message);return}
     toast("Mot de passe enregistré.");
     await hydrate();
-    location.hash=S.cree?"#/fil":"#/";
+    location.hash=S.cree?accueil():"#/";
     render();
   }catch(e){toast("Cela n'a pas fonctionné.")}
 }
@@ -2557,7 +2575,7 @@ function render(){
   if(isDesk()){
     const rightName=name==="maison"?"fil":name;
     const rightHtml=name==="maison"?V.fil():html;
-    const rt=name==="maison"?"Le fil":titre;
+    const rt=name==="maison"?"Le journal":titre;
     const rr=name==="maison"?"":retour;
     app.innerHTML=`<div class="desk">
       <div class="pane left"><div class="topbar">${boutonLogement(S.logement.nom,"")}<span class="small muted">${h(S.logement.ville)}</span></div>${V.maison()}</div>
@@ -2600,7 +2618,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
       }
     }catch(e){}
   }
-  if(S.cree&&!location.hash)location.hash="#/fil";
+  if(S.cree&&!location.hash)location.hash=accueil();
   render();
 })();
 </script>
