@@ -353,8 +353,8 @@ async function supprimerLogementOk(){
   }
   toast(nom+" a été supprimée");
 }
-function boutonLogement(nom,classe){ // le nom de la maison en haut : touchable dès qu'il y a plusieurs logements
-  return S.logements.length>1?`<button class="${classe}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="choisirLogement()" aria-label="Changer de logement"><span class="t">${h(nom)}</span><span style="opacity:.6;display:inline-flex">${I.bascule}</span></button>`:`<span class="${classe}">${h(nom)}</span>`;
+function boutonLogement(nom,classe){ // le nom de la maison en haut : toujours touchable — il ouvre « Vos logements », où l'on bascule et où l'on ajoute un logement
+  return `<button class="${classe}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="choisirLogement()" aria-label="Vos logements : changer ou en ajouter un"><span class="t">${h(nom)}</span><span style="opacity:.6;display:inline-flex">${I.bascule}</span></button>`;
 }
 const uid=()=>(crypto&&crypto.randomUUID)?crypto.randomUUID():"i"+Date.now().toString(36)+Math.random().toString(36).slice(2);
 
@@ -1381,7 +1381,7 @@ V.maison=()=>{
   const prochaine=CARTES.find(c=>!c.nee()&&c.id!=="transmission"&&c.id!=="echanges")||CARTES.find(c=>!c.nee());
   const carte=c=>`<a class="card" href="#/carte/${c.id}" style="flex-direction:row;align-items:center;gap:14px;padding:14px 16px"><span class="tile">${I[c.ico]}</span><span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(c.nom)}</span><span class="small muted">${h(c.sub()||"")}</span></span>${c.n&&c.n()?`<span class="chip num">${c.n()}</span>`:(c.id==="adresse"?`<span style="color:var(--sable)">${I.qr}</span>`:"")}</a>`;
   return `<div class="view" style="gap:12px">
-    <div class="split" style="align-items:flex-start"><div class="stack" style="gap:2px">${S.logements.length>1?`<button class="h" style="all:unset;cursor:pointer;font:inherit;font-size:1.45em;display:inline-flex;align-items:center;gap:6px" onclick="choisirLogement()" aria-label="Changer de logement">${h(L.nom)}<span style="opacity:.55;display:inline-flex;font-size:.7em">${I.bascule}</span></button>`:`<h1 class="h" style="font-size:1.45em">${h(L.nom)}</h1>`}<p class="small muted">${h(L.adresse)}, ${h(L.ville)}${L.annee?" · "+L.annee:""}${L.surface?" · "+L.surface+" m²":""}${L.dpe?" · DPE "+h(L.dpe):""} · <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerLogement()">Corriger</button></p></div>${isDesk()?"":`<a class="btn sm" href="#/reglages" aria-label="Réglages">${I.reglages}</a>`}</div>
+    <div class="split" style="align-items:flex-start"><div class="stack" style="gap:2px"><button class="h" style="all:unset;cursor:pointer;font:inherit;font-size:1.45em;display:inline-flex;align-items:center;gap:6px" onclick="choisirLogement()" aria-label="Vos logements : changer ou en ajouter un">${h(L.nom)}<span style="opacity:.55;display:inline-flex;font-size:.7em">${I.bascule}</span></button><p class="small muted">${h(L.adresse)}, ${h(L.ville)}${L.annee?" · "+L.annee:""}${L.surface?" · "+L.surface+" m²":""}${L.dpe?" · DPE "+h(L.dpe):""} · <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerLogement()">Corriger</button></p></div>${isDesk()?"":`<a class="btn sm" href="#/reglages" aria-label="Réglages">${I.reglages}</a>`}</div>
     <div class="card" style="padding:12px 16px 8px;gap:6px">
       ${S.plan?`<img class="plan" src="${S.plan}" alt="Le plan de la maison">`:""}
       ${dessinMaison({mw:S.plan?220:300})}
