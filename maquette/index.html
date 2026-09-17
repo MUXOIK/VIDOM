@@ -493,7 +493,7 @@ function reconstituerActivitesPros(){ // reconstruit "ce qu'il a fait ici" à pa
 }
 function reconstituerPhotosPieces(){ // la petite galerie de la pièce : ce qui a été rangé dedans, pas une entité à part
   S.pieces.forEach(p=>{
-    const photos=[...S.equipements.filter(e=>e.piece===p.id&&e.img),...S.docs.filter(d=>d.piece===p.id&&d.img)].map(x=>x.img).slice(0,6);
+    const photos=[...S.equipements.filter(e=>e.piece===p.id&&e.img),...S.docs.filter(d=>d.piece===p.id&&d.img&&!d.pdf)].map(x=>x.img).slice(0,6);
     p.photos=photos;
   });
 }
@@ -829,12 +829,21 @@ function rubriqueFournisseur(rec){
   if(rec.catFournisseur==="commercant")return "enseigne"; // D-171 : ancien mot de la reconnaissance
   return TYPES_DOCUMENT_ARTISAN.includes(rec.type)?"artisan":CATEGORIE_PAR_TYPE_DOCUMENT[rec.type];
 }
+/* D-193 : l'appareil déjà connu que vise une facture, une garantie ou une notice — sans rien créer. Sert à relier (D-182)
+   et à proposer la pièce de cet appareil au moment de garder le document. */
+function appareilConnu(rec){
+  if(rec.lie)return equipParLie(rec.lie)||null;
+  if(!rec.appareil||!rec.appareil.nom||!["facture","garantie","notice"].includes(rec.type))return null;
+  const a=rec.appareil;const m=cleTexte(a.modele),q=cleTexte(a.marque),n=cleTexte(a.nom);
+  return (m&&S.equipements.find(e=>cleTexte(e.modele)&&(cleTexte(e.modele).includes(m)||m.includes(cleTexte(e.modele)))&&(!q||!cleTexte(e.marque)||cleTexte(e.marque)===q)))
+    ||S.equipements.find(e=>cleTexte(e.nom)===n&&q&&cleTexte(e.marque)===q)||null;
+}
+function pieceDeLAppareil(rec){const eq=rec.k==="doc"?appareilConnu(rec):null;return eq&&eq.piece&&eq.piece!=="maison"&&pieceParId(eq.piece)?eq:null}
 function relierAppareil(rec){
   // D-182 : une facture ou une garantie qui vise un appareil précis se relie à lui ; s'il n'est pas encore connu, il naît de la facture
   if(!rec.lie&&rec.appareil&&rec.appareil.nom&&["facture","garantie","notice"].includes(rec.type)){
-    const a=rec.appareil;const m=cleTexte(a.modele),q=cleTexte(a.marque),n=cleTexte(a.nom);
-    let eq=(m&&S.equipements.find(e=>cleTexte(e.modele)&&(cleTexte(e.modele).includes(m)||m.includes(cleTexte(e.modele)))&&(!q||!cleTexte(e.marque)||cleTexte(e.marque)===q)))
-      ||S.equipements.find(e=>cleTexte(e.nom)===n&&q&&cleTexte(e.marque)===q);
+    const a=rec.appareil;
+    let eq=appareilConnu(rec);
     if(!eq&&rec.type!=="notice"){
       eq={id:uid(),piece:rec.pieceId||"maison",nom:a.nom,marque:a.marque||"",modele:a.modele||"",ref:"",achat:"",garantie:"",installateur:"",notice:false,sav:"",etat:"bon",entretien:false,img:null,pdf:false,chemin:null,date:now(),entretiens:[],deFacture:true};
       S.equipements.push(eq);
@@ -874,7 +883,7 @@ function ranger(rec){ // C'est bien ça
     if(rec.travaux){let t=S.travaux.find(t=>t.titre===rec.travaux);if(!t){t={id:uid(),titre:rec.travaux,par:rec.fournisseur,date:rec.date,montant:0,docs:[]};S.travaux.push(t)}t.docs.push(d.id);if(rec.type==="facture")t.montant=rec.montant;if(rec.date>t.date)t.date=rec.date}
     if(d.type==="assurance")suivreAssurance(d); // D-151, 16 septembre 2026
   }
-  if(rec.pieceId&&rec.pieceId!=="maison"&&rec.img){const p=pieceParId(rec.pieceId);if(p&&p.photos.length<6)p.photos.push(rec.img)}
+  if(rec.pieceId&&rec.pieceId!=="maison"&&rec.img&&!rec.pdf){const p=pieceParId(rec.pieceId);if(p&&p.photos.length<6)p.photos.push(rec.img)}
   else if(rec.pieceId&&rec.pieceId!=="maison"){const p=pieceParId(rec.pieceId);if(p)p.photos.push(null)}
 }
 // D-151 (16 septembre 2026, à la suite de A16 — entretien avec une amie assureuse) : à chaque document d'assurance
@@ -947,12 +956,14 @@ function filDecider(id,choix){
   if(e.type==="recu"){
     const rec=e.rec;
     if(choix==="garder"){rec.recu="adresse";
+      if(!e.pieceChoisie){const sp=document.getElementById("pr-"+id);rec.pieceId=sp?sp.value:pieceProposee(rec)} // D-192 : on dit où on le range au moment de le garder
+      if(rec.pieceId!=="maison"&&!pieceParId(rec.pieceId))rec.pieceId="maison";
       if(rec.k!=="equip"&&rec.k!=="doc"){ // D-181 : une pièce jointe non lue se garde quand même, comme un document à nommer plus tard — elle ne se perd plus
         Object.assign(rec,{k:"doc",type:"autre",titre:"Document reçu le "+dateFr(rec.date0||today()),date:rec.date0||today(),fournisseur:"",montant:null,lie:"",travaux:"",garantie:""});
       }
-      ranger(rec);assurerImage(S.docs.find(x=>x.id===rec.id)||S.equipements.find(x=>x.id===rec.id));naissances();e.fait=true;e.t2=`Gardé : ${rec.titre||rec.nom}.`;
+      ranger(rec);assurerImage(S.docs.find(x=>x.id===rec.id)||S.equipements.find(x=>x.id===rec.id));naissances();e.fait=true;e.t2=`Gardé : ${rec.titre||rec.nom}.`;const ou=nomPiece(rec.pieceId);
       if(!S.expediteursOk.includes(rec.fournisseur)&&!e.inconnu){e.propose=rec.fournisseur}
-      toast("Gardé dans la mémoire de la maison");}
+      toast(rec.pieceId==="maison"?"Gardé dans la mémoire de la maison":"Gardé dans "+ou);}
     else{e.fait=true;e.t2="Refusé. Rien n'est entré.";}
   }else if(e.type==="rappel"){
     const r=S.rappels.find(r=>r.id===e.rappel);
@@ -964,6 +975,24 @@ function filDecider(id,choix){
     else if(e.q==="manque"){if(choix==="demander"){demanderA("Diagnostic Émeraude","le diagnostic électrique");return}e.fait=true;e.t2="Très bien. La question reviendra quand ce sera utile."}
   }
   save();render();
+}
+/* D-192 : ce qu'on reçoit par l'adresse VIDOM se range dans une pièce au moment où on le garde. VIDOM propose une pièce
+   quand il la devine (suggererPiece), sinon « La maison entière » ; le choix se fait sur la carte, sans fenêtre de plus.
+   Une fois gardé, la carte dit où c'est rangé et laisse changer de pièce. */
+function pieceProposee(rec){if(rec.pieceId&&rec.pieceId!=="maison"&&pieceParId(rec.pieceId))return rec.pieceId;const eq=pieceDeLAppareil(rec);return eq?eq.piece:(suggererPiece(rec)||"maison")} // D-193 : la pièce de l'appareil déjà connu passe avant la devinette
+function choixPieceRecu(e){
+  if(!S.pieces.length||!e.rec)return "";
+  const sel=pieceProposee(e.rec);
+  return `<label class="f"><span>À ranger dans</span><select class="input" id="pr-${e.id}" onchange="choisirPieceRecu('${e.id}',this.value);majIndice(this)"><option value="maison" ${sel==="maison"?"selected":""}>La maison entière</option>${S.pieces.map(p=>`<option value="${p.id}" ${sel===p.id?"selected":""}>${h(p.nom)}</option>`).join("")}</select>${indiceAppareil(e.rec,sel)}</label>`;
+}
+function majIndice(el){const i=el.parentNode.querySelector("[data-piece]");if(i)i.hidden=i.dataset.piece!==el.value}
+function indiceAppareil(rec,sel){const eq=pieceDeLAppareil(rec);return eq?`<span class="small faint" data-piece="${eq.piece}" ${eq.piece===sel?"":"hidden"}>« ${h(eq.nom)}${eq.marque?" "+h(eq.marque):""} » est déjà dans cette pièce.</span>`:""} // D-193
+function choisirPieceRecu(id,p){const e=S.fil.find(x=>x.id===id);if(!e||!e.rec)return;e.rec.pieceId=p;e.pieceChoisie=true;save()}
+function ouEstRange(e){ // la pièce réelle de ce qui a été gardé, lue sur le document ou l'équipement lui-même
+  if(!e.rec||!/^Gardé/.test(e.t2||""))return "";
+  const o=S.docs.find(x=>x.id===e.rec.id)||S.equipements.find(x=>x.id===e.rec.id);if(!o)return "";
+  const n=nomPiece(o.piece||"maison");
+  return `<div class="split" style="align-items:center"><span class="small muted">Rangé dans ${h(n)}.</span>${S.pieces.length?`<button class="btn ghost sm" onclick="corrigerItem('${o.id}')">Changer de pièce</button>`:""}</div>`;
 }
 /* D-181 : relire une pièce jointe que VIDOM n'a pas su lire à son arrivée. On reprend le fichier gardé, on le relit
    comme une photo déposée à la main (un long PDF est raccourci avant lecture), et la carte se met à jour. */
@@ -1389,7 +1418,7 @@ V.reconnu=()=>{
       <div class="row">${rec.k==="inconnu"?`<span class="small b" style="color:var(--terra-f)">Pas reconnu</span>`:`${I.check}<span class="small b" style="color:var(--sauge-f)">Reconnu</span>`}</div>
       <h2 style="font-size:1.4em">${h(titre)}</h2>
       <p class="muted">${detail}</p>
-      ${rec.k!=="inconnu"?`<p class="small faint">Rangé dans ${h(pn)}. Si ce n'est pas la bonne pièce, touchez « Corriger ».</p>`:""}
+      ${rec.k!=="inconnu"?(S.pieces.length?`<label class="f"><span>À ranger dans</span><select class="input" onchange="S.lot[0].pieceId=this.value;save();majIndice(this)"><option value="maison" ${piece==="maison"?"selected":""}>La maison entière</option>${S.pieces.map(p=>`<option value="${p.id}" ${piece===p.id?"selected":""}>${h(p.nom)}</option>`).join("")}</select>${indiceAppareil(rec,piece)}</label>`:`<p class="small faint">Rangé dans ${h(pn)}.</p>`):""}
       ${rec.k!=="equip"?`<label class="row" style="align-items:center;gap:8px"><input type="checkbox" ${rec.etranger?"checked":""} onchange="S.lot[0].etranger=this.checked"><span class="small">Document en langue étrangère — à traduire pour le classement</span></label>`:""}
       <div class="row">${rec.k!=="inconnu"?`<button class="btn primary grow" onclick="cestBienCa()">C'est bien ça</button><button class="btn" onclick="corrigerRec()">Corriger</button>`:`<button class="btn primary grow" onclick="corrigerRec()">Dire ce que c'est</button><button class="btn" onclick="laisserRec()">Laisser</button>`}</div>
     </div>
@@ -1489,7 +1518,7 @@ async function fichiers(files,pieceId){
   modal(`<div class="stack" style="align-items:center;padding:26px 10px;gap:16px"><div class="spin" aria-hidden="true"></div><p class="b" id="prog-txt" style="text-align:center">${list.length>1?`VIDOM regarde vos documents… (0/${list.length})`:"VIDOM regarde…"}</p></div>`);
   const trop=S.equipements.length+S.docs.length>40;
   const lot=[];let i=0;
-  for(const f of list){const r=trop?null:await reduire(f);const rec=await reconnaitre(f,pieceId,r&&r.url,r&&r.pdf,r&&r.chemin);rec.pieceId=rec.pieceId||pieceId||"maison";if(pieceId==="maison")rec.pieceId=suggererPiece(rec)||rec.pieceId;lot.push(rec);i++;maj(i)}
+  for(const f of list){const r=trop?null:await reduire(f);const rec=await reconnaitre(f,pieceId,r&&r.url,r&&r.pdf,r&&r.chemin);rec.pieceId=rec.pieceId||pieceId||"maison";if(pieceId==="maison"){const eqc=pieceDeLAppareil(rec);rec.pieceId=(eqc&&eqc.piece)||suggererPiece(rec)||rec.pieceId}lot.push(rec);i++;maj(i)}
   closeModal();
   if(pieceId&&pieceId!=="maison")S.pieceCourante=pieceId;
   if(lot.length===1){S.lot=lot;if(!S.cree){S.cree=true;S.etape="";S.ajout=false;S.retourVers=null}save();route("#/reconnu")}
@@ -1513,8 +1542,9 @@ function entreeFil(e){
     </div></div>`;
   }
   if(e.type==="recu"&&!e.fait)boutons=e.rec&&e.rec.k==="inconnu"
-    ?`<p class="small muted">VIDOM n'a pas su lire cette pièce jointe.</p><div class="row wrap"><button class="btn primary grow" onclick="relireRecu('${e.id}')" ${e.relecture?"disabled":""}>${e.relecture?"Lecture en cours…":"Relire"}</button><button class="btn" onclick="filDecider('${e.id}','garder')">La garder telle quelle</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>` // D-181
-    :`<div class="row"><button class="btn primary grow" onclick="filDecider('${e.id}','garder')">La garder</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>`;
+    ?`<p class="small muted">VIDOM n'a pas su lire cette pièce jointe.</p>${choixPieceRecu(e)}<div class="row wrap"><button class="btn primary grow" onclick="relireRecu('${e.id}')" ${e.relecture?"disabled":""}>${e.relecture?"Lecture en cours…":"Relire"}</button><button class="btn" onclick="filDecider('${e.id}','garder')">La garder telle quelle</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>` // D-181
+    :`${choixPieceRecu(e)}<div class="row"><button class="btn primary grow" onclick="filDecider('${e.id}','garder')">La garder</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>`;
+  if(e.type==="recu"&&e.fait)boutons=ouEstRange(e); // D-192
   if(e.type==="rappel"&&!e.fait)boutons=e.info?`<div class="row"><button class="btn grow" onclick="filDecider('${e.id}','fait')">Compris</button></div>`:`<div class="row wrap">${e.pro?`<button class="btn grow" onclick="filDecider('${e.id}','rappeler')">Rappeler ${h(e.pro)}</button>`:""}<button class="btn" onclick="filDecider('${e.id}','fait')">Déjà fait</button></div>`;
   if(e.type==="question"&&!e.fait)boutons=`<div class="row wrap">${e.boutons.map((b,i)=>`<button class="btn ${i===0?"primary":""} ${i===0?"grow":""}" onclick="filDecider('${e.id}','${b[1]}')">${h(b[0])}</button>`).join("")}</div>`;
   if(e.type==="naissance"||e.type==="acces")boutons=`<div class="row"><a class="btn" href="${e.go}">Voir</a></div>`;
