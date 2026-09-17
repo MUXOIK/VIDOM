@@ -918,7 +918,11 @@ function filDecider(id,choix){
   const e=S.fil.find(x=>x.id===id);if(!e)return;
   if(e.type==="recu"){
     const rec=e.rec;
-    if(choix==="garder"){rec.recu="adresse";ranger(rec);assurerImage(S.docs.find(x=>x.id===rec.id)||S.equipements.find(x=>x.id===rec.id));naissances();e.fait=true;e.t2=`Gardé : ${rec.titre||rec.nom}.`;
+    if(choix==="garder"){rec.recu="adresse";
+      if(rec.k!=="equip"&&rec.k!=="doc"){ // D-181 : une pièce jointe non lue se garde quand même, comme un document à nommer plus tard — elle ne se perd plus
+        Object.assign(rec,{k:"doc",type:"autre",titre:"Document reçu le "+dateFr(rec.date0||today()),date:rec.date0||today(),fournisseur:"",montant:null,lie:"",travaux:"",garantie:""});
+      }
+      ranger(rec);assurerImage(S.docs.find(x=>x.id===rec.id)||S.equipements.find(x=>x.id===rec.id));naissances();e.fait=true;e.t2=`Gardé : ${rec.titre||rec.nom}.`;
       if(!S.expediteursOk.includes(rec.fournisseur)&&!e.inconnu){e.propose=rec.fournisseur}
       toast("Gardé dans la mémoire de la maison");}
     else{e.fait=true;e.t2="Refusé. Rien n'est entré.";}
@@ -932,6 +936,25 @@ function filDecider(id,choix){
     else if(e.q==="manque"){if(choix==="demander"){demanderA("Diagnostic Émeraude","le diagnostic électrique");return}e.fait=true;e.t2="Très bien. La question reviendra quand ce sera utile."}
   }
   save();render();
+}
+/* D-181 : relire une pièce jointe que VIDOM n'a pas su lire à son arrivée. On reprend le fichier gardé, on le relit
+   comme une photo déposée à la main (un long PDF est raccourci avant lecture), et la carte se met à jour. */
+async function relireRecu(id){
+  const e=S.fil.find(x=>x.id===id);if(!e||!e.rec||!e.rec.chemin||!supa||e.relecture)return;
+  e.relecture=true;render();
+  try{
+    const {data}=await supa.storage.from("logement-files").createSignedUrl(e.rec.chemin,600);
+    const blob=await (await fetch(data.signedUrl)).blob();
+    const pdf=!!e.rec.pdf;const file=new File([blob],pdf?"document.pdf":"photo.jpg",{type:pdf?"application/pdf":(blob.type||"image/jpeg")});
+    const lu=await reconnaitre(file,"maison",null,pdf,e.rec.chemin);
+    if(lu.k==="equip"||lu.k==="doc"){
+      const garde={id:e.rec.id,chemin:e.rec.chemin,pdf:e.rec.pdf,date0:e.rec.date0,date:lu.k==="doc"?lu.date:e.rec.date,img:e.rec.img||null};
+      e.rec={...lu,...garde,statut:"propose"};e.inconnu=false;
+      e.t=lu.k==="equip"?`Relu : la fiche d'un équipement, ${lc(lu.nom||"")} ${lu.marque||""}.`.trim():`Relu : ${lu.titre}${lu.montant?" · "+euros(lu.montant):""}${lu.garantie?" · garantie jusqu'au "+dateFr(lu.garantie):""}.`;
+      toast("VIDOM a su la lire");
+    }else toast("VIDOM n'arrive toujours pas à la lire. Vous pouvez la garder telle quelle.");
+  }catch(err){toast("La relecture a échoué. Réessayez dans un instant.")}
+  delete e.relecture;save();render();
 }
 function toujoursAccepter(id,oui){const e=S.fil.find(x=>x.id===id);if(!e)return;if(oui&&e.propose&&!S.expediteursOk.includes(e.propose))S.expediteursOk.push(e.propose);e.propose=null;e.t3=oui?"Ce que cet expéditeur enverra sera gardé sans vous le demander. Vous pourrez changer d'avis dans les réglages.":"";save();render()}
 
@@ -1424,7 +1447,9 @@ function entreeFil(e){
       ${e.manque?`<div class="row wrap"><label class="btn sm file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} onchange="fichiers(this.files,'maison')"></label><button class="btn sm" onclick="trouverPro()">Demander à un professionnel</button></div>`:""}
     </div></div>`;
   }
-  if(e.type==="recu"&&!e.fait)boutons=`<div class="row"><button class="btn primary grow" onclick="filDecider('${e.id}','garder')">La garder</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>`;
+  if(e.type==="recu"&&!e.fait)boutons=e.rec&&e.rec.k==="inconnu"
+    ?`<p class="small muted">VIDOM n'a pas su lire cette pièce jointe.</p><div class="row wrap"><button class="btn primary grow" onclick="relireRecu('${e.id}')" ${e.relecture?"disabled":""}>${e.relecture?"Lecture en cours…":"Relire"}</button><button class="btn" onclick="filDecider('${e.id}','garder')">La garder telle quelle</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>` // D-181
+    :`<div class="row"><button class="btn primary grow" onclick="filDecider('${e.id}','garder')">La garder</button><button class="btn" onclick="filDecider('${e.id}','non')">Non</button></div>`;
   if(e.type==="rappel"&&!e.fait)boutons=e.info?`<div class="row"><button class="btn grow" onclick="filDecider('${e.id}','fait')">Compris</button></div>`:`<div class="row wrap">${e.pro?`<button class="btn grow" onclick="filDecider('${e.id}','rappeler')">Rappeler ${h(e.pro)}</button>`:""}<button class="btn" onclick="filDecider('${e.id}','fait')">Déjà fait</button></div>`;
   if(e.type==="question"&&!e.fait)boutons=`<div class="row wrap">${e.boutons.map((b,i)=>`<button class="btn ${i===0?"primary":""} ${i===0?"grow":""}" onclick="filDecider('${e.id}','${b[1]}')">${h(b[0])}</button>`).join("")}</div>`;
   if(e.type==="naissance"||e.type==="acces")boutons=`<div class="row"><a class="btn" href="${e.go}">Voir</a></div>`;
