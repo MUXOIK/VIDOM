@@ -387,7 +387,7 @@ const isDesk=()=>window.matchMedia("(min-width:1024px)").matches;
 const slug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 /* adresse VIDOM réelle : allouée et vérifiée unique en base (vidom.fr, le domaine que Murielle possède) */
 async function allouerDepot(nom){
-  const base=slug(nom)||"logement";
+  const base=slug(nom).replace(/-/g,"")||"logement"; // D-175 : le nom d'un seul tenant, un seul tiret avant les trois caractères
   const secours=()=>`${base}-${uid().slice(0,4)}@vidom.fr`; // hors ligne, ou en dernier recours
   if(!supa)return secours();
   let session=null;
@@ -395,7 +395,7 @@ async function allouerDepot(nom){
   if(!session)return secours();
   for(let tentative=0;tentative<8;tentative++){
     const graine=tentative===0?[...nom].reduce((a,ch)=>a*31+ch.charCodeAt(0)|0,7):Math.floor(Math.random()*46656)+tentative;
-    const c=Math.abs(graine).toString(36).padStart(3,"0").slice(0,3);
+    const ALPHA="abcdefghjkmnpqrstuvwxyz23456789";let g=Math.abs(graine),c="";for(let i=0;i<3;i++){c+=ALPHA[g%ALPHA.length];g=Math.floor(g/ALPHA.length)+7} // ni 0 ni o, ni 1 ni l ni i : l'adresse se dicte
     const candidat=`${base}-${c}@vidom.fr`;
     try{
       const {error}=await supa.from("logements").upsert({id:S.logement.id,nom,adresse_depot:candidat,created_by:session.user.id},{onConflict:"id"});
@@ -695,14 +695,51 @@ function fileVersBase64(file){
     r.readAsDataURL(file);
   });
 }
+/* D-172 : d'un long PDF, VIDOM ne fait lire que les trois premières pages et la dernière. La date, le montant,
+   l'émetteur et le titre s'y trouvent presque toujours, et la lecture coûte dix à vingt fois moins.
+   Le fichier gardé dans la mémoire du logement reste l'original, entier : seule la copie envoyée à la lecture est allégée.
+   Au moindre souci (PDF protégé, bibliothèque injoignable), on envoie l'original, comme avant. */
+const PAGES_LUES_DEBUT=3,PAGES_LUES_LONG=15; // un acte ou un contrat dont le montant manque se relit une fois, sur quinze pages
+function chargerPdfLib(){
+  if(window.PDFLib)return Promise.resolve(window.PDFLib);
+  if(!chargerPdfLib.p)chargerPdfLib.p=new Promise((ok,ko)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js";sc.onload=()=>ok(window.PDFLib);sc.onerror=()=>{chargerPdfLib.p=null;ko(new Error("pdf-lib indisponible"))};document.head.appendChild(sc)});
+  return chargerPdfLib.p;
+}
+async function pourLecture(blob,mimeType,nbDebut){ // -> {fileBase64, pages_total, pages_envoyees}
+  nbDebut=nbDebut||PAGES_LUES_DEBUT;
+  let envoi=blob,total=null,envoyees=null;
+  if(mimeType==="application/pdf"){
+    try{
+      const L=await chargerPdfLib();
+      const src=await L.PDFDocument.load(await blob.arrayBuffer(),{parseSpeed:Infinity}); // sans pause : dans un onglet en arrière-plan, les pauses durent une seconde chacune
+      total=src.getPageCount();envoyees=total;
+      if(total>nbDebut+1){
+        const idx=[...Array(nbDebut).keys(),total-1];
+        const out=await L.PDFDocument.create();
+        (await out.copyPages(src,idx)).forEach(pg=>out.addPage(pg));
+        envoi=new Blob([await out.save({objectsPerTick:Infinity})],{type:"application/pdf"});envoyees=idx.length;
+      }
+    }catch(e){envoi=blob;total=null;envoyees=null}
+  }
+  return {fileBase64:await fileVersBase64(envoi),pages_total:total,pages_envoyees:envoyees};
+}
 async function reconnaitre(file,pieceId,dataUrl,pdf,chemin){
   const rec={id:uid(),date:now(),img:dataUrl||null,pdf:!!pdf,chemin:chemin||null,statut:"propose",pieceId:pieceId||S.pieceCourante||"maison"};
   if(!supa||!file){rec.k="inconnu";rec.titre="Photo non reconnue";return rec}
   try{
-    const fileBase64=await fileVersBase64(file);
     const mimeType=file.type||(pdf?"application/pdf":"image/jpeg");
-    const {data,error}=await supa.functions.invoke("extract-document",{body:{fileBase64,mimeType}});
-    const c=(!error&&data&&data.fields)?data.fields:null;
+    const lu=await pourLecture(file,mimeType);
+    const {data,error}=await supa.functions.invoke("extract-document",{body:{...lu,mimeType}});
+    if(error){const r=await raisonEchec(error);if(r&&/aujourd'hui/i.test(r))toast(r)} // D-172 : le plafond du jour se dit, il ne se cache pas
+    let c=(!error&&data&&data.fields)?data.fields:null;
+    // D-172 : dans un acte notarié ou un contrat, le prix est souvent au milieu. S'il manque et que le PDF a été raccourci, on relit une fois, plus largement.
+    if(c&&c.kind==="document"&&c.montant_ttc==null&&["acte","contrat","assurance"].includes(c.type)&&lu.pages_total&&lu.pages_envoyees<lu.pages_total){
+      try{
+        const lu2=await pourLecture(file,mimeType,PAGES_LUES_LONG);
+        const r2=await supa.functions.invoke("extract-document",{body:{...lu2,mimeType}});
+        if(!r2.error&&r2.data&&r2.data.fields&&r2.data.fields.kind==="document")c=r2.data.fields;
+      }catch(e){}
+    }
     if(c&&c.kind==="equipement"){
       Object.assign(rec,{k:"equip",nom:c.nom||"Équipement",marque:c.marque||"",modele:c.modele||"",ref:c.ref||"",
         achat:today(),garantie:"",installateur:"",notice:false,sav:"",etat:"bon",entretien:false});
@@ -719,17 +756,10 @@ async function reconnaitre(file,pieceId,dataUrl,pdf,chemin){
 async function traduireDocument(d){ // best-effort : relit le document en demandant une traduction du titre pour le classement, sans jamais toucher au fichier d'origine
   if(!supa||!d||!d.img)return;
   try{
-    let fileBase64,mimeType;
-    if(d.img.startsWith("data:")){
-      const m=d.img.match(/^data:([^;]+);base64,([\s\S]*)$/);
-      if(!m)return;
-      mimeType=m[1];fileBase64=m[2];
-    }else{
-      const resp=await fetch(d.img);const blob=await resp.blob();
-      mimeType=blob.type||(d.pdf?"application/pdf":"image/jpeg");
-      fileBase64=await fileVersBase64(blob);
-    }
-    const {data,error}=await supa.functions.invoke("extract-document",{body:{fileBase64,mimeType,traduire:true}});
+    const resp=await fetch(d.img);const blob=await resp.blob(); // fetch lit aussi bien une adresse qu'une image embarquée (data:)
+    const mimeType=(d.pdf?"application/pdf":"")||blob.type||"image/jpeg";
+    const lu=await pourLecture(blob,mimeType);
+    const {data,error}=await supa.functions.invoke("extract-document",{body:{...lu,mimeType,traduire:true}});
     if(error||!data||!data.fields){
       const r=await raisonEchec(error);
       if(r)console.error("extract-document :",r);
@@ -861,7 +891,7 @@ function filDecider(id,choix){
   const e=S.fil.find(x=>x.id===id);if(!e)return;
   if(e.type==="recu"){
     const rec=e.rec;
-    if(choix==="garder"){rec.recu="adresse";ranger(rec);naissances();e.fait=true;e.t2=`Gardé : ${rec.titre||rec.nom}.`;
+    if(choix==="garder"){rec.recu="adresse";ranger(rec);assurerImage(S.docs.find(x=>x.id===rec.id)||S.equipements.find(x=>x.id===rec.id));naissances();e.fait=true;e.t2=`Gardé : ${rec.titre||rec.nom}.`;
       if(!S.expediteursOk.includes(rec.fournisseur)&&!e.inconnu){e.propose=rec.fournisseur}
       toast("Gardé dans la mémoire de la maison");}
     else{e.fait=true;e.t2="Refusé. Rien n'est entré.";}
@@ -1213,6 +1243,13 @@ function appliquerCorrection(id){const p=document.getElementById("cp").value,nom
   if(S.derniereBatch){const i=S.derniereBatch.items.find(x=>x.id===id);if(i){i.pieceId=p;if(nom)i.titre=nom}}closeModal();save();render();toast("Corrigé")}
 
 /* ================= une photo, reconnue ================= */
+/* Un document arrivé par l'adresse VIDOM n'a que son chemin de stockage, pas encore d'adresse pour l'afficher :
+   on la demande à la volée, puis on redessine. */
+function assurerImage(o){
+  if(!o||o.img||!o.chemin||o._sig||!supa)return;
+  o._sig=true;
+  supa.storage.from("logement-files").createSignedUrl(o.chemin,60*60*24*30).then(({data})=>{if(data&&data.signedUrl){o.img=data.signedUrl;save();render()}}).catch(()=>{});
+}
 function vignette(rec){ // ce qu'on montre dans la case photo : l'image réduite, le vrai PDF, ou rien
   if(rec.pdf&&rec.img)return `<embed src="${rec.img}" type="application/pdf" style="position:absolute;inset:0;width:100%;height:100%;border:0">`;
   if(rec.img)return `<img src="${rec.img}" alt="">`;
@@ -1474,6 +1511,7 @@ function vEquipements(){
 }
 V.equipement=id=>{
   const e=S.equipements.find(x=>x.id===id);if(!e)return vEquipements();
+  assurerImage(e);
   const docs=docsLies(e);
   return `<div class="view" style="gap:12px">
     ${e.img?`<div class="photo" style="min-height:${e.pdf?"420px":"130px"}">${vignette(e)}</div>`:""}
@@ -1508,7 +1546,7 @@ function vDocuments(){
     <div class="row"><label class="btn grow file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter</button></div>
   </div>`;
 }
-V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();const t=S.travaux.find(t=>t.docs.includes(d.id));const eqLie=d.lie?equipParLie(d.lie):null;
+V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();assurerImage(d);const t=S.travaux.find(t=>t.docs.includes(d.id));const eqLie=d.lie?equipParLie(d.lie):null;
   return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:${d.pdf?"420px":"160px"}">${vignette(d)}</div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">${h(d.titre)}</h1><p class="muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</p></div>
     <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd>${d.langueOriginale?`<dt>Langue d'origine</dt><dd>${h(d.langueOriginale)} · titre traduit automatiquement pour le classement</dd>`:(d.etranger?`<dt>Langue d'origine</dt><dd class="muted">Traduction en cours…</dd>`:"")}</dl></div>
