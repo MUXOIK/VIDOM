@@ -481,7 +481,7 @@ async function enrichirAdresse(){ // best-effort : chaque source est indépendan
    ce qui suit lit et écrit en plus la même chose dans le compte réel, en tâche de fond. */
 const SUPA_URL="https://tqcxsxgpjjybeearvysj.supabase.co";
 const SUPA_KEY="sb_publishable_ckoht2xpCpfpGviMBrx5zQ_ccczT55F";
-const supa=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
+const supa=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,lock:async(nom,delai,fn)=>await fn()}}):null;
 
 function reconstituerActivitesPros(){ // reconstruit "ce qu'il a fait ici" à partir de ce qui est chargé, sans rien écrire
   S.pros.forEach(p=>{p.interventions=[]});
@@ -576,7 +576,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
       const photo=photoParEquip[r.id];
       return {id:r.id,piece:r.piece_id||"maison",nom:r.categorie||"Équipement",marque:r.marque||"",modele:r.modele||"",
         ref:r.numero_serie||"",achat:r.date_achat||r.date_installation||"",garantie:r.date_garantie_fin||"",
-        installateur:r.installateur||"",notice:!!r.notice,sav:r.service_apres_vente||"",etat:r.etat||"bon",
+        installateur:r.installateur||"",notice:!!r.notice,noticeUrl:r.notice_url||"",noticeTitre:r.notice_titre||"",sav:r.service_apres_vente||"",etat:r.etat||"bon",
         entretien:!!r.entretien_requis,
         img:photo&&photo.chemin_stockage?(urlParChemin[photo.chemin_stockage]||null):null,
         pdf:photo?photo.mime_type==="application/pdf":false,chemin:photo?(photo.chemin_stockage||null):null,
@@ -657,7 +657,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
         id:e.id,logement_id:lig.id,piece_id:(e.piece&&e.piece!=="maison")?e.piece:null,
         categorie:e.nom||"Équipement",marque:e.marque||null,modele:e.modele||null,numero_serie:e.ref||null,
         date_installation:e.achat||null,date_achat:e.achat||null,date_garantie_fin:e.garantie||null,
-        installateur:e.installateur||null,notice:!!e.notice,service_apres_vente:e.sav||null,
+        installateur:e.installateur||null,notice:!!e.notice,notice_url:e.noticeUrl||null,notice_titre:e.noticeTitre||null,service_apres_vente:e.sav||null,
         etat:["bon","moyen","a_remplacer","hors_service"].includes(e.etat)?e.etat:"bon",entretien_requis:!!e.entretien
       })),{onConflict:"id"});
       const photosEq=S.equipements.filter(e=>e.chemin).map(e=>({
@@ -1201,7 +1201,9 @@ async function compteOk(){
   if(!supa){S.compte.email=email;S.etape="adresse";save();render();return}
   toast("Un instant…");
   try{
-    const {data,error}=await supa.auth.signUp({email,password:mdp});
+    // D-190 : ne jamais rester muet. Si le serveur ne répond pas en 15 secondes, on le dit en clair.
+    const garde=new Promise((_,non)=>setTimeout(()=>non(new Error("delai")),15000));
+    const {data,error}=await Promise.race([supa.auth.signUp({email,password:mdp}),garde]);
     // ce courriel a peut-être déjà un compte : Supabase le signale parfois par une erreur, parfois (pour ne rien révéler) par un utilisateur sans aucune identité
     const dejaExistant=(error&&/registered/i.test(error.message))||(data&&data.user&&Array.isArray(data.user.identities)&&data.user.identities.length===0);
     if(dejaExistant){
@@ -1215,7 +1217,7 @@ async function compteOk(){
     S.compte.email=email;
     if(data&&data.session){S.etape="adresse";save();render()}
     else modal(`<h2>Vérifiez votre boîte de courriel</h2><p class="muted">VIDOM a envoyé un lien de confirmation à ${h(email)}. Une fois confirmé, revenez ici et retapez votre adresse et votre mot de passe.</p><button class="btn primary big" onclick="closeModal()">Compris</button>`);
-  }catch(e){toast("Cela n'a pas fonctionné. Vérifiez votre connexion.")}
+  }catch(e){modal(`<h2>VIDOM n'arrive pas à vous connecter</h2><p class="muted">${e&&e.message==="delai"?"Le serveur n'a pas répondu.":"La connexion n'a pas abouti."} Vérifiez que le téléphone a bien du réseau, fermez les autres fenêtres VIDOM ouvertes sur cet appareil, puis réessayez.</p><button class="btn primary big" onclick="closeModal();location.reload()">Recharger et réessayer</button><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
 }
 function mdpOublie(){const m=document.getElementById("email")?.value||"";modal(`<h2>Mot de passe oublié</h2><p class="muted">VIDOM vous envoie un courriel avec un lien pour en choisir un nouveau.</p><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em2" type="email" value="${h(m)}"></label><button class="btn primary big" onclick="mdpOublieOk()">Envoyer le lien</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
 async function mdpOublieOk(){
@@ -1687,12 +1689,39 @@ V.equipement=id=>{
     ${e.img?`<div class="photo" style="min-height:${e.pdf?"420px":"130px"}">${vignette(e)}</div>`:""}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(e.nom)}</h1><p class="muted">${h(e.marque)} ${h(e.modele)} · ${h(nomPiece(e.piece))} <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerItem('${e.id}')">Changer de pièce</button></p></div>
     <div class="card"><dl class="kv">${e.ref?`<dt>Référence</dt><dd class="num">${h(e.ref)}</dd>`:""}${e.achat?`<dt>Acheté</dt><dd>${dateFr(e.achat)}</dd>`:""}${e.garantie?`<dt>Garantie</dt><dd>${joursDepuis(e.garantie)<0?"jusqu'au "+dateFr(e.garantie):"terminée le "+dateFr(e.garantie)}</dd>`:""}${e.installateur?`<dt>Installé par</dt><dd>${h(e.installateur)}</dd>`:""}${e.entretiens&&e.entretiens.length?`<dt>Entretiens</dt><dd>${e.entretiens.map(x=>dateFr(x.d)+(x.par?" · "+h(x.par):"")).join("<br>")}</dd>`:""}<dt>État</dt><dd>${e.etat==="bon"?"Bon":h(e.etat)}</dd></dl></div>
-    <div class="grid2">${e.img?`<button class="btn" onclick="voirEquipement('${e.id}')">Voir la photo</button>`:""}${e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" disabled>Pas de notice</button>`}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
+    <div class="grid2">${e.img?`<button class="btn" onclick="voirEquipement('${e.id}')">Voir la photo</button>`:""}${e.noticeUrl?`<a class="btn" href="${h(e.noticeUrl)}" target="_blank" rel="noopener">${I.doc} Voir la notice</a>`:(e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" onclick="trouverNotice('${e.id}')" ${e.chercheNotice?"disabled":""}>${e.chercheNotice?"Recherche en cours…":"Retrouver la notice"}</button>`)}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
     ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents reliés</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
-    <p class="small faint">Notice et service après-vente retrouvés à partir de la référence lue sur l'étiquette.</p>
+    ${e.noticeUrl?`<p class="small muted">${h(e.noticeTitre||"Notice")} — VIDOM garde le lien vers la notice. <button class="btn sm ghost" style="padding:2px 6px" onclick="retirerNotice('${e.id}')">Retirer</button></p>`:`<p class="small faint">La notice se retrouve à partir de la marque et du modèle, lus sur la plaque de l'appareil ou sur sa facture.</p>`}
     <div class="row wrap"><button class="btn grow" onclick="relierEquipA('${e.id}')">${I.doc} Relier un document</button><button class="btn" onclick="retirerEquip('${e.id}')">Retirer cet équipement</button></div>
   </div>`;
 };
+/* D-188 : retrouver la notice sur internet, à la demande. Il faut la marque, et le modèle ou une référence (lus sur la plaque ou sur la facture reliée).
+   VIDOM garde le lien vers la notice, pas le fichier. */
+function referencePourNotice(e){
+  let modele=e.modele||"",ref=e.ref||"";
+  return {modele,ref};
+}
+async function trouverNotice(id){
+  const e=S.equipements.find(x=>x.id===id);if(!e||e.chercheNotice)return;
+  const {modele,ref}=referencePourNotice(e);
+  if(!e.marque||!(modele||ref)){modal(`<h2>Il manque la référence</h2><p class="muted">Pour retrouver la bonne notice, VIDOM a besoin de la marque et du modèle de l'appareil. Photographiez sa plaque (souvent à l'intérieur de la porte, ou à l'arrière), ou reliez-lui sa facture.</p><div class="row"><button class="btn grow" onclick="closeModal()">Compris</button></div>`);return}
+  e.chercheNotice=true;render();
+  let data=null,error=null;
+  try{const r=await supa.functions.invoke("trouver-notice",{body:{nom:e.nom,marque:e.marque,modele,ref}});data=r.data;error=r.error}catch(err){error=err}
+  delete e.chercheNotice;
+  if(error){const r=typeof raisonEchec==="function"?await raisonEchec(error):"";save();render();toast(r||"La recherche n'a pas abouti. Réessayez dans un instant.");return}
+  if(!data||!data.trouve){save();render();modal(`<h2>Pas de notice trouvée</h2><p class="muted">VIDOM n'a pas trouvé de notice fiable pour ${h(lc(e.nom))} ${h(e.marque)} ${h(modele||ref)}. Si vous l'avez en papier ou en PDF, déposez-la : elle se reliera à l'appareil.</p><div class="row"><button class="btn grow" onclick="closeModal()">Fermer</button></div>`);return}
+  window._noticeTrouvee={id:e.id,url:data.url,titre:data.titre};
+  save();render();
+  modal(`<h2>${data.sur?"Notice retrouvée":"Une notice approchante"}</h2><p class="muted">${h(data.titre)}${data.source?" · "+h(data.source):""}${data.langue&&data.langue!=="français"?" · en "+h(data.langue):""}</p>${data.sur?"":`<p class="small muted">VIDOM n'est pas sûr que ce soit exactement votre modèle. Regardez avant de la garder.</p>`}
+    <div class="row wrap"><a class="btn grow" href="${h(data.url)}" target="_blank" rel="noopener">Regarder</a><button class="btn primary grow" onclick="garderNotice()">La garder</button><button class="btn" onclick="closeModal()">Non</button></div>`);
+}
+function garderNotice(){
+  const n=window._noticeTrouvee;if(!n)return;const e=S.equipements.find(x=>x.id===n.id);if(!e)return;
+  e.noticeUrl=n.url;e.noticeTitre=n.titre;e.notice=true;window._noticeTrouvee=null;
+  closeModal();save();render();toast("Notice gardée sur la fiche de l'appareil");
+}
+function retirerNotice(id){const e=S.equipements.find(x=>x.id===id);if(!e)return;e.noticeUrl="";e.noticeTitre="";e.notice=false;save();render();toast("Lien retiré")}
 function voirNotice(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Notice — ${h(e.marque)} ${h(e.modele)}</h2><div class="book"><p class="small muted">Retrouvée sur le site du fabricant à partir de la référence ${h(e.ref)}.</p><p style="margin-top:10px"><b>Mise en service.</b> Raccordez l'appareil, vérifiez le niveau, lancez un premier cycle à vide.</p><p><b>Entretien.</b> Nettoyez le filtre une fois par mois. Détartrez tous les six mois.</p><p><b>En cas de panne.</b> Le code affiché indique la cause : E15, fuite ; E22, filtre obstrué ; E24, évacuation.</p></div><div class="row"><button class="btn primary grow" onclick="closeModal();toast('Notice conservée dans Documents')">Conserver dans Documents</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
 function sav(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Service après-vente ${h(e.marque)}</h2><p class="muted">Retrouvé à partir de la référence ${h(e.ref)}. ${e.garantie&&joursDepuis(e.garantie)<0?"L'appareil est encore sous garantie.":"L'appareil n'est plus sous garantie."}</p><a class="btn primary big" href="tel:${e.sav.replace(/\s/g,"")}">${I.telephone} ${h(e.sav)}</a><p class="small faint">Ayez sous la main : la référence ${h(e.ref)}, la date d'achat (${dateFr(e.achat)}) et la facture, qui est dans la mémoire de la maison.</p><button class="btn" onclick="closeModal()">Fermer</button>`)}
 function probleme(id){const e=S.equipements.find(x=>x.id===id);const garanti=e.garantie&&joursDepuis(e.garantie)<0;const pro=S.pros.find(p=>p.nom===e.installateur);modal(`<h2>Un problème avec ${h(lc(e.nom))} ?</h2><p class="muted">${garanti?"Il est sous garantie : le service après-vente d'abord.":(pro?`${h(pro.nom)} connaît cet appareil : la maison le propose en premier.`:"Voici par où commencer.")}</p><div class="stack">${garanti&&e.sav?`<button class="btn primary big" onclick="closeModal();sav('${e.id}')">${I.telephone} Appeler le SAV</button>`:""}${pro?`<button class="btn ${garanti?"":"primary"} big" onclick="closeModal();contacter('${h(pro.nom)}')">${I.gens} Recontacter ${h(pro.nom)}</button>`:""}<button class="btn big" onclick="closeModal();trouverPro('${h(e.nom)}')">Trouver un professionnel</button><button class="btn big" onclick="closeModal();sinistre('${e.id}')">Déclarer un sinistre à l'assureur</button></div><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
@@ -2077,6 +2106,7 @@ V["adresse-vidom"]=()=>`<div class="view" style="gap:12px"><h1 class="h" style="
   <div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Tant que la réception n'est pas branchée</p><p class="small muted">Cette adresse est réelle et déjà enregistrée pour votre logement. Un e-mail envoyé ici n'arrivera dans le fil qu'une fois la réception configurée côté serveur (chez le prestataire choisi pour vidom.fr) — jusque-là, il n'arrivera simplement pas.</p></div>
   ${(S.logement.numeroCadastral||S.logement.altitude!=null||S.logement.rnbId)?`<div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Ce que VIDOM a trouvé sur votre parcelle</p>${S.logement.numeroCadastral?`<p class="small">Cadastre : ${h(S.logement.numeroCadastral)}</p>`:""}${S.logement.altitude!=null?`<p class="small">Altitude : ${Math.round(S.logement.altitude)} m</p>`:""}${S.logement.classeClimat?`<p class="small">Classe climat (GES) : ${h(S.logement.classeClimat)}</p>`:""}<p class="small faint">Source : IGN, RNB, ADEME.</p></div>`:""}
   <div class="card" style="gap:6px"><p class="small b" style="color:var(--sauge-f)">À qui la donner</p><p class="small muted">Notaire, agent immobilier, artisans, assureur, syndic, diagnostiqueur — tous ceux qui détiennent des papiers de votre logement. Ils envoient, vous décidez.</p></div>
+  <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">VIDOM sur votre téléphone</p><div class="row" style="align-items:center;gap:14px"><div class="qr" style="width:104px;height:104px;flex:0 0 auto">${qrSvg(location.href.split("#")[0])}</div><span class="small muted">Visez ce code avec l'appareil photo de votre téléphone, puis connectez-vous avec le même compte : vous retrouvez la même maison. Pour l'avoir comme une application, ouvrez le menu du navigateur et choisissez « Ajouter à l'écran d'accueil ».</span></div><span class="mono small" style="word-break:break-all">${h(location.href.split("#")[0])}</span></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Le courriel du mois</p><p class="small muted">Une fois par mois, VIDOM vous écrit ce qui vous attend : les garanties qui se terminent bientôt, les rappels, les documents reçus à trier. Rien à dire, pas de courriel.</p><div class="row wrap"><button class="chip btn-chip ${S.reglages.courrielMensuel!==false?"on":""}" onclick="reglerCourrielMensuel(true)">Je le reçois</button><button class="chip btn-chip ${S.reglages.courrielMensuel===false?"on":""}" onclick="reglerCourrielMensuel(false)">Non merci</button><button class="btn sm" onclick="apercuCourrielMensuel()">Voir ce qu'il dirait</button></div></div>
   <div class="card" style="gap:6px"><p class="small b" style="color:var(--sauge-f)">Expéditeurs acceptés sans vous demander</p>${S.expediteursOk.length?S.expediteursOk.map(x=>`<div class="line"><span>${h(x)}</span><button class="btn sm" onclick="S.expediteursOk=S.expediteursOk.filter(y=>y!=='${h(x)}');save();render()">Me redemander</button></div>`).join(""):`<p class="small muted">Aucun. Chaque envoi vous est proposé.</p>`}</div>
   <button class="btn" onclick="etiquette()">${I.qr} Imprimer l'étiquette</button>
