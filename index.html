@@ -1549,6 +1549,7 @@ function vEquipements(){
   const expirent=S.equipements.filter(e=>e.garantie&&joursDepuis(e.garantie)<0&&joursDepuis(e.garantie)>-180);
   return `<div class="view" style="gap:12px">
     <h1 class="h" style="font-size:1.45em">Équipements</h1>
+    ${carteDoublons("equips")}
     ${expirent.length?`<div class="card soft"><p class="small">${expirent.length===1?"Une garantie expire":expirent.length+" garanties expirent"} dans les six mois : ${expirent.map(e=>lc(e.nom)).join(", ")}.</p></div>`:""}
     ${ordre.map(pid=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(pid==="maison"?"La maison entière":nomPiece(pid))}</p>${parPiece[pid].map(e=>`<a class="line" href="#/equipement/${e.id}">${I.outil}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(e.nom)}</span><span class="small muted">${h(e.marque)}${e.garantie&&joursDepuis(e.garantie)<0?" · garanti jusqu'en "+e.garantie.slice(0,4):""}</span></span>${I.fleche}</a>`).join("")}</div>`).join("")}
     <label class="btn file">${I.camera} Photographier un appareil<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label>
@@ -1565,6 +1566,7 @@ V.equipement=id=>{
     <div class="grid2">${e.img?`<button class="btn" onclick="voirEquipement('${e.id}')">Voir la photo</button>`:""}${e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" disabled>Pas de notice</button>`}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
     ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents reliés</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
     <p class="small faint">Notice et service après-vente retrouvés à partir de la référence lue sur l'étiquette.</p>
+    <div class="row"><button class="btn" onclick="retirerEquip('${e.id}')">Retirer cet équipement</button></div>
   </div>`;
 };
 function voirNotice(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Notice — ${h(e.marque)} ${h(e.modele)}</h2><div class="book"><p class="small muted">Retrouvée sur le site du fabricant à partir de la référence ${h(e.ref)}.</p><p style="margin-top:10px"><b>Mise en service.</b> Raccordez l'appareil, vérifiez le niveau, lancez un premier cycle à vide.</p><p><b>Entretien.</b> Nettoyez le filtre une fois par mois. Détartrez tous les six mois.</p><p><b>En cas de panne.</b> Le code affiché indique la cause : E15, fuite ; E22, filtre obstrué ; E24, évacuation.</p></div><div class="row"><button class="btn primary grow" onclick="closeModal();toast('Notice conservée dans Documents')">Conserver dans Documents</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
@@ -1586,6 +1588,7 @@ function vDocuments(){
     corps=Object.keys(TYPES).filter(t=>par[t]).map(t=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${TYPES[t]}</p>${par[t].sort((a,b)=>b.date.localeCompare(a.date)).map(ligne).join("")}</div>`).join("");
   }
   return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Documents</h1>
+    ${carteDoublons("docs")}
     ${S.docs.length?`<div class="row">${[["type","Par type"],["enseigne","Par enseigne"]].map(([k,n])=>`<button class="chip btn-chip ${vue===k?"on":""}" onclick="S.reglages.docsPar='${k}';save();render()">${n}</button>`).join("")}</div>`:""}
     ${corps}
     <div class="row"><label class="btn grow file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter</button></div>
@@ -1597,7 +1600,79 @@ V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();assu
     <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd>${d.langueOriginale?`<dt>Langue d'origine</dt><dd>${h(d.langueOriginale)} · titre traduit automatiquement pour le classement</dd>`:(d.etranger?`<dt>Langue d'origine</dt><dd class="muted">Traduction en cours…</dd>`:"")}</dl></div>
     <div class="row wrap">${d.img?`<button class="btn" onclick="voirDocument('${d.id}')">Voir</button>`:""}${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Changer de pièce</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
   </div>`};
-function retirerDoc(id){modal(`<h2>Retirer ce document ?</h2><p class="muted">Il disparaît vraiment de la mémoire de la maison.</p><div class="row"><button class="btn terra grow" onclick="S.docs=S.docs.filter(d=>d.id!=='${id}');closeModal();save();route('#/carte/documents');toast('Retiré')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+/* D-180 : retirer, c'est retirer pour de vrai — sur l'appareil, sur le compte et dans les fichiers gardés.
+   (Avant, le document retiré revenait à la relecture du compte : la maquette n'effaçait rien en ligne.) */
+async function effacerEnLigne({docs=[],equips=[],chemins=[]}){
+  if(!supa)return;
+  try{
+    const {data:s}=await supa.auth.getSession();if(!s||!s.session)return;
+    if(equips.length){
+      const {data:photos}=await supa.from("documents").select("id,chemin_stockage").in("equipement_id",equips).eq("type_document","photo");
+      (photos||[]).forEach(ph=>{docs.push(ph.id);if(ph.chemin_stockage)chemins.push(ph.chemin_stockage)});
+    }
+    if(docs.length)await supa.from("documents").delete().in("id",docs);
+    if(equips.length){try{await supa.from("rappels").delete().in("equipement_id",equips)}catch(_){}}
+    if(equips.length)await supa.from("equipements").delete().in("id",equips);
+    const uniques=[...new Set(chemins.filter(Boolean))];
+    const encore=new Set([...S.docs,...S.equipements].map(x=>x.chemin).filter(Boolean)); // un même fichier peut servir à deux fiches : on ne l'efface que s'il ne sert plus
+    const aEffacer=uniques.filter(c=>!encore.has(c));
+    if(aEffacer.length)await supa.storage.from("logement-files").remove(aEffacer);
+  }catch(e){console.error("VIDOM : l'effacement en ligne a échoué.",e)}
+}
+function retirerDoc(id){modal(`<h2>Retirer ce document ?</h2><p class="muted">Il disparaît vraiment de la mémoire de la maison.</p><div class="row"><button class="btn terra grow" onclick="retirerDocOui('${id}')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+function retirerDocOui(id){
+  const d=S.docs.find(x=>x.id===id);if(!d){closeModal();return}
+  S.docs=S.docs.filter(x=>x.id!==id);S.travaux.forEach(t=>{t.docs=(t.docs||[]).filter(x=>x!==id)});
+  closeModal();save();route("#/carte/documents");toast("Retiré");
+  effacerEnLigne({docs:[id],chemins:[d.chemin]});
+}
+function retirerEquip(id){const e=S.equipements.find(x=>x.id===id);if(!e)return;modal(`<h2>Retirer ${h(lc(e.nom))}${e.marque?" "+h(e.marque):""} ?</h2><p class="muted">Sa fiche et sa photo disparaissent vraiment de la mémoire de la maison. Les factures et les notices restent dans Documents.</p><div class="row"><button class="btn terra grow" onclick="retirerEquipOui('${id}')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+function retirerEquipOui(id){
+  const e=S.equipements.find(x=>x.id===id);if(!e){closeModal();return}
+  S.equipements=S.equipements.filter(x=>x.id!==id);
+  S.rappels=S.rappels.filter(r=>r.equip!==id);
+  closeModal();save();route(S.equipements.length?"#/carte/equipements":"#/maison");toast("Retiré");
+  effacerEnLigne({equips:[id],chemins:[e.chemin]});
+}
+/* D-180 : les doublons. Deux documents sont tenus pour le même quand ils ont le même émetteur, la même date et le même montant
+   (ou, sans montant, le même titre) ; deux équipements, quand ils ont la même marque et le même modèle (ou, sans modèle, le même nom).
+   VIDOM propose, le gardien décide : on garde le plus complet, à défaut le plus ancien. */
+const cleTexte=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"");
+function doublonsDocs(){
+  const par={};
+  S.docs.forEach(d=>{const k=d.montant!=null&&d.montant!==""?[cleTexte(d.fournisseur).slice(0,12),d.date,Math.round(d.montant*100)].join("|"):["t",cleTexte(d.titre),d.date,cleTexte(d.fournisseur).slice(0,12)].join("|");(par[k]=par[k]||[]).push(d)});
+  const poids=d=>(d.lie?4:0)+(d.garantie?2:0)+(S.travaux.some(t=>(t.docs||[]).includes(d.id))?4:0)+(d.pdf?1:0);
+  return Object.values(par).filter(g=>g.length>1).map(g=>{const tri=g.slice().sort((a,b)=>poids(b)-poids(a)||String(a.dateRecu||"").localeCompare(String(b.dateRecu||"")));return {garde:tri[0],retire:tri.slice(1)}});
+}
+function doublonsEquips(){
+  const par={};
+  S.equipements.forEach(e=>{const k=e.modele?[cleTexte(e.marque),cleTexte(e.modele)].join("|"):["n",cleTexte(e.nom),cleTexte(e.marque),e.piece].join("|");(par[k]=par[k]||[]).push(e)});
+  const poids=e=>docsLies(e).length*4+(e.garantie?2:0)+(e.ref?1:0)+(e.img||e.chemin?1:0);
+  return Object.values(par).filter(g=>g.length>1).map(g=>{const tri=g.slice().sort((a,b)=>poids(b)-poids(a)||String(a.date||"").localeCompare(String(b.date||"")));return {garde:tri[0],retire:tri.slice(1)}});
+}
+function carteDoublons(quoi){
+  const g=quoi==="docs"?doublonsDocs():doublonsEquips();const n=g.reduce((a,x)=>a+x.retire.length,0);
+  if(!n)return "";
+  return `<div class="card soft" style="gap:8px"><p class="small">${n===1?"Un doublon probable":n+" doublons probables"} : ${quoi==="docs"?"le même document gardé plusieurs fois":"le même appareil gardé plusieurs fois"}.</p><div class="row"><button class="btn sm" onclick="voirDoublons('${quoi}')">Voir et retirer les doublons</button></div></div>`;
+}
+function voirDoublons(quoi){
+  const g=quoi==="docs"?doublonsDocs():doublonsEquips();
+  const nom=x=>quoi==="docs"?`${h(x.titre)} · ${dateFr(x.date)}${x.montant?" · "+euros(x.montant):""}`:`${h(x.nom)} ${h(x.marque||"")} ${h(x.modele||"")} · ${x.piece==="maison"?"la maison":h(nomPiece(x.piece))}`;
+  modal(`<h2>Les doublons</h2><p class="muted">Pour chaque groupe, VIDOM garde la fiche la plus complète et retire les autres. Décochez ce que vous voulez garder quand même.</p>
+    <div class="stack" style="gap:10px;max-height:50vh;overflow:auto">${g.map(x=>`<div class="card" style="gap:6px;padding:10px 12px"><p class="small"><b style="color:var(--sauge-f)">Gardé :</b> ${nom(x.garde)}</p>${x.retire.map(r=>`<label class="row small" style="gap:8px;align-items:flex-start"><input type="checkbox" class="dbl" value="${r.id}" checked><span><b style="color:var(--terra-f)">Retiré :</b> ${nom(r)}</span></label>`).join("")}</div>`).join("")}</div>
+    <div class="row"><button class="btn terra grow" onclick="retirerDoublons('${quoi}')">Retirer ce qui est coché</button><button class="btn" onclick="closeModal()">Annuler</button></div>`);
+}
+function retirerDoublons(quoi){
+  const ids=[...document.querySelectorAll(".dbl:checked")].map(i=>i.value);closeModal();if(!ids.length)return;
+  if(quoi==="docs"){
+    const vises=S.docs.filter(d=>ids.includes(d.id));S.docs=S.docs.filter(d=>!ids.includes(d.id));S.travaux.forEach(t=>{t.docs=(t.docs||[]).filter(x=>!ids.includes(x))});
+    save();render();effacerEnLigne({docs:ids,chemins:vises.map(d=>d.chemin)});
+  }else{
+    const vises=S.equipements.filter(e=>ids.includes(e.id));S.equipements=S.equipements.filter(e=>!ids.includes(e.id));S.rappels=S.rappels.filter(r=>!ids.includes(r.equip));
+    save();render();effacerEnLigne({equips:ids,chemins:vises.map(e=>e.chemin)});
+  }
+  toast(ids.length===1?"Un doublon retiré":ids.length+" doublons retirés");
+}
 function voirDocument(id){const d=S.docs.find(x=>x.id===id);if(!d||!d.img)return;modal(`<h2>${h(d.titre)}</h2>${d.pdf?`<embed src="${d.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${d.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2);display:block">`}<button class="btn" onclick="closeModal()">Fermer</button>`)}
 function voirEquipement(id){const e=S.equipements.find(x=>x.id===id);if(!e||!e.img)return;modal(`<h2>${h(e.nom)}</h2>${e.pdf?`<embed src="${e.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${e.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2);display:block">`}<button class="btn" onclick="closeModal()">Fermer</button>`)}
 
