@@ -208,6 +208,7 @@ bascule:`<svg class="i" ${VS} stroke-width="2" style="width:1em;height:1em"><pat
   echanges:`<svg class="i" ${VS}><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/><path d="M9.5 10.5L5.3 7.1M14.5 10.5l4.2-3.4M9.5 13.5l-4.2 3.4M14.5 13.5l4.2 3.4"/></svg>`,
   telephone:`<svg class="i" ${VS}><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>`,
   fichier:`<svg class="i" ${VS}><path d="M4 6h6l2 2h8v11H4z"/></svg>`,
+  micro:`<svg class="i" ${VS}><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>`,
   croix:`<svg class="i" ${VS} stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
 };
 
@@ -554,7 +555,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
       risquesNaturels:logement.risques_naturels||null,
     });
     S.pieces=(pieces||[]).map(p=>({id:p.id,type:p.type_piece||"autre",nom:p.nom,photos:[]}));
-    S.pros=(artisans||[]).map(a=>({id:a.id,nom:a.nom,metier:a.metier||"",tel:a.telephone||"",mail:a.email||"",ville:a.ville||"",categorie:a.categorie||"",interventions:[],avis:[]}));
+    S.pros=(artisans||[]).map(a=>({id:a.id,nom:a.nom,metier:a.metier||"",tel:a.telephone||"",mail:a.email||"",ville:a.ville||"",categorie:a.categorie||"",interventions:[],avis:(a.memo&&a.memo.avis)||[],vocales:(a.memo&&a.memo.vocales)||[]}));
     S.travaux=(interventions||[]).map(iv=>({id:iv.id,titre:iv.type_intervention||"Travaux",par:iv.artisan_nom||"",date:iv.date_intervention||"",montant:iv.cout||0,docs:(documents||[]).filter(r=>r.intervention_id===iv.id).map(r=>r.id)}));
     const photoParEquip={};const docsBruts=[];
     (documents||[]).forEach(r=>{
@@ -647,7 +648,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
       risques_naturels:lig.risquesNaturels||null,canal_acquisition:lig.canalAcquisition||null,
     },{onConflict:"id"});
     if(S.pieces.length)await supa.from("pieces").upsert(S.pieces.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,type_piece:p.type||null})),{onConflict:"id"});
-    if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null,categorie:p.categorie||null})),{onConflict:"id"});
+    if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null,categorie:p.categorie||null,memo:{avis:p.avis||[],vocales:(p.vocales||[]).filter(v=>v.chemin).map(v=>({id:v.id,chemin:v.chemin,d:v.d,duree:v.duree||0}))}})),{onConflict:"id"});
     if(S.travaux.length)await supa.from("interventions").upsert(S.travaux.map(t=>({id:t.id,logement_id:lig.id,type_intervention:t.titre||"Travaux",artisan_nom:t.par||null,date_intervention:t.date||null,cout:t.montant||null})),{onConflict:"id"});
     if(S.equipements.length){
       await supa.from("equipements").upsert(S.equipements.map(e=>({
@@ -769,7 +770,8 @@ async function reconnaitre(file,pieceId,dataUrl,pdf,chemin){
         achat:today(),garantie:"",installateur:"",notice:false,sav:"",etat:"bon",entretien:false});
     }else if(c&&c.kind==="document"){
       Object.assign(rec,{k:"doc",type:c.type||"autre",titre:c.titre||"Document",date:c.date_document||today(),
-        fournisseur:c.fournisseur||"",montant:c.montant_ttc??null,echeance:c.date_echeance||"",lie:"",travaux:"",garantie:"",
+        fournisseur:c.fournisseur||"",montant:c.montant_ttc??null,echeance:c.date_echeance||"",lie:"",travaux:"",garantie:c.date_fin_garantie||"", // D-179 : la garantie et son extension se lisent sur la facture
+        
         catFournisseur:c.categorie_fournisseur||"",metierFournisseur:c.metier_fournisseur||""}); // D-170
     }else{
       rec.k="inconnu";rec.titre="Photo non reconnue";
@@ -1340,8 +1342,10 @@ function reduire(file){return new Promise(res=>{
   if(!file.type.startsWith("image/")){res(null);return}
   const img=new Image();const url=URL.createObjectURL(file);
   img.onload=()=>{try{
-    const max=520;let w=img.width,h2=img.height;const k=Math.min(1,max/Math.max(w,h2));w=Math.round(w*k);h2=Math.round(h2*k);
-    const c=document.createElement("canvas");c.width=w;c.height=h2;c.getContext("2d").drawImage(img,0,0,w,h2);
+    // D-179 : la photo gardée en ligne doit rester lisible (une facture à 520 points ne se relit pas) : 2000 points de côté au plus.
+    // La petite image (520 points) ne sert plus que de secours, quand la connexion manque et que tout reste sur l'appareil.
+    const dessiner=max=>{let w=img.width,h2=img.height;const k=Math.min(1,max/Math.max(w,h2));w=Math.round(w*k);h2=Math.round(h2*k);const cv=document.createElement("canvas");cv.width=w;cv.height=h2;cv.getContext("2d").drawImage(img,0,0,w,h2);return cv};
+    const grand=dessiner(2000);let petit=null;const c={toDataURL:(t,q)=>(petit=petit||dessiner(520)).toDataURL(t,q),toBlob:(f,t,q)=>grand.toBlob(f,t,q)};
     c.toBlob(blob=>{
       URL.revokeObjectURL(url);
       if(!blob){res({url:c.toDataURL("image/jpeg",.7),pdf:false,chemin:null});return}
@@ -1349,7 +1353,7 @@ function reduire(file){return new Promise(res=>{
         if(t){res({url:t.url,pdf:false,chemin:t.chemin});return}
         res({url:c.toDataURL("image/jpeg",.7),pdf:false,chemin:null});
       });
-    },"image/jpeg",.7);
+    },"image/jpeg",.85);
   }catch(e){URL.revokeObjectURL(url);res(null)}};
   img.onerror=()=>{URL.revokeObjectURL(url);res(null)};img.src=url;
 })}
@@ -1616,6 +1620,7 @@ V.pro=id=>{const p=S.pros.find(x=>x.id===id);if(!p)return vArtisans();const docs
     <div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ce qu'il a fait ici</p>${p.interventions.map(i=>`<div class="line"><span>${h(i.motif)}</span><span class="small muted">${dateFr(i.d)}</span></div>`).join("")}</div>
     ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ses documents</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
     <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre appréciation</p>${p.avis.length?p.avis.map(a=>`<p class="small">${"★".repeat(a.n)}${"☆".repeat(5-a.n)} <span class="muted">${h(a.t)} · ${dateFr(a.d)}</span></p>`).join(""):`<p class="small muted">Elle reste dans la mémoire de la maison et se transmet avec elle. L'artisan ne la voit jamais.</p>`}<div class="row">${[1,2,3,4,5].map(n=>`<button class="btn sm" onclick="noter('${p.id}',${n})">${"★".repeat(n)}</button>`).join("")}</div></div>
+    ${carteVocales(p)}
     <div class="row wrap"><button class="btn primary grow" onclick="contacter('${h(p.nom)}')">${I.telephone} Recontacter</button><button class="btn grow" onclick="recommanderArtisan('${p.id}')">${I.envoi} Recommander</button></div>
   </div>`};
 // D-170 : VIDOM se trompera parfois de rubrique. Le gardien la corrige lui-même, en deux gestes.
@@ -1633,6 +1638,63 @@ function rangerPro(id,cat){
   p.categorie=cat;
   if(p.metier==="Professionnel"&&cat!=="artisan")p.metier=nomRubrique(cat);
   closeModal();save();naissances();render();toast(`${p.nom} est rangé dans « ${nomRubrique(cat)} »`);
+}
+/* D-178 : la note vocale sur la fiche d'un professionnel. On enregistre avec le micro de l'appareil, on réécoute,
+   on retire. Le son est rangé avec les fichiers du logement ; la fiche n'en garde que le chemin, la date et la durée. */
+let enreg=null; // {proId,rec,flux,morceaux,debut,timer}
+const dureeFr=s=>{s=Math.round(s||0);return s<60?s+" s":Math.floor(s/60)+" min "+String(s%60).padStart(2,"0")};
+function carteVocales(p){
+  const liste=p.vocales||[];
+  liste.forEach(v=>{if(v.chemin&&!v.url&&!v._sig&&supa){v._sig=true;supa.storage.from("logement-files").createSignedUrl(v.chemin,60*60*24*30).then(({data})=>{if(data&&data.signedUrl){v.url=data.signedUrl;if(!enreg)render()}}).catch(()=>{})}});
+  const enCours=enreg&&enreg.proId===p.id;
+  return `<div class="card" style="gap:10px"><p class="small b" style="color:var(--sauge-f)">Vos notes vocales</p>
+    ${liste.length?"":`<p class="small muted">Dites ce que vous voulez retenir : comment le chantier s'est passé, ce qu'il faudra lui redemander. L'artisan ne l'entend jamais.</p>`}
+    ${liste.map(v=>`<div class="stack" style="gap:4px"><div class="split"><span class="small muted">${dateFr(v.d)} · ${dureeFr(v.duree)}</span><button class="btn sm ghost" onclick="retirerVocale('${p.id}','${v.id}')">Retirer</button></div>${v.url?`<audio controls preload="metadata" src="${v.url}" style="width:100%"></audio>`:`<p class="small muted">Un instant…</p>`}</div>`).join("")}
+    ${enCours?`<div class="row"><span class="small b" style="color:var(--terra-f);flex:1 1 auto">● Enregistrement… <span id="enreg-t">0 s</span></span><button class="btn primary" onclick="arreterVocale()">Terminer</button><button class="btn" onclick="arreterVocale(true)">Annuler</button></div>`
+      :`<div class="row"><button class="btn grow" onclick="enregistrerVocale('${p.id}')">${I.micro} Enregistrer une note</button></div>`}
+  </div>`;
+}
+async function enregistrerVocale(proId){
+  if(enreg)return;
+  if(!navigator.mediaDevices||!window.MediaRecorder){toast("Cet appareil ne permet pas d'enregistrer ici.");return}
+  let flux;
+  try{flux=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){toast("VIDOM n'a pas accès au micro. Autorisez-le dans le navigateur.");return}
+  const type=["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/ogg"].find(t=>MediaRecorder.isTypeSupported(t))||"";
+  const rec=new MediaRecorder(flux,type?{mimeType:type}:undefined);
+  enreg={proId,rec,flux,morceaux:[],debut:Date.now(),annule:false,timer:null};
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)enreg.morceaux.push(e.data)};
+  rec.onstop=()=>finirVocale();
+  rec.start();
+  enreg.timer=setInterval(()=>{const el=document.getElementById("enreg-t");const s=(Date.now()-enreg.debut)/1000;if(el)el.textContent=dureeFr(s);if(s>=180)arreterVocale()},500); // trois minutes au plus
+  render();
+}
+function arreterVocale(annuler){if(!enreg)return;enreg.annule=!!annuler;clearInterval(enreg.timer);try{enreg.rec.stop()}catch(e){finirVocale()}}
+async function finirVocale(){
+  const e=enreg;if(!e)return;enreg=null;
+  try{e.flux.getTracks().forEach(t=>t.stop())}catch(_){}
+  const p=S.pros.find(x=>x.id===e.proId);
+  if(e.annule||!p||!e.morceaux.length){render();return}
+  const mime=(e.rec.mimeType||"audio/webm").split(";")[0];
+  const blob=new Blob(e.morceaux,{type:mime});
+  const v={id:uid(),d:today(),duree:Math.round((Date.now()-e.debut)/1000),chemin:null,url:URL.createObjectURL(blob)};
+  p.vocales=p.vocales||[];p.vocales.unshift(v);render();
+  let ok=false;
+  try{
+    if(supa&&S.logement.id){
+      const ext=mime.includes("mp4")?"m4a":(mime.includes("ogg")?"ogg":"webm");
+      const chemin=`${S.logement.id}/vocal-${v.id}.${ext}`;
+      const {error}=await supa.storage.from("logement-files").upload(chemin,blob,{contentType:mime,upsert:false});
+      if(!error){v.chemin=chemin;ok=true}
+    }
+  }catch(_){}
+  save();
+  toast(ok?"Note vocale conservée":"Note gardée sur cet appareil seulement : la connexion a manqué.");
+}
+function retirerVocale(proId,vid){modal(`<h2>Retirer cette note vocale ?</h2><p class="muted">Elle disparaît vraiment de la mémoire de la maison.</p><div class="row"><button class="btn terra grow" onclick="retirerVocaleOui('${proId}','${vid}')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+async function retirerVocaleOui(proId,vid){
+  const p=S.pros.find(x=>x.id===proId);if(!p)return;const v=(p.vocales||[]).find(x=>x.id===vid);
+  p.vocales=(p.vocales||[]).filter(x=>x.id!==vid);closeModal();save();render();toast("Retirée");
+  if(v&&v.chemin&&supa){try{await supa.storage.from("logement-files").remove([v.chemin])}catch(_){}}
 }
 function noter(id,n){const p=S.pros.find(x=>x.id===id);p.avis.push({n,t:"Par vous",d:today()});save();render();toast("Appréciation conservée")}
 
@@ -2169,8 +2231,9 @@ function render(){
   questionDuJour();
   const {name,arg}=parseHash();
   const html=vue(name,arg);
-  const titre=TITRES[name]||"VIDOM";
-  const retour=RETOUR[name];
+  let titre=TITRES[name]||"VIDOM";
+  let retour=RETOUR[name];
+  if(name==="pro"){const pp=S.pros.find(x=>x.id===arg);if(pp&&categorieDe(pp)!=="artisan"){titre="Notaire, assurance, fournisseurs";retour="#/carte/contacts"}} // D-179 : un fournisseur d'énergie n'est pas un artisan
   if(isDesk()){
     const rightName=name==="maison"?"fil":name;
     const rightHtml=name==="maison"?V.fil():html;
