@@ -2542,7 +2542,9 @@ function render(){
 function ajouterDesk(){modal(`<h2>Photographier</h2><div class="stack"><label class="btn primary big file">${I.camera} Avec la caméra de l'ordinateur<input type="file" accept="image/*" capture="environment" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="qr" style="width:96px;height:96px">${qrSvg(location.href.split("#")[0])}</div><span class="small muted">Pour continuer sur votre téléphone, ouvrez ce code avec l'appareil photo, puis connectez-vous avec le même compte : vous retrouverez la même maison.</span></div></div><button class="btn" onclick="closeModal()">Fermer</button>`)}
 function route(hsh){if(hsh&&location.hash!==hsh){location.hash=hsh}else render()}
 window.addEventListener("hashchange",render);
-window.addEventListener("resize",()=>{clearTimeout(render.rt);render.rt=setTimeout(render,120)});
+// D-191 : on ne redessine que si l'on passe du téléphone à l'ordinateur (ou l'inverse). Le clavier du téléphone change la hauteur de l'écran : redessiner à ce moment-là effaçait le champ en cours de saisie et refermait le clavier.
+render.desk=isDesk();
+window.addEventListener("resize",()=>{clearTimeout(render.rt);render.rt=setTimeout(()=>{const d=isDesk();if(d===render.desk)return;const a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;render.desk=d;render()},120)});
 
 /* glisser-déposer, n'importe où sur la page */
 (function(){
