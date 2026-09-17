@@ -811,6 +811,7 @@ function docsLies(e){ // les documents reliés à cet équipement, par identifia
 const TYPES_DOCUMENT_ARTISAN=["facture","devis","garantie","notice","diagnostic","contrat"]; // D-167 : types de document qui indiquent un vrai professionnel du logement, pas une administration ou une institution (acte notarié, document d'urbanisme, avis d'imposition, assurance, courrier...)
 const CATEGORIES_PRO=[ // D-168, élargi par D-171 : les rubriques pour les contacts qui ne sont pas des artisans
   {id:"notaire",nom:"Notaire",ico:"cle"},
+  {id:"syndic",nom:"Syndic et copropriété",ico:"maison"},       // D-183 : le syndic, le gestionnaire de l'immeuble, le conseil syndical
   {id:"assureur",nom:"Assurance",ico:"doc"},
   {id:"administration",nom:"Administration",ico:"fichier"},
   {id:"energie",nom:"Fournisseur d'énergie",ico:"eclair"},       // D-171 : électricité, gaz, eau, chauffage
@@ -848,7 +849,13 @@ function ranger(rec){ // C'est bien ça
   const nees=[];
   if(rec.k==="equip"){
     const e={id:rec.id,piece:rec.pieceId,nom:rec.nom,marque:rec.marque,modele:rec.modele,ref:rec.ref,achat:rec.achat,garantie:rec.garantie,installateur:rec.installateur||"",notice:rec.notice,sav:rec.sav,etat:rec.etat,entretien:!!rec.entretien,img:rec.img,pdf:!!rec.pdf,chemin:rec.chemin||null,date:rec.date,entretiens:rec.entretien?[{d:rec.achat,par:rec.installateur}]:[]};
-    S.equipements.push(e);
+    // D-184 : si cet appareil est déjà connu par sa facture (sans photo), la photo le complète au lieu de créer une seconde fiche
+    const m=cleTexte(e.modele),q=cleTexte(e.marque),n=cleTexte(e.nom);
+    const deja=S.equipements.find(x=>!x.img&&!x.chemin&&((m&&cleTexte(x.modele)&&(cleTexte(x.modele).includes(m)||m.includes(cleTexte(x.modele))))||(cleTexte(x.nom)===n&&q&&cleTexte(x.marque)===q)));
+    if(deja){
+      Object.assign(deja,{img:e.img,pdf:e.pdf,chemin:e.chemin,ref:deja.ref||e.ref,modele:deja.modele||e.modele,marque:deja.marque||e.marque,piece:(e.piece&&e.piece!=="maison")?e.piece:deja.piece});
+      e.id=deja.id;rec.id=deja.id;rec.fusion=true;
+    }else S.equipements.push(e);
     // les documents déjà rangés qui le visaient par son nom (arrivés avant lui) se relient à lui pour de bon
     S.docs.forEach(d=>{if(d.lie&&d.lie!==e.id&&slug(d.lie)===slug(e.nom))d.lie=e.id});
     if(rec.installateur)connaitrePro(rec.installateur,`Installation : ${rec.nom.toLowerCase()}`,rec.achat);
@@ -912,9 +919,10 @@ const CARTES=[
   {id:"adresse",nom:"Adresse VIDOM",ico:"mail",quand:"",sub:()=>S.logement.depot,nee:()=>true},
   {id:"recus",nom:"Reçu par l'adresse VIDOM",ico:"mail",quand:"au premier document envoyé à l'adresse VIDOM",sub:()=>{const n=S.fil.filter(e=>e.type==="recu"&&!e.fait).length;return n?(n===1?"Un envoi attend votre décision":n+" envois attendent votre décision"):"Ce qu'on a envoyé à la maison"},nee:()=>S.fil.some(e=>e.type==="recu"),n:()=>S.fil.filter(e=>e.type==="recu"&&!e.fait).length}, // D-177
   {id:"equipements",nom:"Équipements",ico:"outil",quand:"à la première étiquette ou facture d'appareil reconnue",sub:()=>"Notices, garanties, service après-vente",nee:()=>S.equipements.length>0,n:()=>S.equipements.length},
+  {id:"garanties",nom:"Garanties",ico:"check",quand:"à la première facture d'appareil gardée",sub:()=>{const g=listeGaranties().filter(x=>x.enCours).length;return g?(g===1?"Une garantie en cours":g+" garanties en cours"):"Garanties et extensions, avec leur date de fin"},nee:()=>listeGaranties().length>0||S.docs.some(d=>d.type==="facture"||d.type==="garantie"),n:()=>listeGaranties().filter(x=>x.enCours).length}, // D-184
   {id:"documents",nom:"Documents",ico:"doc",quand:"au premier document gardé",sub:()=>"Tout ce qui est conservé",nee:()=>S.docs.length>0,n:()=>S.docs.length},
   {id:"artisans",nom:"Les artisans de la maison",ico:"gens",quand:"au premier professionnel connu",sub:()=>S.pros.filter(p=>categorieDe(p)==="artisan").slice(0,3).map(p=>p.nom).join(", "),nee:()=>S.pros.some(p=>categorieDe(p)==="artisan"),n:()=>S.pros.filter(p=>categorieDe(p)==="artisan").length},
-  {id:"contacts",nom:"Notaire, assurance, fournisseurs",ico:"fichier",quand:"au premier contact non-artisan connu",sub:()=>S.pros.filter(p=>categorieDe(p)!=="artisan").slice(0,3).map(p=>p.nom).join(", "),nee:()=>S.pros.some(p=>categorieDe(p)!=="artisan"),n:()=>S.pros.filter(p=>categorieDe(p)!=="artisan").length}, // D-168
+  {id:"contacts",nom:"Notaire, syndic, assurance, fournisseurs",ico:"fichier",quand:"au premier contact non-artisan connu",sub:()=>S.pros.filter(p=>categorieDe(p)!=="artisan").slice(0,3).map(p=>p.nom).join(", "),nee:()=>S.pros.some(p=>categorieDe(p)!=="artisan"),n:()=>S.pros.filter(p=>categorieDe(p)!=="artisan").length}, // D-168
   {id:"travaux",nom:"Travaux",ico:"travaux",quand:"au premier devis",sub:()=>"Chantiers, devis, ce que ça a coûté",nee:()=>S.travaux.length>0,n:()=>S.travaux.length},
   {id:"echanges",nom:"Échanges et accès",ico:"echanges",quand:"au premier accès ouvert à un tiers",sub:()=>"Qui voit quoi, pour combien de temps",nee:()=>S.acces.length>0,n:()=>S.acces.filter(a=>a.ouvert).length},
   {id:"transmission",nom:"Transmission",ico:"cle",quand:"le jour où la maison change de mains",sub:()=>"Les dossiers, le livre du logement",nee:()=>!!S.transmission},
@@ -1568,7 +1576,7 @@ V.carte=id=>{
   if(id==="adresse")return V["adresse-vidom"]();
   const c=CARTES.find(x=>x.id===id);if(!c)return V.maison();
   if(!c.nee())return `<div class="view"><div class="card dash"><p>${h(c.nom)} apparaîtra ${h(c.quand)}.</p></div><a class="btn" href="#/maison">Ma maison</a></div>`;
-  const F={recus:vRecus,equipements:vEquipements,documents:vDocuments,artisans:vArtisans,contacts:vContactsAutres,travaux:vTravaux,echanges:vEchanges,transmission:vTransmission};
+  const F={recus:vRecus,garanties:vGaranties,equipements:vEquipements,documents:vDocuments,artisans:vArtisans,contacts:vContactsAutres,travaux:vTravaux,echanges:vEchanges,transmission:vTransmission};
   return F[id]();
 };
 /* D-177 : le sas de réception. Tout ce qu'on a envoyé à l'adresse VIDOM, au même endroit :
@@ -1587,6 +1595,36 @@ function vRecus(){
   </div>`;
 }
 function voirRecu(id){const e=S.fil.find(x=>x.id===id);const r=e&&e.rec;if(!r||!r.img)return;modal(`<h2>${h(r.titre||r.nom||"Ce qui a été envoyé")}</h2>${r.pdf?`<embed src="${r.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${r.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2)">`}<div class="row"><button class="btn grow" onclick="closeModal()">Fermer</button></div>`)}
+/* D-184 : toutes les garanties et extensions de garantie au même endroit. Une garantie vient d'un document (facture, contrat de garantie)
+   ou de la fiche d'un équipement ; quand les deux disent la même chose, on n'en montre qu'une, rattachée à l'appareil. */
+function listeGaranties(){
+  const L=[];const vus=new Set();
+  S.docs.filter(d=>d.garantie).forEach(d=>{const eq=d.lie?equipParLie(d.lie):null;if(eq)vus.add(eq.id);L.push({fin:d.garantie,quoi:eq?`${eq.nom}${eq.marque?" "+eq.marque:""}`:d.titre,ou:d.fournisseur||"",doc:d,eq})});
+  S.equipements.filter(e=>e.garantie&&!vus.has(e.id)).forEach(e=>L.push({fin:e.garantie,quoi:`${e.nom}${e.marque?" "+e.marque:""}`,ou:"",doc:null,eq:e}));
+  L.forEach(x=>{x.enCours=joursDepuis(x.fin)<0});
+  return L.sort((a,b)=>a.enCours===b.enCours?String(a.fin).localeCompare(String(b.fin)):(a.enCours?-1:1));
+}
+const aRelire=()=>S.docs.filter(d=>d.chemin&&!d.relu&&!d.garantie&&!d.lie&&["facture","garantie"].includes(d.type));
+function vGaranties(){
+  const L=listeGaranties();const cours=L.filter(x=>x.enCours),finies=L.filter(x=>!x.enCours);const n=aRelire().length;
+  const ligne=x=>`<a class="line" href="${x.doc?"#/document/"+x.doc.id:"#/equipement/"+x.eq.id}">${I.check}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(x.quoi)}</span><span class="small muted">${x.enCours?"jusqu'au "+dateFr(x.fin):"terminée le "+dateFr(x.fin)}${x.ou?" · "+h(x.ou):""}${x.enCours&&joursDepuis(x.fin)>-180?" · bientôt finie":""}</span></span>${I.fleche}</a>`;
+  return `<div class="view" style="gap:12px"><div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">Garanties</h1><p class="muted">Les garanties et les extensions de garantie lues sur vos factures, avec leur date de fin.</p></div>
+    ${cours.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">En cours</p>${cours.map(ligne).join("")}</div>`:`<div class="card soft"><p class="small">Aucune garantie en cours n'est connue pour l'instant.</p></div>`}
+    ${finies.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Terminées</p>${finies.map(ligne).join("")}</div>`:""}
+    ${n?`<div class="card soft" style="gap:8px"><p class="small">${n===1?"Une facture gardée n'a":n+" factures gardées n'ont"} pas encore été relue${n>1?"s":""} pour y chercher une garantie et l'appareil concerné.</p><div class="row"><button class="btn sm" onclick="relireFactures()">Chercher les garanties dans ${n===1?"cette facture":"ces "+n+" factures"}</button></div><p class="small faint">Chaque relecture compte comme une lecture de document.</p></div>`:""}
+  </div>`;
+}
+let relectureLot=false;
+async function relireFactures(){
+  if(relectureLot)return;relectureLot=true;
+  const liste=aRelire();let i=0,trouvees=0;
+  for(const d of liste){
+    i++;toast(`VIDOM relit vos factures… ${i} sur ${liste.length}`);
+    const avant=d.garantie;await relireDoc(d.id,true);d.relu=true;if(d.garantie&&!avant)trouvees++;
+  }
+  relectureLot=false;naissances();save();render();
+  toast(trouvees?(trouvees===1?"Une garantie retrouvée":trouvees+" garanties retrouvées"):"Aucune garantie de plus dans ces factures");
+}
 function vEquipements(){
   const vue=S.reglages.equipsPar||"piece"; // D-182 : comme les documents, les équipements se regardent de plusieurs façons
   const enseigneDe=e=>{const f=docsLies(e).filter(d=>d.type==="facture"&&d.fournisseur).sort((x,y)=>String(x.date).localeCompare(String(y.date)))[0];return f?f.fournisseur:"Sans enseigne connue"};
@@ -1670,9 +1708,12 @@ async function effacerEnLigne({docs=[],equips=[],chemins=[]}){
   }catch(e){console.error("VIDOM : l'effacement en ligne a échoué.",e)}
 }
 /* D-182 : relire un document déjà gardé, pour profiter d'une lecture devenue meilleure (garantie, appareil visé). */
-async function relireDoc(id){
+async function relireDoc(id,silence){
   const d=S.docs.find(x=>x.id===id);if(!d||!d.chemin||!supa)return;
-  toast("VIDOM relit le document…");
+  const toastOrig=toast;if(silence)toast=()=>{};else toast("VIDOM relit le document…");
+  try{await relireDocInterne(d)}finally{toast=toastOrig}
+}
+async function relireDocInterne(d){
   try{
     const {data}=await supa.storage.from("logement-files").createSignedUrl(d.chemin,600);
     const blob=await (await fetch(data.signedUrl)).blob();
@@ -1681,7 +1722,7 @@ async function relireDoc(id){
     if(lu.k!=="doc"){toast("VIDOM n'a rien trouvé de plus.");return}
     if(lu.garantie&&!d.garantie)d.garantie=lu.garantie;
     if(!d.lie){const r={lie:"",appareil:lu.appareil,type:d.type,date:d.date,garantie:d.garantie||lu.garantie,pieceId:d.piece};relierAppareil(r);if(r.lie)d.lie=r.lie}
-    naissances();save();render();
+    d.relu=true;naissances();save();render();
     const eq=d.lie?equipParLie(d.lie):null;
     toast(eq?`Relié à : ${eq.nom}${eq.marque?" "+eq.marque:""}`:"Relu. Aucun appareil précis n'est visé par ce document.");
   }catch(e){toast("La relecture a échoué. Réessayez dans un instant.")}
@@ -1752,7 +1793,7 @@ function vArtisans(){
 }
 function vContactsAutres(){ // D-168, élargi par D-171 -- tous les contacts de la maison qui ne sont pas des artisans
   const groupes=CATEGORIES_PRO.map(c=>({...c,pros:S.pros.filter(p=>categorieDe(p)===c.id)})).filter(g=>g.pros.length);
-  return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Notaire, assurance, fournisseurs</h1><p class="muted">Les contacts que la maison garde aussi, mais qui ne sont pas des artisans.</p>
+  return `<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">Notaire, syndic, assurance, fournisseurs</h1><p class="muted">Les contacts que la maison garde aussi, mais qui ne sont pas des artisans.</p>
     ${groupes.map(g=>`<div class="stack" style="gap:2px"><p class="small b" style="color:var(--sauge-f);padding:4px 2px 0">${h(g.nom)}</p><div class="card" style="gap:0;padding:4px 16px">${g.pros.map(p=>`<a class="line" href="#/pro/${p.id}"><span class="tile" style="width:36px;height:36px;font-weight:700;font-size:.85em">${h(p.nom.split(/\s/).map(w=>w[0]).join("").slice(0,2).toUpperCase())}</span><span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(p.nom)}</span><span class="small muted">${p.interventions[0]?h(p.interventions[0].motif)+", "+dateFr(p.interventions[0].d):h(p.metier)}</span></span>${I.fleche}</a>`).join("")}</div></div>`).join("")}
   </div>`;
 }
@@ -2375,7 +2416,7 @@ function render(){
   const html=vue(name,arg);
   let titre=TITRES[name]||"VIDOM";
   let retour=RETOUR[name];
-  if(name==="pro"){const pp=S.pros.find(x=>x.id===arg);if(pp&&categorieDe(pp)!=="artisan"){titre="Notaire, assurance, fournisseurs";retour="#/carte/contacts"}} // D-179 : un fournisseur d'énergie n'est pas un artisan
+  if(name==="pro"){const pp=S.pros.find(x=>x.id===arg);if(pp&&categorieDe(pp)!=="artisan"){titre="Notaire, syndic, assurance, fournisseurs";retour="#/carte/contacts"}} // D-179 : un fournisseur d'énergie n'est pas un artisan
   if(isDesk()){
     const rightName=name==="maison"?"fil":name;
     const rightHtml=name==="maison"?V.fil():html;
