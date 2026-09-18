@@ -261,7 +261,7 @@ const etatInitial=()=>({
   logement:{id:null,nom:"",adresse:"",cp:"",ville:"",annee:null,surface:null,dpe:"",dpeDate:"",depot:"",
     latitude:null,longitude:null,numeroCadastral:"",classeClimat:"",altitude:null,rnbId:"",rnbStatut:"",surfaceEmpriseSol:null,risquesNaturels:null,canalAcquisition:null},
   comptage:{cuisine:1,salon:1,chambre:2,"salle de bain":1},piecesLibres:[],pieces:[],plan:null,
-  equipements:[],docs:[],pros:[],travaux:[],acces:[],journalAcces:[],
+  equipements:[],docs:[],pros:[],travaux:[],acces:[],journalAcces:[],sinistres:[],sinistreAttendu:null, // D-201
   fil:[],rappels:[],reserveServie:[],nees:["adresse"],
   questionsPosees:[],dernierJour:"",transmission:null,
   reglages:{texte:"normal"},expediteursOk:[],
@@ -275,6 +275,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}syncDi
 S=load()||etatInitial();
 if(!S.v){S=etatInitial()}
 if(!Array.isArray(S.logements))S.logements=[]; // états enregistrés avant le multi-logement
+if(!Array.isArray(S.sinistres))S.sinistres=[]; // D-201
 (function(){try{const p=new URLSearchParams(location.search).get("canal");if(p)localStorage.setItem("vidom_canal_attente",p)}catch(e){}})(); // ?canal=xxx sur le lien d'entrée : consommé à la création du logement
 
 /* ================= plusieurs logements pour un même compte =================
@@ -534,7 +535,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
     if(S.cree&&S.logement.id&&!connu(S.logement.id)){ // ce que l'appareil regarde n'est pas (encore) dans le compte : on ne l'écrase pas, la synchro suivra
       save();return}
     if(S.logement.id&&S.logement.id!==logementId){mettreDeCote();S=etatPour(logementId)}
-    const [{data:logement},{data:pieces},{data:equipements},{data:artisans},{data:interventions},{data:documents},{data:rappels},{data:expediteurs},{data:fil},{data:etatRow},{data:guideInviteRow},{data:sejoursInvitesRows}]=await Promise.all([
+    const [{data:logement},{data:pieces},{data:equipements},{data:artisans},{data:interventions},{data:documents},{data:rappels},{data:expediteurs},{data:fil},{data:etatRow},{data:guideInviteRow},{data:sejoursInvitesRows},{data:sinistresRows}]=await Promise.all([
       supa.from("logements").select("*").eq("id",logementId).maybeSingle(),
       supa.from("pieces").select("*").eq("logement_id",logementId),
       supa.from("equipements").select("*").eq("logement_id",logementId),
@@ -547,6 +548,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
       supa.from("etat_logement").select("*").eq("logement_id",logementId).maybeSingle(),
       supa.from("guides_invites").select("*").eq("logement_id",logementId).maybeSingle(),
       supa.from("sejours_invites").select("*").eq("logement_id",logementId).order("cree_le",{ascending:false}),
+      supa.from("sinistres").select("*").eq("logement_id",logementId).order("created_at",{ascending:false}), // D-201
     ]);
     if(!logement){save();return}
     const chemins=(documents||[]).map(d=>d.chemin_stockage).filter(Boolean);
@@ -567,7 +569,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
       risquesNaturels:logement.risques_naturels||null,
     });
     S.pieces=(pieces||[]).map(p=>({id:p.id,type:p.type_piece||"autre",nom:p.nom,photos:[]}));
-    S.pros=(artisans||[]).map(a=>({id:a.id,nom:a.nom,metier:a.metier||"",tel:a.telephone||"",mail:a.email||"",ville:a.ville||"",categorie:a.categorie||"",interventions:[],avis:(a.memo&&a.memo.avis)||[],vocales:(a.memo&&a.memo.vocales)||[]}));
+    S.pros=(artisans||[]).map(a=>({id:a.id,nom:a.nom,metier:a.metier||"",tel:a.telephone||"",mail:a.email||"",ville:a.ville||"",categorie:a.categorie||"",contrat:a.numero_contrat||"",interventions:[],avis:(a.memo&&a.memo.avis)||[],vocales:(a.memo&&a.memo.vocales)||[]})); // D-201 : numero_contrat
     S.travaux=(interventions||[]).map(iv=>({id:iv.id,titre:iv.type_intervention||"Travaux",par:iv.artisan_nom||"",date:iv.date_intervention||"",montant:iv.cout||0,docs:(documents||[]).filter(r=>r.intervention_id===iv.id).map(r=>r.id)}));
     const photoParEquip={};const docsBruts=[];
     (documents||[]).forEach(r=>{
@@ -582,7 +584,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
         date:(r.date_document||(r.created_at||"").slice(0,10)),fournisseur:r.fournisseur||"",montant:r.montant_ttc,
         lie:r.equipement_id||"",travaux:iv?(iv.type_intervention||""):"",garantie:r.date_garantie_fin||"",
         img:r.chemin_stockage?(urlParChemin[r.chemin_stockage]||null):null,pdf:r.mime_type==="application/pdf",chemin:r.chemin_stockage||null,
-        recu:r.source==="adresse_vidom"?"adresse":"photo",dateRecu:(r.created_at||"").slice(0,10),notes:r.notes||""}; // D-198
+        recu:r.source==="adresse_vidom"?"adresse":"photo",dateRecu:(r.created_at||"").slice(0,10),notes:r.notes||"",sinistre:r.sinistre_id||"",sinRole:r.sinistre_role||""}; // D-198, D-201
     });
     S.equipements=(equipements||[]).map(r=>{
       const photo=photoParEquip[r.id];
@@ -601,6 +603,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
     lireCourrielMensuel(); // D-186
     S.fil=(fil||[]).map(f=>({id:f.id,d:f.horodatage,fait:!!f.fait,type:f.type,...(f.donnees||{})}));
     S.guideInvite=guideInviteRow?{equipementIds:guideInviteRow.equipement_ids||[],message:guideInviteRow.message_accueil||""}:null;
+    S.sinistres=(sinistresRows||[]).map(r=>({id:r.id,equip:r.equipement_id||null,equipNom:(r.lecture&&r.lecture.equipNom)||"",cause:r.cause||"autre",quand:r.date_sinistre||"",quoi:r.description||"",tiers:r.tiers||"aucun",tiersQui:r.tiers_qui||"",mesures:r.mesures||"",etat:r.etat||"ouvert",numero:r.numero_assureur||"",assureurId:r.assureur_id||null,assureurNom:r.assureur_nom||"",contrat:r.numero_contrat||"",declaration:r.declaration||{},res:(r.lecture&&r.lecture.res)||{declaration:{},garantie:{}},delai:r.delai||{},docsLus:(r.lecture&&r.lecture.docsLus)||[],estimeLe:(r.lecture&&r.lecture.estimeLe)||null,voisin:(r.voisin&&r.voisin.nom!==undefined)?r.voisin:null,reglement:r.reglement||null,envoyeLe:r.envoye_le||null,closLe:r.clos_le||null,d:r.created_at||now()})); // D-201, D-202
     S.sejoursInvites=(sejoursInvitesRows||[]).map(s=>({id:s.id,nom:s.nom_invite||"",code:s.code,debut:s.debut,fin:s.fin,creeLe:s.cree_le,ouvertLe:s.ouvert_le,revoqueLe:s.revoque_le}));
     if(etatRow&&etatRow.etat){
       const et=etatRow.etat;
@@ -662,7 +665,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
       risques_naturels:lig.risquesNaturels||null,canal_acquisition:lig.canalAcquisition||null,
     },{onConflict:"id"});
     if(S.pieces.length)await supa.from("pieces").upsert(S.pieces.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,type_piece:p.type||null})),{onConflict:"id"});
-    if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null,categorie:p.categorie||null,memo:{avis:p.avis||[],vocales:(p.vocales||[]).filter(v=>v.chemin).map(v=>({id:v.id,chemin:v.chemin,d:v.d,duree:v.duree||0}))}})),{onConflict:"id"});
+    if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null,categorie:p.categorie||null,numero_contrat:p.contrat||null,memo:{avis:p.avis||[],vocales:(p.vocales||[]).filter(v=>v.chemin).map(v=>({id:v.id,chemin:v.chemin,d:v.d,duree:v.duree||0}))}})),{onConflict:"id"});
     if(S.travaux.length)await supa.from("interventions").upsert(S.travaux.map(t=>({id:t.id,logement_id:lig.id,type_intervention:t.titre||"Travaux",artisan_nom:t.par||null,date_intervention:t.date||null,cout:t.montant||null})),{onConflict:"id"});
     if(S.equipements.length){
       await supa.from("equipements").upsert(S.equipements.map(e=>({
@@ -693,12 +696,14 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
             mime_type:d.pdf?"application/pdf":"image/jpeg",
             date_document:d.date?d.date.slice(0,10):null,date_echeance:d.echeance?d.echeance.slice(0,10):null,fournisseur:d.fournisseur||null,montant_ttc:d.montant,
             date_garantie_fin:d.garantie||null,source:d.recu==="adresse"?"adresse_vidom":"manuel",uploaded_by:session.user.id,
-            notes:d.notes||null // D-198
+            notes:d.notes||null, // D-198
+            sinistre_id:S.sinistres.some(s=>s.id===d.sinistre)?d.sinistre:null,sinistre_role:d.sinistre&&["transmis","recu"].includes(d.sinRole)?d.sinRole:null // D-201
           };
         });
         await supa.from("documents").upsert(lignesDoc,{onConflict:"id"});
       }
     }
+    if(S.sinistres.length)await supa.from("sinistres").upsert(S.sinistres.map(s=>({id:s.id,logement_id:lig.id,equipement_id:S.equipements.some(e=>e.id===s.equip)?s.equip:null,cause:s.cause||"autre",date_sinistre:s.quand||null,description:s.quoi||null,tiers:s.tiers||"aucun",tiers_qui:s.tiersQui||null,mesures:s.mesures||null,etat:["ouvert","attente","clos"].includes(s.etat)?s.etat:"ouvert",numero_assureur:s.numero||null,assureur_id:S.pros.some(p=>p.id===s.assureurId)?s.assureurId:null,assureur_nom:s.assureurNom||null,numero_contrat:s.contrat||null,declaration:s.declaration||{},lecture:{res:s.res||{},docsLus:s.docsLus||[],equipNom:s.equipNom||"",estimeLe:s.estimeLe||null},delai:s.delai||{},voisin:s.voisin||{},reglement:s.reglement||{},envoye_le:s.envoyeLe||null,clos_le:s.closLe||null,updated_at:new Date().toISOString()})),{onConflict:"id"}); // D-201
     if(S.rappels.length)await supa.from("rappels").upsert(S.rappels.map(r=>({id:r.id,logement_id:lig.id,texte:r.t,equipement_id:S.equipements.some(e=>e.id===r.equip)?r.equip:null,date_echeance:r.du||null,fait:!!r.fait,info:!!r.info})),{onConflict:"id"});
     if(S.expediteursOk.length)await supa.from("expediteurs_autorises").upsert(S.expediteursOk.map(exp=>({logement_id:lig.id,expediteur:exp})),{onConflict:"logement_id,expediteur"});
     if(S.fil.length){
@@ -788,7 +793,7 @@ async function reconnaitre(file,pieceId,dataUrl,pdf,chemin){
       Object.assign(rec,{k:"doc",type:c.type||"autre",titre:c.titre||"Document",date:c.date_document||today(),
         fournisseur:c.fournisseur||"",montant:c.montant_ttc??null,echeance:c.date_echeance||"",lie:"",travaux:"",appareil:c.appareil_nom?{nom:c.appareil_nom,marque:c.appareil_marque||"",modele:c.appareil_modele||""}:null,garantie:c.date_fin_garantie||"", // D-179 : la garantie et son extension se lisent sur la facture
         
-        catFournisseur:c.categorie_fournisseur||"",metierFournisseur:c.metier_fournisseur||""}); // D-170
+        catFournisseur:c.categorie_fournisseur||"",metierFournisseur:c.metier_fournisseur||"",numeroContrat:c.numero_contrat||""}); // D-170, D-201
     }else{
       rec.k="inconnu";rec.titre="Photo non reconnue";
     }
@@ -896,6 +901,8 @@ function ranger(rec){ // C'est bien ça
     }
     if(rec.travaux){let t=S.travaux.find(t=>t.titre===rec.travaux);if(!t){t={id:uid(),titre:rec.travaux,par:rec.fournisseur,date:rec.date,montant:0,docs:[]};S.travaux.push(t)}t.docs.push(d.id);if(rec.type==="facture")t.montant=rec.montant;if(rec.date>t.date)t.date=rec.date}
     if(d.type==="assurance")suivreAssurance(d); // D-151, 16 septembre 2026
+    if(rec.numeroContrat&&rec.fournisseur){const pa=S.pros.find(p=>p.nom===rec.fournisseur);if(pa&&!pa.contrat)pa.contrat=rec.numeroContrat} // D-201 : le numéro de contrat lu sur le document va sur la fiche de l'assureur
+    if(S.sinistreAttendu){d.sinistre=S.sinistreAttendu.id;d.sinRole=S.sinistreAttendu.role;S.sinistreAttendu=null} // D-201 : photographié depuis un dossier de sinistre
   }
   if(rec.pieceId&&rec.pieceId!=="maison"&&rec.img&&!rec.pdf){const p=pieceParId(rec.pieceId);if(p&&p.photos.length<6)p.photos.push(rec.img)}
   else if(rec.pieceId&&rec.pieceId!=="maison"){const p=pieceParId(rec.pieceId);if(p)p.photos.push(null)}
@@ -947,6 +954,7 @@ const CARTES=[
   {id:"documents",nom:"Documents",ico:"doc",quand:"au premier document gardé",sub:()=>"Tout ce qui est conservé",nee:()=>S.docs.length>0,n:()=>S.docs.length},
   {id:"artisans",nom:"Les artisans de la maison",ico:"gens",quand:"au premier professionnel connu",sub:()=>S.pros.filter(p=>categorieDe(p)==="artisan").slice(0,3).map(p=>p.nom).join(", "),nee:()=>S.pros.some(p=>categorieDe(p)==="artisan"),n:()=>S.pros.filter(p=>categorieDe(p)==="artisan").length},
   {id:"contacts",nom:"Notaire, syndic, assurance, fournisseurs",ico:"fichier",quand:"au premier contact non-artisan connu",sub:()=>S.pros.filter(p=>categorieDe(p)!=="artisan").slice(0,3).map(p=>p.nom).join(", "),nee:()=>S.pros.some(p=>categorieDe(p)!=="artisan"),n:()=>S.pros.filter(p=>categorieDe(p)!=="artisan").length}, // D-168
+  {id:"sinistres",nom:"Sinistres",ico:"envoi",quand:"au premier sinistre déclaré",sub:()=>{const o=S.sinistres.filter(s=>s.etat!=="clos").length;return o?(o===1?"Un dossier ouvert":o+" dossiers ouverts"):"Les dossiers, clos et gardés"},nee:()=>S.sinistres.length>0,n:()=>S.sinistres.filter(s=>s.etat!=="clos").length}, // D-201
   {id:"travaux",nom:"Travaux",ico:"travaux",quand:"au premier devis",sub:()=>"Chantiers, devis, ce que ça a coûté",nee:()=>S.travaux.length>0,n:()=>S.travaux.length},
   {id:"echanges",nom:"Échanges et accès",ico:"echanges",quand:"au premier accès ouvert à un tiers",sub:()=>"Qui voit quoi, pour combien de temps",nee:()=>S.acces.length>0,n:()=>S.acces.filter(a=>a.ouvert).length},
   {id:"transmission",nom:"Transmission",ico:"cle",quand:"le jour où la maison change de mains",sub:()=>"Les dossiers, le livre du logement",nee:()=>!!S.transmission},
@@ -1119,6 +1127,7 @@ function memoireLogement(){ // résumé compact des vraies données du logement,
     equipements:S.equipements.map(e=>({id:e.id,nom:e.nom,marque:e.marque,modele:e.modele,achat:e.achat,garantie:e.garantie,installateur:e.installateur,etat:e.etat,notice:e.notice,entretien:e.entretien})),
     pros:S.pros.map(p=>({id:p.id,nom:p.nom,metier:p.metier,interventions:p.interventions})),
     travaux:S.travaux.map(t=>({id:t.id,titre:t.titre,par:t.par,date:t.date,montant:t.montant})),
+    sinistres:S.sinistres.map(s=>({id:s.id,cause:s.cause,date:s.quand,etat:s.etat,numero:s.numero,assureur:s.assureurNom})), // D-201
   };
 }
 async function raisonEchec(error){ // le message que la fonction a vraiment renvoyé, quand il y en a un
@@ -1574,7 +1583,7 @@ function entreeFil(e){
   if(e.type==="rappel"&&!e.fait)boutons=e.info?`<div class="row"><button class="btn grow" onclick="filDecider('${e.id}','fait')">Compris</button></div>`:`<div class="row wrap">${e.pro?`<button class="btn grow" onclick="filDecider('${e.id}','rappeler')">Rappeler ${h(e.pro)}</button>`:""}<button class="btn" onclick="filDecider('${e.id}','fait')">Déjà fait</button></div>`;
   if(e.type==="question"&&!e.fait)boutons=`<div class="row wrap">${e.boutons.map((b,i)=>`<button class="btn ${i===0?"primary":""} ${i===0?"grow":""}" onclick="filDecider('${e.id}','${b[1]}')">${h(b[0])}</button>`).join("")}</div>`;
   if(e.type==="naissance"||e.type==="acces")boutons=`<div class="row"><a class="btn" href="${e.go}">Voir</a></div>`;
-  if(e.type==="sinistre")boutons=`<div class="row"><button class="btn grow" onclick="montrerSinistre('${e.id}')">Revoir la déclaration</button></div>`; // D-200
+  if(e.type==="sinistre")boutons=`<div class="row"><button class="btn grow" onclick="montrerSinistre('${e.id}')">${e.sinistreId?"Ouvrir le dossier":"Revoir la déclaration"}</button></div>`; // D-200, D-201
   if(e.propose)boutons+=`<div class="card soft" style="gap:8px;padding:12px 14px"><p class="small">Toujours garder ce que ${h(e.propose)} envoie ?</p><div class="row"><button class="btn sm" onclick="toujoursAccepter('${e.id}',true)">Oui</button><button class="btn sm" onclick="toujoursAccepter('${e.id}',false)">Non, me demander</button></div></div>`;
   corps=`<p>${h(e.t)}</p>${e.t2?`<p class="small muted">${h(e.t2)}</p>`:""}${e.t3?`<p class="small muted">${h(e.t3)}</p>`:""}`;
   return `<div class="card fadein ${e.type==="recu"&&!e.fait?"attn":""}"><div class="split">${quand}${ico}</div>${corps}${boutons}</div>`;
@@ -1672,7 +1681,7 @@ V.carte=id=>{
   if(id==="adresse")return V["adresse-vidom"]();
   const c=CARTES.find(x=>x.id===id);if(!c)return V.maison();
   if(!c.nee())return `<div class="view"><div class="card dash"><p>${h(c.nom)} apparaîtra ${h(c.quand)}.</p></div><a class="btn" href="#/maison">Ma maison</a></div>`;
-  const F={recus:vRecus,garanties:vGaranties,equipements:vEquipements,documents:vDocuments,artisans:vArtisans,contacts:vContactsAutres,travaux:vTravaux,echanges:vEchanges,transmission:vTransmission};
+  const F={recus:vRecus,garanties:vGaranties,equipements:vEquipements,documents:vDocuments,artisans:vArtisans,contacts:vContactsAutres,travaux:vTravaux,sinistres:vSinistres,echanges:vEchanges,transmission:vTransmission};
   return F[id]();
 };
 /* D-177 : le sas de réception. Tout ce qu'on a envoyé à l'adresse VIDOM, au même endroit :
@@ -1798,15 +1807,25 @@ function probleme(id){const e=S.equipements.find(x=>x.id===id);const garanti=e.g
    Le gardien dit ce qui s'est passé. VIDOM relit les documents d'assurance que la maison garde (fonction declarer-sinistre,
    qui appelle Claude), restitue ce que dit le contrat — garantie, franchise, exclusions — sans conclure à la place de
    l'assureur sur un cas ambigu, applique elle-même le cadre légal français (délai de déclaration, convention IRSI), puis
-   propose la déclaration pré-remplie. Le gardien relit, copie ou envoie depuis sa messagerie. Tout reste dans le journal. */
+   propose la déclaration pré-remplie. Le gardien relit, copie ou envoie depuis sa messagerie.
+   D-201 (18 septembre 2026, après le premier test) : le dossier de sinistre, comme un livre — ouvert, en attente de
+   l'assureur, clos ; la déclaration, les pièces transmises, les réponses reçues (table sinistres). La fiche de l'assureur
+   (nom, courriel, téléphone, numéro de contrat) se complète au passage, pré-remplie quand le contrat existe. Le voisin en
+   cause : ses coordonnées, a-t-il VIDOM, un message préparé. Et sans contrat dans la maison, VIDOM n'appelle personne :
+   elle rédige la déclaration elle-même, tout de suite. */
 const CAUSES_SINISTRE=[["panne","Panne d'un appareil"],["degat_eaux","Dégât des eaux, fuite"],["electrique","Dommage électrique, surtension"],["incendie","Incendie, fumée"],["tempete","Tempête, grêle, neige"],["vol","Vol, effraction, vandalisme"],["bris","Bris de glace"],["catnat","Catastrophe naturelle"],["autre","Autre"]];
 const TIERS_SINISTRE=[["aucun","Non, personne d'autre"],["voisin","Un voisin ou l'immeuble"],["autre","Un professionnel, une autre personne"],["inconnu","Je ne sais pas"]];
+const ETATS_SINISTRE={ouvert:"Ouvert",attente:"En attente de l'assureur",clos:"Clos"};
 const PAGES_LUES_SINISTRE=30; // les exclusions sont souvent loin dans les conditions générales : on relit plus large que pour un classement
+const LIEN_VIDOM="https://muxoik.github.io/VIDOM/maquette/";
+// D-202 : le dossier de sinistre est un dossier payant (D-060) — la première année, tout est offert (D-084). Le geste de régler existe dès maintenant, à 0 €. D-203 : le prix est tranché, 19 € par dossier, pour sa constitution.
+const PRIX_DOSSIER_SINISTRE_REFERENCE=19,PRIX_DOSSIER_SINISTRE=0;
 let sinistreEnCours=null;
+const nomCause=c=>(CAUSES_SINISTRE.find(x=>x[0]===c)||["","Sinistre"])[1];
 function docsAssurance(){ // les documents d'assurance que la maison garde, les plus utiles d'abord : le contrat avant l'attestation, le plus récent avant l'ancien
   const assureurs=S.pros.filter(p=>categorieDe(p)==="assureur").map(p=>p.nom);
   const poids=d=>(d.type==="assurance"?2:0)+(d.type==="contrat"?2:0)+(d.pdf?1:0)+(/condition|contrat|g[ée]n[ée]rale|particuli/i.test(d.titre||"")?2:0)-(/attestation/i.test(d.titre||"")?1:0);
-  return S.docs.filter(d=>d.chemin&&(d.type==="assurance"||(["contrat","devis","courrier","autre","garantie"].includes(d.type)&&assureurs.includes(d.fournisseur))))
+  return S.docs.filter(d=>d.chemin&&!d.sinistre&&(d.type==="assurance"||(["contrat","devis","courrier","autre","garantie"].includes(d.type)&&assureurs.includes(d.fournisseur))))
     .sort((a,b)=>(poids(b)-poids(a))||String(b.date||"").localeCompare(String(a.date||"")));
 }
 function assureurConnu(){return S.pros.find(p=>categorieDe(p)==="assureur")||null}
@@ -1820,100 +1839,286 @@ function delaiSinistre(cause,quand){ // France, code des assurances, article L.1
   if(cause==="catnat")return {jours:30,limite:null,base:"30 jours après la publication de l'arrêté de catastrophe naturelle au Journal officiel (article L.125-2 du code des assurances)"};
   return {jours:5,limite:joursOuvresApres(quand,5),base:"5 jours ouvrés (article L.113-2 du code des assurances)"};
 }
-function sinistre(id){ // point d'entrée : depuis « Un problème avec… », depuis l'aide, ou depuis le journal
+function sinistre(id){ // point d'entrée : depuis « Un problème avec… », depuis l'aide, ou pour la maison elle-même
   const e=id?S.equipements.find(x=>x.id===id):null;
-  sinistreEnCours={equip:e?e.id:null,cause:e?"panne":"",quand:today(),quoi:"",tiers:"aucun",tiersQui:"",mesures:""};
+  const ass=assureurConnu();
+  sinistreEnCours={equip:e?e.id:null,cause:e?"panne":"",quand:today(),quoi:"",tiers:"aucun",tiersQui:"",mesures:"",
+    voisin:{nom:"",mail:"",aVidom:"non"},
+    assureur:{id:ass?ass.id:null,nom:ass?ass.nom:"",mail:ass?ass.mail:"",tel:ass?ass.tel:"",contrat:ass?(ass.contrat||""):""}};
   formSinistre();
 }
-function lireFormSinistre(){const g=k=>{const el=document.getElementById("sin-"+k);return el?el.value:""};const s=sinistreEnCours;s.quand=g("quand")||s.quand;s.quoi=g("quoi");s.tiersQui=g("qui");s.mesures=g("mesures")}
-function choixSinistre(k,v){lireFormSinistre();sinistreEnCours[k]=v;formSinistre()}
+function lireFormSinistre(){const g=k=>{const el=document.getElementById("sin-"+k);return el?el.value:null};const s=sinistreEnCours;
+  const v=(k,cible,champ)=>{const x=g(k);if(x!==null)cible[champ]=x};
+  v("quand",s,"quand");v("quoi",s,"quoi");v("qui",s,"tiersQui");v("mesures",s,"mesures");
+  v("vnom",s.voisin,"nom");v("vmail",s.voisin,"mail");
+  v("anom",s.assureur,"nom");v("amail",s.assureur,"mail");v("atel",s.assureur,"tel");v("acontrat",s.assureur,"contrat");
+  if(!s.quand)s.quand=today();
+}
+function choixSinistre(k,v){lireFormSinistre();if(k==="voisin.aVidom")sinistreEnCours.voisin.aVidom=v;else sinistreEnCours[k]=v;formSinistre()}
 function formSinistre(){
   const s=sinistreEnCours,e=s.equip?S.equipements.find(x=>x.id===s.equip):null;
-  const docs=docsAssurance(),ass=assureurConnu();
-  const chips=(liste,k)=>`<div class="row wrap" style="gap:6px">${liste.map(([v,t])=>`<button type="button" class="chip btn-chip ${s[k]===v?"on":""}" onclick="choixSinistre('${k}','${v}')">${h(t)}</button>`).join("")}</div>`;
-  modal(`<h2>Déclarer un sinistre</h2><p class="muted">${e?`Sur ${h(lc(e.nom))}${e.marque?" "+h(e.marque):""}. `:""}Dites ce qui s'est passé : VIDOM relit votre contrat et prépare la déclaration. Vous relisez, vous envoyez.</p>
-    <div class="stack" style="gap:14px">
-      <div class="stack" style="gap:6px"><span class="b">Que s'est-il passé ?</span>${chips(CAUSES_SINISTRE,"cause")}</div>
+  const docs=docsAssurance();
+  const chips=(liste,k,val)=>`<div class="row wrap" style="gap:6px">${liste.map(([v,t])=>`<button type="button" class="chip btn-chip ${val===v?"on":""}" onclick="choixSinistre('${k}','${v}')">${h(t)}</button>`).join("")}</div>`;
+  modal(`<h2>Déclarer un sinistre</h2><p class="muted">${e?`Sur ${h(lc(e.nom))}${e.marque?" "+h(e.marque):""}. `:""}Dites ce qui s'est passé : VIDOM ${docs.length?"relit votre contrat et ":""}prépare la déclaration. Vous relisez, vous envoyez.</p>
+    <div class="stack" style="gap:14px;max-height:62vh;overflow:auto;padding-right:2px">
+      <div class="stack" style="gap:6px"><span class="b">Que s'est-il passé ?</span>${chips(CAUSES_SINISTRE,"cause",s.cause)}</div>
       <div class="stack" style="gap:6px"><label class="b" for="sin-quand">Quand ?</label><input class="input" type="date" id="sin-quand" value="${h(s.quand)}" max="${today()}"></div>
       <div class="stack" style="gap:6px"><label class="b" for="sin-quoi">En quelques mots</label><textarea class="input" id="sin-quoi" rows="3" placeholder="${e?`Par exemple : ${h(lc(e.nom))} ne s'allume plus depuis ce matin, aucun code d'erreur.`:"Par exemple : fuite sous l'évier, le parquet de la cuisine est gondolé."}">${h(s.quoi)}</textarea></div>
-      <div class="stack" style="gap:6px"><span class="b">Quelqu'un d'autre est-il en cause ?</span>${chips(TIERS_SINISTRE,"tiers")}${s.tiers==="voisin"||s.tiers==="autre"?`<input class="input" id="sin-qui" placeholder="${s.tiers==="voisin"?"Par exemple : l'appartement du dessus, M. Martin":"Qui ? Par exemple : le plombier venu le 12"}" value="${h(s.tiersQui)}">`:""}</div>
+      <div class="stack" style="gap:6px"><span class="b">Quelqu'un d'autre est-il en cause ?</span>${chips(TIERS_SINISTRE,"tiers",s.tiers)}
+        ${s.tiers==="voisin"?`<input class="input" id="sin-vnom" placeholder="Le voisin : son nom, son appartement" value="${h(s.voisin.nom)}"><input class="input" id="sin-vmail" type="email" placeholder="Son courriel (pour lui écrire)" value="${h(s.voisin.mail)}"><span class="small muted">A-t-il VIDOM ?</span>${chips([["oui","Oui"],["non","Non"],["inconnu","Je ne sais pas"]],"voisin.aVidom",s.voisin.aVidom)}`:""}
+        ${s.tiers==="autre"?`<input class="input" id="sin-qui" placeholder="Qui ? Par exemple : le plombier venu le 12" value="${h(s.tiersQui)}">`:""}</div>
       <div class="stack" style="gap:6px"><label class="b" for="sin-mesures">Ce que vous avez déjà fait <span class="small muted" style="font-weight:400">(facultatif)</span></label><textarea class="input" id="sin-mesures" rows="2" placeholder="Coupé l'eau, pris des photos, prévenu le voisin…">${h(s.mesures)}</textarea></div>
-      <p class="small faint">${docs.length?`VIDOM relira ${docs.length===1?"le document d'assurance":docs.slice(0,3).length+" documents d'assurance"} que la maison garde${ass?" ("+h(ass.nom)+")":""} : ${docs.slice(0,3).map(d=>h(d.titre)).join(", ")}.`:"La maison n'a encore aucun contrat d'assurance : VIDOM préparera la déclaration, mais ne pourra pas dire ce que couvre votre contrat. Photographiez-le (conditions particulières et générales) pour la prochaine fois."}</p>
+      <p class="small faint">${docs.length?`VIDOM relira ${docs.length===1?"le document d'assurance":docs.slice(0,3).length+" documents d'assurance"} que la maison garde : ${docs.slice(0,3).map(d=>h(d.titre)).join(", ")}.`:"La maison n'a encore aucun contrat d'assurance : VIDOM préparera la déclaration sans attendre, mais ne pourra pas dire ce que couvre votre contrat. Photographiez-le (conditions particulières et générales) pour la prochaine fois."}</p>
     </div>
-    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="lancerSinistre()">${I.doc} Préparer la déclaration</button><button class="btn" onclick="closeModal()">Annuler</button></div>`);
+    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="formAssureur()">Continuer ${I.fleche}</button><button class="btn" onclick="closeModal()">Annuler</button></div>`);
+}
+/* D-201 : l'assureur, avant d'écrire. Pré-rempli quand la maison le connaît ; sinon c'est le moment de le garder. */
+function formAssureur(){
+  lireFormSinistre();const s=sinistreEnCours,a=s.assureur;
+  if(!s.cause){toast("Dites d'abord ce qui s'est passé.");formSinistre();return}
+  if(!s.quoi.trim()&&s.cause==="autre"){toast("Quelques mots suffisent.");formSinistre();return}
+  modal(`<h2>Votre assureur</h2><p class="muted">${a.id?"C'est ce que la maison sait de lui. Complétez ce qui manque.":"La maison ne connaît pas encore votre assureur : ce que vous écrivez ici reste dans sa mémoire, pour cette fois et les suivantes."}</p>
+    <div class="stack" style="gap:10px">
+      <label class="f"><span>Compagnie ou courtier</span><input class="input" id="sin-anom" placeholder="AXA, MAIF, Allianz…" value="${h(a.nom)}"></label>
+      <label class="f"><span>Courriel pour les sinistres</span><input class="input" id="sin-amail" type="email" placeholder="sinistres@…" value="${h(a.mail)}"></label>
+      <label class="f"><span>Téléphone</span><input class="input" id="sin-atel" type="tel" placeholder="01 …" value="${h(a.tel)}"></label>
+      <label class="f"><span>Numéro de contrat</span><input class="input" id="sin-acontrat" placeholder="Sur les conditions particulières ou l'attestation" value="${h(a.contrat)}"></label>
+      <p class="small faint">Tout est facultatif. Sans courriel, VIDOM préparera la déclaration et vous l'enverrez par le moyen que vous voulez.</p>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="formReglement()">Continuer ${I.fleche}</button><button class="btn" onclick="lireFormSinistre();formSinistre()">Retour</button></div>`);
+}
+/* D-202 : constituer et gérer un dossier de sinistre est un service de VIDOM. On le règle — 0 € la première année — pour que le geste existe dès les tests. */
+function formReglement(){
+  lireFormSinistre();
+  modal(`<h2>Le dossier de sinistre</h2><p class="muted">VIDOM constitue le dossier, relit le contrat, dit la franchise et estime ce que vous pouvez récupérer d'après les pièces fournies, prépare la déclaration, garde les pièces et les réponses jusqu'à la clôture.</p>
+    <div class="book" style="text-align:center"><p class="small muted">Constitution et gestion du dossier</p><p style="font-size:2em;font-weight:600;margin:6px 0">Vous devez régler ${PRIX_DOSSIER_SINISTRE} €</p><p class="small muted">${PRIX_DOSSIER_SINISTRE===0?`Offert la première année, à tous. Ensuite ${PRIX_DOSSIER_SINISTRE_REFERENCE} € par dossier, réglés une fois, pour toute sa durée.`:"Réglé une fois, pour toute la durée du dossier."}</p></div>
+    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="lancerSinistre()">Régler ${PRIX_DOSSIER_SINISTRE} € et préparer la déclaration</button><button class="btn" onclick="formAssureur()">Retour</button></div>
+    <p class="small faint" style="margin-top:8px">Aucun paiement n'est demandé aujourd'hui : la mémoire du logement reste gratuite, seuls les dossiers qui la transforment en service seront payants, plus tard.</p>`);
+}
+function garderAssureur(a){ // la fiche de l'assureur se complète au passage, sans écraser ce qu'on savait
+  const nom=(a.nom||"").trim();if(!nom)return null;
+  let p=a.id?S.pros.find(x=>x.id===a.id):null;
+  if(!p)p=S.pros.find(x=>x.nom.toLowerCase()===nom.toLowerCase());
+  if(!p)p=connaitrePro(nom,"Assureur du logement",today(),"assureur","Assurance habitation");
+  if(a.mail&&a.mail.trim())p.mail=a.mail.trim();
+  if(a.tel&&a.tel.trim())p.tel=a.tel.trim();
+  if(a.contrat&&a.contrat.trim())p.contrat=a.contrat.trim();
+  if(!p.categorie||p.categorie==="artisan")p.categorie="assureur";
+  return p;
+}
+function declarationLocale(s,e,ass){ // sans contrat à relire, VIDOM écrit elle-même, tout de suite, à partir de ce que la maison sait
+  const L=S.logement,quand=dateFr(s.quand);
+  const factures=e?docsLies(e).filter(d=>d.type==="facture"):[];
+  const lignes=["Madame, Monsieur,","",`Je vous déclare un sinistre survenu le ${quand} dans mon logement situé ${L.adresse}, ${L.cp} ${L.ville}${ass&&ass.contrat?` (contrat n° ${ass.contrat})`:""}.`,"",`Nature des faits : ${nomCause(s.cause).toLowerCase()}${s.quoi.trim()?" — "+s.quoi.trim().replace(/\.$/,""):""}.`];
+  if(e)lignes.push("",`Appareil concerné : ${e.nom}${e.marque?" "+e.marque:""}${e.modele?", modèle "+e.modele:""}${e.ref?", n° de série "+e.ref:""}${e.achat?", acheté le "+dateFr(e.achat):""}${factures[0]&&factures[0].fournisseur?" chez "+factures[0].fournisseur:""}${e.installateur?", installé par "+e.installateur:""}.`);
+  if(s.mesures.trim())lignes.push("",`Mesures prises : ${s.mesures.trim()}.`);
+  if(s.tiers==="voisin")lignes.push("",`Un logement voisin semble concerné${s.voisin.nom?" ("+s.voisin.nom+")":""}. Je vous laisse apprécier les responsabilités.`);
+  else if(s.tiers==="autre")lignes.push("",`Une autre personne semble concernée${s.tiersQui?" : "+s.tiersQui:""}. Je vous laisse apprécier les responsabilités.`);
+  else if(s.tiers==="inconnu")lignes.push("","La cause exacte n'est pas encore établie.");
+  const pj=[];if(factures.length)pj.push("la facture d'achat");pj.push("des photos");if(e&&e.garantie)pj.push("la garantie");
+  lignes.push("",`Vous trouverez en pièces jointes ${pj.join(", ")}.`,"","Je vous remercie de me confirmer l'ouverture du dossier et de m'indiquer les pièces complémentaires que vous souhaitez.","","Cordialement,","[Votre nom]");
+  const avant=[];
+  if(s.cause==="panne")avant.push("Une panne relève d'abord de la garantie légale de conformité (deux ans après l'achat) ou de la garantie du fabricant, pas de l'assurance habitation — sauf dommage électrique (surtension, foudre) ou dégât causé par l'appareil.");
+  if(e&&e.garantie&&joursDepuis(e.garantie)<0)avant.push(`${e.nom} est encore sous garantie jusqu'au ${dateFr(e.garantie)} : le service après-vente d'abord.`);
+  avant.push("Photographiez les dégâts avant toute réparation, gardez ce qui est abîmé.");
+  return {contrat_trouve:false,assureur:ass?ass.nom:null,numero_contrat:ass&&ass.contrat?ass.contrat:null,documents_lus:[],garantie:{nom:null,s_applique:"a_verifier",explication:null,franchise:null,plafond:null},exclusions:[],a_verifier:false,pourquoi_a_verifier:null,avant_assureur:avant,pages_manquantes:false,declaration:{objet:`Déclaration de sinistre — ${nomCause(s.cause).toLowerCase()} du ${quand} — ${L.adresse}, ${L.ville}`,texte:lignes.join("\n")},a_joindre:pj.map(x=>x.charAt(0).toUpperCase()+x.slice(1)),manque:["Le contrat d'assurance habitation (conditions particulières et générales), pour que VIDOM dise ce qu'il couvre"],local:true,
+    estimation:{base_pieces:factures.reduce((a,d)=>a+(Number(d.montant)||0),0)||null,franchise_montant:null,plafond_montant:null,vetuste:null,indemnite_min:null,indemnite_max:null,explication:"Sans le contrat, VIDOM ne connaît ni la franchise ni la règle de vétusté : elle ne peut pas estimer ce que vous récupérerez. Les pièces chiffrées sont comptées ; le calcul viendra avec le contrat.",confiance:"faible",regles_appliquees:[],pieces_retenues:factures.filter(d=>d.montant).map(d=>`${d.titre} (${euros(d.montant)})`),pieces_manquantes:["Le contrat d'assurance habitation"]}};
 }
 async function lancerSinistre(){
   lireFormSinistre();const s=sinistreEnCours;
-  if(!s.cause){toast("Dites d'abord ce qui s'est passé.");return}
-  if(!s.quoi.trim()&&s.cause==="autre"){toast("Quelques mots suffisent.");return}
-  if(!supa){toast("Indisponible pour l'instant.");return}
   const e=s.equip?S.equipements.find(x=>x.id===s.equip):null;
+  const ass=garderAssureur(s.assureur);
   const docs=docsAssurance().slice(0,3);
-  modal(`<h2>Un instant</h2><p class="muted" id="sin-attente">${docs.length?"VIDOM relit votre contrat d'assurance…":"VIDOM prépare la déclaration…"}</p><p class="small faint">Cela peut prendre une minute quand le contrat est long.</p>`);
-  const contrats=[];
-  for(const d of docs){
-    try{
-      const {data}=await supa.storage.from("logement-files").createSignedUrl(d.chemin,600);
-      const blob=await (await fetch(data.signedUrl)).blob();
-      const mimeType=d.pdf?"application/pdf":(blob.type||"image/jpeg");
-      const lu=await pourLecture(blob,mimeType,PAGES_LUES_SINISTRE);
-      contrats.push({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,mimeType,...lu});
-    }catch(err){console.error("sinistre, document illisible",d.titre,err)}
-  }
-  const factures=e?docsLies(e).map(d=>({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,montant:d.montant,garantie:d.garantie||""})):[];
-  const corps={
-    sinistre:{cause:s.cause,quand:s.quand,quoi:s.quoi,tiers:s.tiers,tiersQui:s.tiersQui,mesures:s.mesures},
-    logement:{nom:S.logement.nom,adresse:S.logement.adresse,cp:S.logement.cp,ville:S.logement.ville,pays:"France",annee:S.logement.annee,surface:S.logement.surface},
-    equipement:e?{nom:e.nom,marque:e.marque,modele:e.modele,ref:e.ref,achat:e.achat,fin_garantie:e.garantie||null,sous_garantie:!!(e.garantie&&joursDepuis(e.garantie)<0),installateur:e.installateur,piece:nomPiece(e.piece),factures}:null,
-    contrats,
-  };
   let res=null,raison="";
-  try{
-    const {data,error}=await supa.functions.invoke("declarer-sinistre",{body:corps});
-    if(error||!data||!data.declaration){raison=await raisonEchec(error);if(raison)console.error("declarer-sinistre :",raison)}
-    else res=data;
-  }catch(err){console.error("declarer-sinistre",err)}
-  if(!res){
-    modal(`<h2>Cela n'a pas fonctionné</h2><p class="muted">${h(serviceNonConfigure(raison)?"Le service de lecture n'est pas configuré.":(raison||"VIDOM n'a pas pu relire le contrat. Réessayez dans un instant."))}</p><div class="row"><button class="btn primary grow" onclick="formSinistre()">Revenir</button><button class="btn" onclick="closeModal()">Fermer</button></div>`);
-    return;
+  if(!docs.length||!supa){
+    res=declarationLocale(s,e,ass); // rien à relire : pas d'attente, pas d'appel
+  }else{
+    modal(`<h2>Un instant</h2><p class="muted">VIDOM relit votre contrat d'assurance…</p><p class="small faint">Cela peut prendre une minute quand le contrat est long.</p>`);
+    const contrats=[];
+    for(const d of docs){
+      try{
+        const {data}=await supa.storage.from("logement-files").createSignedUrl(d.chemin,600);
+        const blob=await (await fetch(data.signedUrl)).blob();
+        const mimeType=d.pdf?"application/pdf":(blob.type||"image/jpeg");
+        const lu=await pourLecture(blob,mimeType,PAGES_LUES_SINISTRE);
+        contrats.push({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,mimeType,...lu});
+      }catch(err){console.error("sinistre, document illisible",d.titre,err)}
+    }
+    const factures=e?docsLies(e).map(d=>({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,montant:d.montant,garantie:d.garantie||""})):[];
+    const corps={
+      sinistre:{cause:s.cause,quand:s.quand,quoi:s.quoi,tiers:s.tiers,tiersQui:s.tiers==="voisin"?s.voisin.nom:s.tiersQui,mesures:s.mesures},
+      logement:{nom:S.logement.nom,adresse:S.logement.adresse,cp:S.logement.cp,ville:S.logement.ville,pays:"France",annee:S.logement.annee,surface:S.logement.surface,assureur:ass?{nom:ass.nom,numero_contrat:ass.contrat||null}:null},
+      equipement:e?{nom:e.nom,marque:e.marque,modele:e.modele,ref:e.ref,achat:e.achat,fin_garantie:e.garantie||null,sous_garantie:!!(e.garantie&&joursDepuis(e.garantie)<0),installateur:e.installateur,piece:nomPiece(e.piece),factures}:null,
+      contrats,
+      pieces:piecesPourEstimation(null,e), // D-204
+    };
+    try{
+      const {data,error}=await supa.functions.invoke("declarer-sinistre",{body:corps});
+      if(error||!data||!data.declaration){raison=await raisonEchec(error);if(raison)console.error("declarer-sinistre :",raison)}
+      else res=data;
+    }catch(err){console.error("declarer-sinistre",err)}
+    if(!res){
+      modal(`<h2>Cela n'a pas fonctionné</h2><p class="muted">${h(serviceNonConfigure(raison)?"Le service de lecture n'est pas configuré.":(raison||"VIDOM n'a pas pu relire le contrat. Réessayez dans un instant."))}</p><div class="row"><button class="btn primary grow" onclick="lancerSinistreSansContrat()">Préparer sans relire le contrat</button><button class="btn" onclick="closeModal()">Fermer</button></div>`);
+      return;
+    }
+    if(ass&&!ass.contrat&&res.numero_contrat)ass.contrat=res.numero_contrat; // lu sur le contrat : la fiche le garde
   }
   const delai=delaiSinistre(s.cause,s.quand);
-  const sin={...s,equipNom:e?`${e.nom}${e.marque?" "+e.marque:""}`:"",res,delai,docsLus:docs.map(d=>d.titre),d:now()};
-  const entree=filAjouter({type:"sinistre",t:`Déclaration de sinistre préparée${e?" pour "+lc(e.nom):""} : ${CAUSES_SINISTRE.find(c=>c[0]===s.cause)[1].toLowerCase()}, le ${dateFr(s.quand)}.`,t2:res.contrat_trouve?`Contrat relu${res.assureur?" ("+res.assureur+")":""}.`:"Aucun contrat d'assurance relu : la maison n'en garde pas encore.",sin,ico:"envoi",fait:true});
+  const sin={id:uid(),equip:e?e.id:null,equipNom:e?`${e.nom}${e.marque?" "+e.marque:""}`:"",cause:s.cause,quand:s.quand,quoi:s.quoi,tiers:s.tiers,tiersQui:s.tiersQui,mesures:s.mesures,
+    etat:"ouvert",numero:"",assureurId:ass?ass.id:null,assureurNom:ass?ass.nom:"",contrat:ass&&ass.contrat?ass.contrat:"",
+    declaration:{objet:res.declaration.objet,texte:res.declaration.texte},res,delai,docsLus:docs.map(d=>d.titre),
+    voisin:s.tiers==="voisin"?{nom:s.voisin.nom,mail:s.voisin.mail,aVidom:s.voisin.aVidom,ecrit:false}:null,
+    reglement:{montant:PRIX_DOSSIER_SINISTRE,prix_reference:PRIX_DOSSIER_SINISTRE_REFERENCE,offert:PRIX_DOSSIER_SINISTRE===0,le:now()}, // D-202
+    envoyeLe:null,closLe:null,d:now()};
+  S.sinistres.unshift(sin);
+  filAjouter({type:"sinistre",t:`Dossier de sinistre ouvert${e?" pour "+lc(e.nom):""} : ${nomCause(s.cause).toLowerCase()}, le ${dateFr(s.quand)}.`,t2:res.contrat_trouve?`Contrat relu${res.assureur?" ("+res.assureur+")":""}.`:"Aucun contrat d'assurance relu : la maison n'en garde pas encore.",sinistreId:sin.id,ico:"envoi",fait:true});
   if(delai.limite){const t=`Déclarer le sinistre du ${dateFr(s.quand)} à votre assureur avant le ${dateFr(delai.limite)} (délai légal).`;if(!S.rappels.some(r=>r.t===t))S.rappels.push({id:uid(),t,equip:e?e.id:"",du:today(),fait:false})}
-  save();render();
-  montrerSinistre(entree.id);
+  naissances();save();closeModal();
+  route("#/sinistre/"+sin.id);
 }
-function montrerSinistre(filId){
-  const entree=S.fil.find(x=>x.id===filId);if(!entree||!entree.sin)return;
-  const sin=entree.sin,r=sin.res,g=r.garantie||{},ass=assureurConnu();
+function lancerSinistreSansContrat(){const s=sinistreEnCours;const e=s.equip?S.equipements.find(x=>x.id===s.equip):null;const ass=garderAssureur(s.assureur);
+  const res=declarationLocale(s,e,ass);const delai=delaiSinistre(s.cause,s.quand);
+  const sin={id:uid(),equip:e?e.id:null,equipNom:e?`${e.nom}${e.marque?" "+e.marque:""}`:"",cause:s.cause,quand:s.quand,quoi:s.quoi,tiers:s.tiers,tiersQui:s.tiersQui,mesures:s.mesures,etat:"ouvert",numero:"",assureurId:ass?ass.id:null,assureurNom:ass?ass.nom:"",contrat:ass&&ass.contrat?ass.contrat:"",declaration:{objet:res.declaration.objet,texte:res.declaration.texte},res,delai,docsLus:[],voisin:s.tiers==="voisin"?{nom:s.voisin.nom,mail:s.voisin.mail,aVidom:s.voisin.aVidom,ecrit:false}:null,reglement:{montant:PRIX_DOSSIER_SINISTRE,prix_reference:PRIX_DOSSIER_SINISTRE_REFERENCE,offert:PRIX_DOSSIER_SINISTRE===0,le:now()},envoyeLe:null,closLe:null,d:now()};
+  S.sinistres.unshift(sin);filAjouter({type:"sinistre",t:`Dossier de sinistre ouvert${e?" pour "+lc(e.nom):""} : ${nomCause(s.cause).toLowerCase()}, le ${dateFr(s.quand)}.`,t2:"Le contrat n'a pas pu être relu.",sinistreId:sin.id,ico:"envoi",fait:true});
+  naissances();save();closeModal();route("#/sinistre/"+sin.id);
+}
+/* ce que VIDOM restitue — les mêmes blocs sur la page du dossier et dans l'ancienne fenêtre du journal */
+function blocsSinistre(sin){
+  const r=sin.res,g=r.garantie||{};
   const etat={oui:["Couvert par votre contrat, d'après ce qu'il écrit","var(--sauge-f)"],non:["Une exclusion écrite vise ce cas","var(--terra-f)"],a_verifier:["À faire confirmer par votre assureur","var(--terra-f)"]}[g.s_applique||"a_verifier"];
   const bloc=(titre,corps)=>`<div class="card" style="gap:6px"><span class="b">${titre}</span>${corps}</div>`;
   const li=l=>`<ul style="margin:0;padding-left:18px">${l.map(x=>`<li>${h(x)}</li>`).join("")}</ul>`;
   const contrat=r.contrat_trouve
-    ?bloc("Ce que dit votre contrat",`<p class="small muted">${r.documents_lus.length?"Relu : "+h(r.documents_lus.join(", ")):"Relu : "+h(sin.docsLus.join(", "))}${r.numero_contrat?" · contrat n° "+h(r.numero_contrat):""}</p>${g.nom?`<p><b>${h(g.nom)}</b> — <span style="color:${etat[1]}">${etat[0]}</span></p>`:`<p>VIDOM n'a pas trouvé, dans les pages relues, de garantie qui corresponde à ce cas.</p>`}${g.explication?`<p>${h(g.explication)}</p>`:""}${g.franchise||g.plafond?`<p class="small">${g.franchise?"Franchise : "+h(g.franchise):""}${g.franchise&&g.plafond?" · ":""}${g.plafond?"Plafond : "+h(g.plafond):""}</p>`:`<p class="small muted">Franchise et plafond : non lisibles dans les pages relues.</p>`}${r.pages_manquantes?`<p class="small muted">Le contrat est long : VIDOM n'en a relu qu'une partie. Les conditions générales complètes diraient plus.</p>`:""}`)
-    :bloc("Votre contrat d'assurance",`<p>La maison ne garde pas encore votre contrat d'assurance habitation : VIDOM ne peut pas dire ce qu'il couvre, ni sa franchise. Photographiez les conditions particulières et les conditions générales, puis refaites la demande.</p><button class="btn sm" onclick="closeModal();aideFichier('image/*,.pdf')">${I.camera} Photographier le contrat</button>`);
-  const exclusions=r.exclusions.length?bloc("Les exclusions à lire",`<p class="small muted">VIDOM les recopie, sans décider si elles s'appliquent : c'est à l'assureur d'apprécier.</p>${r.exclusions.map(x=>`<p><i>« ${h(x.clause)} »</i>${x.pourquoi?`<br><span class="small muted">${h(x.pourquoi)}</span>`:""}</p>`).join("")}`):"";
+    ?bloc("Ce que dit votre contrat",`<p class="small muted">${(r.documents_lus||[]).length?"Relu : "+h(r.documents_lus.join(", ")):"Relu : "+h((sin.docsLus||[]).join(", "))}${r.numero_contrat?" · contrat n° "+h(r.numero_contrat):""}</p>${g.nom?`<p><b>${h(g.nom)}</b> — <span style="color:${etat[1]}">${etat[0]}</span></p>`:`<p>VIDOM n'a pas trouvé, dans les pages relues, de garantie qui corresponde à ce cas.</p>`}${g.explication?`<p>${h(g.explication)}</p>`:""}${g.franchise||g.plafond?`<p class="small">${g.franchise?"Franchise : "+h(g.franchise):""}${g.franchise&&g.plafond?" · ":""}${g.plafond?"Plafond : "+h(g.plafond):""}</p>`:`<p class="small muted">Franchise et plafond : non lisibles dans les pages relues.</p>`}${r.pages_manquantes?`<p class="small muted">Le contrat est long : VIDOM n'en a relu qu'une partie. Les conditions générales complètes diraient plus.</p>`:""}`)
+    :bloc("Votre contrat d'assurance",`<p>La maison ne garde pas encore votre contrat d'assurance habitation : VIDOM ne peut pas dire ce qu'il couvre, ni sa franchise. Photographiez les conditions particulières et les conditions générales : la prochaine déclaration les relira.</p><button class="btn sm" onclick="aideFichier('image/*,.pdf')">${I.camera} Photographier le contrat</button>`);
+  const exclusions=(r.exclusions||[]).length?bloc("Les exclusions à lire",`<p class="small muted">VIDOM les recopie, sans décider si elles s'appliquent : c'est à l'assureur d'apprécier.</p>${r.exclusions.map(x=>`<p><i>« ${h(x.clause)} »</i>${x.pourquoi?`<br><span class="small muted">${h(x.pourquoi)}</span>`:""}</p>`).join("")}`):"";
   const verif=r.a_verifier&&r.pourquoi_a_verifier?bloc("Ce que VIDOM ne tranche pas",`<p>${h(r.pourquoi_a_verifier)}</p><p class="small muted">Posez la question à votre assureur telle quelle : la réponse dépend de son appréciation, pas d'une lecture du contrat.</p>`):"";
-  const avant=r.avant_assureur.length?bloc("Avant d'écrire à l'assureur",li(r.avant_assureur)):"";
-  const delai=bloc("Le délai",`<p>${sin.delai.limite?`Déclarer <b>avant le ${dateFr(sin.delai.limite)}</b> : `:""}${h(sin.delai.base)}, à compter du jour où vous avez eu connaissance du sinistre. Votre contrat peut prévoir plus long, jamais moins. Un rappel est posé dans le journal.</p><p class="small muted">Les jours fériés ne sont pas déduits : en cas de doute, écrivez plus tôt.</p>`);
+  const avant=(r.avant_assureur||[]).length?bloc("Avant d'écrire à l'assureur",li(r.avant_assureur)):"";
+  const delai=bloc("Le délai",`<p>${sin.delai.limite?`Déclarer <b>avant le ${dateFr(sin.delai.limite)}</b> : `:""}${h(sin.delai.base)}, à compter du jour où vous avez eu connaissance du sinistre. Votre contrat peut prévoir plus long, jamais moins.</p><p class="small muted">Les jours fériés ne sont pas déduits : en cas de doute, écrivez plus tôt.</p>`);
   const tiers=sin.tiers==="voisin"&&["degat_eaux","incendie"].includes(sin.cause)
     ?bloc("Un voisin ou l'immeuble est en cause",`<p>Écrivez d'abord à <b>votre propre assureur</b>, pas à celui du voisin. En France, pour un dégât des eaux ou un incendie dans un immeuble collectif, la convention IRSI règle le partage entre assureurs sous 5 000 € HT : c'est l'assureur de l'occupant du logement sinistré qui pilote, vous n'avez pas à négocier avec l'assurance du voisin. Un constat amiable de dégât des eaux, rempli avec le voisin, facilite tout.</p>`)
     :(sin.tiers!=="aucun"?bloc("Quelqu'un d'autre est en cause",`<p>Écrivez d'abord à votre propre assureur : c'est lui qui se retourne, s'il y a lieu, vers l'assurance de l'autre partie. Gardez les coordonnées${sin.tiersQui?" ("+h(sin.tiersQui)+")":""} et tout écrit échangé.</p>`):"");
-  const joindre=r.a_joindre.length?bloc("À joindre",li(r.a_joindre)):"";
-  const manque=r.manque.length?`<p class="small faint">Pour faire mieux la prochaine fois : ${h(r.manque.join(" ; "))}.</p>`:"";
-  const dest=ass&&ass.mail?ass.mail:"";
-  const texte=r.declaration.texte||"";
-  modal(`<h2>Sinistre${sin.equipNom?" — "+h(sin.equipNom):""}</h2><p class="muted">${h(CAUSES_SINISTRE.find(c=>c[0]===sin.cause)[1])}, le ${dateFr(sin.quand)}. VIDOM restitue ce que dit votre contrat et le cadre légal ; il ne décide pas à la place de l'assureur.</p>
-    <div class="stack" style="gap:10px;max-height:60vh;overflow:auto;padding-right:2px">
-      ${contrat}${avant}${exclusions}${verif}${delai}${tiers}
-      <div class="card" style="gap:6px"><span class="b">Votre déclaration, à relire</span><p class="small muted">Objet : ${h(r.declaration.objet)}${dest?" · À : "+h(dest):(ass?" · À : "+h(ass.nom)+" (courriel à retrouver)":"")}</p><div class="book" style="white-space:pre-wrap;font-size:.95em">${h(texte)}</div></div>
-      ${joindre}${manque}
-    </div>
-    <div class="row wrap" style="margin-top:12px"><a class="btn primary grow" href="mailto:${encodeURIComponent(dest)}?subject=${encodeURIComponent(r.declaration.objet)}&body=${encodeURIComponent(texte)}" onclick="toast('Le message part de votre messagerie.')">${I.envoi} Envoyer par courriel</a><button class="btn" onclick="copier(document.getElementById('sin-texte').value)">Copier</button><button class="btn" onclick="closeModal()">Fermer</button></div>
-    <textarea id="sin-texte" class="sr" aria-hidden="true">${h(texte)}</textarea>
-    <p class="small faint" style="margin-top:8px">Le message part de votre messagerie, pas de VIDOM. Joignez vous-même les photos et factures.</p>`);
+  const joindre=(r.a_joindre||[]).length?bloc("À joindre",li(r.a_joindre)):"";
+  const manque=(r.manque||[]).length?`<p class="small faint">Pour faire mieux la prochaine fois : ${h(r.manque.join(" ; "))}.</p>`:"";
+  // D-204 : le service rendu — ce que le gardien peut récupérer, d'après les pièces fournies et ce que le contrat écrit
+  const es=r.estimation||{};const conf={bonne:["Estimation solide","var(--sauge-f)"],moyenne:["Estimation à affiner","var(--terra-f)"],faible:["Estimation fragile","var(--terra-f)"]}[es.confiance||"faible"];
+  const fourchette=es.indemnite_min!=null&&es.indemnite_max!=null?(es.indemnite_min===es.indemnite_max?euros(es.indemnite_min):`${euros(es.indemnite_min)} à ${euros(es.indemnite_max)}`):null;
+  const estimation=bloc("Ce que vous pouvez récupérer",`${fourchette?`<p style="font-size:1.5em;font-weight:600;margin:2px 0">${fourchette}</p><p class="small" style="color:${conf[1]}">${conf[0]} — si l'assureur retient la garantie.</p>`:`<p class="muted">Pas encore de montant${r.contrat_trouve?" : il manque de quoi chiffrer":" : il manque le contrat"}.</p>`}
+      <dl class="kv" style="margin-top:6px">${es.base_pieces!=null?`<dt>Pièces fournies</dt><dd class="num">${euros(es.base_pieces)}</dd>`:""}${es.franchise_montant!=null?`<dt>Franchise</dt><dd class="num">− ${euros(es.franchise_montant)}</dd>`:(r.contrat_trouve?`<dt>Franchise</dt><dd class="muted">non lisible</dd>`:"")}${es.plafond_montant!=null?`<dt>Plafond</dt><dd class="num">${euros(es.plafond_montant)}</dd>`:""}${es.vetuste?`<dt>Vétusté</dt><dd>${h(es.vetuste)}</dd>`:""}</dl>
+      ${es.explication?`<p class="small">${h(es.explication)}</p>`:""}${(es.regles_appliquees||[]).length?`<p class="small muted">Règles du contrat appliquées : ${h(es.regles_appliquees.join(" ; "))}.</p>`:""}${(es.pieces_retenues||[]).length?`<p class="small muted">Pièces retenues : ${h(es.pieces_retenues.join(" ; "))}.</p>`:""}${(es.pieces_manquantes||[]).length?`<p class="small" style="color:var(--terra-f)">Pour affiner : ${h(es.pieces_manquantes.join(" ; "))}.</p>`:""}
+      ${sin.estimeLe?`<p class="small faint">Estimation du ${dateFr(String(sin.estimeLe).slice(0,10))}.</p>`:""}<p class="small faint">Une estimation d'après votre contrat et vos pièces, pas un engagement : l'assureur décide.</p>`);
+  return {contrat,avant,exclusions,verif,delai,tiers,joindre,manque,estimation};
 }
+function montrerSinistre(filId){ // les entrées du journal : les nouvelles ouvrent le dossier, celles d'avant D-201 gardent leur fenêtre
+  const entree=S.fil.find(x=>x.id===filId);if(!entree)return;
+  if(entree.sinistreId){route("#/sinistre/"+entree.sinistreId);return}
+  if(!entree.sin)return;
+  const sin=entree.sin,r=sin.res,b=blocsSinistre(sin),ass=assureurConnu(),dest=ass&&ass.mail?ass.mail:"",texte=r.declaration.texte||"";
+  modal(`<h2>Sinistre${sin.equipNom?" — "+h(sin.equipNom):""}</h2><p class="muted">${h(nomCause(sin.cause))}, le ${dateFr(sin.quand)}.</p>
+    <div class="stack" style="gap:10px;max-height:60vh;overflow:auto;padding-right:2px">${b.contrat}${b.estimation||""}${b.avant}${b.exclusions}${b.verif}${b.delai}${b.tiers}
+      <div class="card" style="gap:6px"><span class="b">Votre déclaration</span><div class="book" style="white-space:pre-wrap;font-size:.95em">${h(texte)}</div></div>${b.joindre}${b.manque}</div>
+    <div class="row wrap" style="margin-top:12px"><a class="btn primary grow" href="mailto:${encodeURIComponent(dest)}?subject=${encodeURIComponent(r.declaration.objet)}&body=${encodeURIComponent(texte)}">${I.envoi} Envoyer par courriel</a><button class="btn" onclick="copier(document.getElementById('sin-texte').value)">Copier</button><button class="btn" onclick="closeModal()">Fermer</button></div><textarea id="sin-texte" class="sr" aria-hidden="true">${h(texte)}</textarea><div></div>`);
+}
+/* ================= D-201 : le dossier de sinistre, comme un livre ================= */
+function sinistreParId(id){return S.sinistres.find(x=>x.id===id)}
+function docsDuSinistre(id,role){return S.docs.filter(d=>d.sinistre===id&&(!role||d.sinRole===role))}
+function vSinistres(){
+  const l=S.sinistres.slice().sort((a,b)=>String(b.d).localeCompare(String(a.d)));
+  return `<div class="view" style="gap:12px"><div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">Sinistres</h1><p class="muted">Un dossier par sinistre : la déclaration, les pièces transmises, les réponses de l'assureur. Ouvert jusqu'à ce que vous le fermiez.</p></div>
+    ${l.map(s=>`<a class="card" href="#/sinistre/${s.id}" style="gap:4px;text-decoration:none;color:inherit"><div class="split"><span class="b">${h(nomCause(s.cause))}${s.equipNom?" — "+h(s.equipNom):""}</span><span class="chip ${s.etat==="clos"?"":"num"}">${h(ETATS_SINISTRE[s.etat]||s.etat)}</span></div><p class="small muted">Le ${dateFr(s.quand)}${s.numero?" · n° "+h(s.numero):""}${s.assureurNom?" · "+h(s.assureurNom):""} · ${docsDuSinistre(s.id).length} pièce${docsDuSinistre(s.id).length>1?"s":""}</p></a>`).join("")}
+    <button class="btn big" onclick="declarerSinistre()">${I.envoi} Déclarer un sinistre</button></div>`;
+}
+V.sinistre=id=>{
+  const s=sinistreParId(id);if(!s)return vSinistres();
+  const b=blocsSinistre(s),ass=s.assureurId?S.pros.find(p=>p.id===s.assureurId):assureurConnu();
+  const dest=ass&&ass.mail?ass.mail:"",texte=s.declaration.texte||"",objet=s.declaration.objet||"Déclaration de sinistre";
+  const transmis=docsDuSinistre(id,"transmis"),recus=docsDuSinistre(id,"recu");
+  const ligneDoc=d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</span></span>${I.fleche}</a>`;
+  const etapes=[["ouvert","Ouvert"],["attente","Déclaration envoyée"],["clos","Clos"]];
+  return `<div class="view" style="gap:12px">
+    <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(nomCause(s.cause))}${s.equipNom?" — "+h(s.equipNom):""}</h1><p class="muted">Le ${dateFr(s.quand)}${s.quoi?" · "+h(s.quoi):""}</p></div>
+    <div class="card" style="gap:8px"><div class="row wrap" style="gap:6px">${etapes.map(([k,t])=>`<button class="chip btn-chip ${s.etat===k?"on":""}" onclick="etatSinistre('${s.id}','${k}')">${t}</button>`).join("")}</div>
+      <p class="small muted">${s.etat==="ouvert"?"Dossier ouvert le "+dateFr(s.d.slice(0,10))+". "+(s.delai.limite?"À déclarer avant le "+dateFr(s.delai.limite)+".":""):s.etat==="attente"?"Déclaration envoyée"+(s.envoyeLe?" le "+dateFr(s.envoyeLe.slice(0,10)):"")+". En attente de la réponse de l'assureur.":"Dossier clos"+(s.closLe?" le "+dateFr(s.closLe.slice(0,10)):"")+". Tout reste dans la mémoire de la maison."}</p>
+      ${s.reglement&&s.reglement.le?`<p class="small muted">Constitution et gestion du dossier : <b>${s.reglement.montant} €</b> réglés le ${dateFr(String(s.reglement.le).slice(0,10))}${s.reglement.offert?" — offert la première année":""}.</p>`:""}<label class="f"><span>Numéro de sinistre donné par l'assureur</span><input class="input" value="${h(s.numero)}" placeholder="Dès que l'assureur vous l'a communiqué" onchange="numeroSinistre('${s.id}',this.value)"></label></div>
+    <div class="card" style="gap:6px"><div class="split"><span class="b">L'assureur</span><button class="btn sm ghost" onclick="modifierAssureurSinistre('${s.id}')">Modifier</button></div>${ass?`<p>${h(ass.nom)}${ass.contrat?` · contrat n° ${h(ass.contrat)}`:""}</p><p class="small muted">${ass.mail?h(ass.mail):"courriel à compléter"}${ass.tel?" · "+h(ass.tel):""}</p>`:`<p class="small muted">Pas encore d'assureur dans la mémoire de la maison.</p>`}</div>
+    ${b.contrat}${b.estimation}${s.etat!=="clos"?`<button class="btn" onclick="reestimerSinistre('${s.id}')">Réestimer avec les pièces du dossier</button>`:""}${b.avant}${b.exclusions}${b.verif}${b.delai}${b.tiers}
+    <div class="card" style="gap:8px"><div class="split"><span class="b">La déclaration</span><button class="btn sm ghost" onclick="modifierDeclaration('${s.id}')">Modifier</button></div><p class="small muted">Objet : ${h(objet)}${dest?" · À : "+h(dest):""}</p><div class="book" style="white-space:pre-wrap;font-size:.95em">${h(texte)}</div>
+      <div class="row wrap"><a class="btn primary grow" href="mailto:${encodeURIComponent(dest)}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(texte)}" onclick="declarationEnvoyee('${s.id}')">${I.envoi} Envoyer par courriel</a><button class="btn" onclick="copierSinistre('${s.id}','declaration')">Copier</button></div>
+      <p class="small faint">Le message part de votre messagerie, pas de VIDOM. Joignez vous-même les photos et factures — puis rangez-les ci-dessous, pour que le dossier soit complet.</p></div>
+    ${b.joindre}
+    <div class="card" style="gap:6px"><span class="b">Pièces transmises à l'assureur</span>${transmis.length?`<div class="stack" style="gap:0">${transmis.map(ligneDoc).join("")}</div>`:`<p class="small muted">Rien encore. La facture, les photos, le constat : tout ce que vous envoyez à l'assureur a sa place ici.</p>`}<div class="row wrap"><button class="btn sm" onclick="joindreAuSinistre('${s.id}','transmis')">${I.doc} Une pièce déjà dans la maison</button><button class="btn sm" onclick="photographierPourSinistre('${s.id}','transmis')">${I.camera} Photographier</button></div></div>
+    <div class="card" style="gap:6px"><span class="b">Réponses de l'assureur</span>${recus.length?`<div class="stack" style="gap:0">${recus.map(ligneDoc).join("")}</div>`:`<p class="small muted">Accusé de réception, convocation d'expert, proposition d'indemnisation : mettez l'adresse VIDOM de la maison (${h(S.logement.depot||"")}) en copie de vos échanges, et rangez ici ce qui arrive.</p>`}<div class="row wrap"><button class="btn sm" onclick="joindreAuSinistre('${s.id}','recu')">${I.doc} Une réponse déjà reçue</button><button class="btn sm" onclick="photographierPourSinistre('${s.id}','recu')">${I.camera} Photographier</button></div></div>
+    ${s.voisin?carteVoisin(s):""}
+    ${b.manque}
+    ${s.etat!=="clos"?`<button class="btn big" onclick="etatSinistre('${s.id}','clos')">Clore le dossier</button>`:""}
+  </div>`;
+};
+function etatSinistre(id,etat){const s=sinistreParId(id);if(!s)return;s.etat=etat;if(etat==="attente"&&!s.envoyeLe)s.envoyeLe=now();if(etat==="clos"){s.closLe=now();S.rappels.filter(r=>/Déclarer le sinistre du/.test(r.t)&&r.t.includes(dateFr(s.quand))).forEach(r=>r.fait=true);filAjouter({type:"info",t:`Le dossier de sinistre (${nomCause(s.cause).toLowerCase()} du ${dateFr(s.quand)}) est clos. Il reste dans la mémoire de la maison.`,ico:"check",fait:true})}if(etat!=="clos")s.closLe=null;save();render()}
+function numeroSinistre(id,v){const s=sinistreParId(id);if(!s)return;s.numero=(v||"").trim();save();toast(s.numero?"Numéro gardé":"Numéro retiré")}
+function declarationEnvoyee(id){const s=sinistreParId(id);if(!s)return;toast("Le message part de votre messagerie.");if(s.etat==="ouvert"){s.etat="attente";s.envoyeLe=now();S.rappels.filter(r=>/Déclarer le sinistre du/.test(r.t)&&r.t.includes(dateFr(s.quand))).forEach(r=>r.fait=true);save();setTimeout(render,600)}}
+function modifierDeclaration(id){const s=sinistreParId(id);if(!s)return;modal(`<h2>La déclaration</h2><p class="muted">Relisez, corrigez : c'est votre lettre.</p><label class="f"><span>Objet</span><input class="input" id="sd-objet" value="${h(s.declaration.objet||"")}"></label><textarea class="input" id="sd-texte" rows="12" style="padding:12px 16px;font-size:.95em">${h(s.declaration.texte||"")}</textarea><div class="row"><button class="btn primary grow" onclick="const s=sinistreParId('${s.id}');s.declaration.objet=document.getElementById('sd-objet').value;s.declaration.texte=document.getElementById('sd-texte').value;save();closeModal();render()">Garder</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+function modifierAssureurSinistre(id){const s=sinistreParId(id);if(!s)return;const p=(s.assureurId?S.pros.find(x=>x.id===s.assureurId):null)||assureurConnu();
+  modal(`<h2>L'assureur</h2><div class="stack" style="gap:10px"><label class="f"><span>Compagnie ou courtier</span><input class="input" id="sa-nom" value="${h(p?p.nom:"")}"></label><label class="f"><span>Courriel pour les sinistres</span><input class="input" id="sa-mail" type="email" value="${h(p?p.mail:"")}"></label><label class="f"><span>Téléphone</span><input class="input" id="sa-tel" type="tel" value="${h(p?p.tel:"")}"></label><label class="f"><span>Numéro de contrat</span><input class="input" id="sa-contrat" value="${h(p?(p.contrat||""):"")}"></label></div>
+    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="const g=k=>document.getElementById('sa-'+k).value;const a=garderAssureur({id:'${p?p.id:""}',nom:g('nom'),mail:g('mail'),tel:g('tel'),contrat:g('contrat')});const s=sinistreParId('${s.id}');if(a){s.assureurId=a.id;s.assureurNom=a.nom;s.contrat=a.contrat||''}save();closeModal();render()">Garder</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+function joindreAuSinistre(id,role){
+  const libres=S.docs.filter(d=>!d.sinistre).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  if(!libres.length){toast("Aucun document à joindre pour l'instant.");return}
+  modal(`<h2>${role==="recu"?"Quelle réponse de l'assureur ?":"Quelle pièce ?"}</h2><div class="card" style="gap:0;padding:4px 16px;max-height:55vh;overflow:auto">${libres.map(d=>`<button class="line" style="width:100%;text-align:left" onclick="closeModal();const d=S.docs.find(x=>x.id==='${d.id}');d.sinistre='${id}';d.sinRole='${role}';save();render();toast('Rangé dans le dossier')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</span></span>${I.fleche}</button>`).join("")}</div><button class="btn ghost" onclick="closeModal()">Annuler</button>`);
+}
+function photographierPourSinistre(id,role){S.sinistreAttendu={id,role};aideFichier("image/*,.pdf",true)}
+function retirerDuSinistre(docId){const d=S.docs.find(x=>x.id===docId);if(!d)return;d.sinistre="";d.sinRole="";save();render();toast("Retiré du dossier")}
+/* le voisin (A17) : ses coordonnées gardées, un message préparé — VIDOM n'écrit jamais à sa place */
+function messageVoisin(s){
+  const L=S.logement,v=s.voisin||{};
+  const lignes=[`Bonjour${v.nom?" "+v.nom:""},`,"",`Je vous écris au sujet du sinistre du ${dateFr(s.quand)} (${nomCause(s.cause).toLowerCase()}) qui concerne mon logement, ${L.adresse}, ${L.ville}, et peut-être le vôtre.`,"",`J'ai déclaré le sinistre à mon assureur${s.assureurNom?" ("+s.assureurNom+")":""}. Pour que nos deux assurances s'accordent vite, il serait utile que vous fassiez de même auprès du vôtre, et que nous remplissions ensemble un constat amiable de dégât des eaux si cela s'applique.`,"",
+    `Je tiens la mémoire de mon logement dans VIDOM. Vous pouvez m'y envoyer directement ce qui concerne ce sinistre (votre attestation d'assurance, des photos, la date de passage de l'expert) à cette adresse : ${L.depot||"(adresse VIDOM du logement)"}.`];
+  if(v.aVidom!=="oui")lignes.push("",`Si vous le souhaitez, VIDOM est gratuit et se crée en deux minutes : ${LIEN_VIDOM} — chaque logement y garde ses documents, et deux logements voisins peuvent se transmettre ce qui les concerne le jour d'un sinistre.`);
+  lignes.push("","Merci d'avance, et à très vite.","","[Votre nom]");
+  return {objet:`Sinistre du ${dateFr(s.quand)} — ${L.adresse}`,texte:lignes.join("\n")};
+}
+function carteVoisin(s){const v=s.voisin,m=messageVoisin(s);
+  return `<div class="card" style="gap:8px"><div class="split"><span class="b">Le voisin</span><button class="btn sm ghost" onclick="modifierVoisin('${s.id}')">Modifier</button></div><p>${v.nom?h(v.nom):"<span class='muted'>Nom à compléter</span>"}${v.mail?" · "+h(v.mail):""} · ${v.aVidom==="oui"?"a VIDOM":v.aVidom==="non"?"n'a pas VIDOM":"VIDOM : on ne sait pas"}</p>
+    <details><summary class="small b" style="cursor:pointer;color:var(--sauge-f)">Le message préparé pour lui</summary><div class="book" style="white-space:pre-wrap;font-size:.95em;margin-top:8px">${h(m.texte)}</div></details>
+    <div class="row wrap"><a class="btn primary grow" href="mailto:${encodeURIComponent(v.mail||"")}?subject=${encodeURIComponent(m.objet)}&body=${encodeURIComponent(m.texte)}" onclick="const s=sinistreParId('${s.id}');s.voisin.ecrit=true;save();toast('Le message part de votre messagerie.')">${I.envoi} Écrire au voisin</a><button class="btn" onclick="copierSinistre('${s.id}','voisin')">Copier</button></div>
+    ${v.ecrit?`<p class="small muted">Message préparé et ouvert dans votre messagerie. Ce qu'il enverra à l'adresse VIDOM arrivera dans « Reçu par l'adresse VIDOM ».</p>`:""}</div>`;
+}
+function modifierVoisin(id){const s=sinistreParId(id);if(!s)return;const v=s.voisin||{nom:"",mail:"",aVidom:"inconnu"};
+  modal(`<h2>Le voisin</h2><div class="stack" style="gap:10px"><label class="f"><span>Nom, appartement</span><input class="input" id="sv-nom" value="${h(v.nom)}"></label><label class="f"><span>Courriel</span><input class="input" id="sv-mail" type="email" value="${h(v.mail)}"></label><label class="f"><span>A-t-il VIDOM ?</span><select class="input" id="sv-vidom">${[["oui","Oui"],["non","Non"],["inconnu","Je ne sais pas"]].map(([k,t])=>`<option value="${k}" ${v.aVidom===k?"selected":""}>${t}</option>`).join("")}</select></label></div>
+    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="const s=sinistreParId('${s.id}');s.voisin={...(s.voisin||{}),nom:document.getElementById('sv-nom').value.trim(),mail:document.getElementById('sv-mail').value.trim(),aVidom:document.getElementById('sv-vidom').value};save();closeModal();render()">Garder</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
+/* D-204 : les pièces qui servent à chiffrer — les factures de l'appareil touché, et tout ce que le dossier a reçu (devis, factures de réparation) */
+function piecesPourEstimation(sinistreId,e){
+  const vues=new Set();const out=[];
+  const ajouter=(d,role)=>{if(!d||vues.has(d.id))return;vues.add(d.id);out.push({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,montant:d.montant,role})};
+  if(sinistreId)S.docs.filter(d=>d.sinistre===sinistreId).forEach(d=>ajouter(d,d.sinRole||"transmis"));
+  if(e)docsLies(e).forEach(d=>ajouter(d,"appareil"));
+  return out;
+}
+async function reestimerSinistre(id){
+  const s=sinistreParId(id);if(!s)return;
+  if(!supa){toast("Indisponible pour l'instant.");return}
+  const e=s.equip?S.equipements.find(x=>x.id===s.equip):null;
+  const pieces=piecesPourEstimation(id,e);
+  if(!pieces.some(p=>p.montant)){toast("Ajoutez d'abord une pièce chiffrée : facture, devis de réparation.");return}
+  const docs=docsAssurance().slice(0,3);
+  if(!docs.length){toast("Sans contrat dans la maison, VIDOM ne peut pas chiffrer. Photographiez-le d'abord.");return}
+  modal(`<h2>Un instant</h2><p class="muted">VIDOM relit le contrat et recompte avec ${pieces.length===1?"la pièce":pieces.length+" pièces"} du dossier…</p>`);
+  const contrats=[];
+  for(const d of docs){try{const {data}=await supa.storage.from("logement-files").createSignedUrl(d.chemin,600);const blob=await (await fetch(data.signedUrl)).blob();const mimeType=d.pdf?"application/pdf":(blob.type||"image/jpeg");const lu=await pourLecture(blob,mimeType,PAGES_LUES_SINISTRE);contrats.push({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,mimeType,...lu})}catch(err){console.error("réestimation, document illisible",d.titre,err)}}
+  const ass=s.assureurId?S.pros.find(p=>p.id===s.assureurId):null;
+  const corps={mode:"estimation",sinistre:{cause:s.cause,quand:s.quand,quoi:s.quoi,tiers:s.tiers,tiersQui:s.tiersQui,mesures:s.mesures},
+    logement:{nom:S.logement.nom,adresse:S.logement.adresse,cp:S.logement.cp,ville:S.logement.ville,pays:"France",assureur:ass?{nom:ass.nom,numero_contrat:ass.contrat||null}:null},
+    equipement:e?{nom:e.nom,marque:e.marque,modele:e.modele,ref:e.ref,achat:e.achat,fin_garantie:e.garantie||null,sous_garantie:!!(e.garantie&&joursDepuis(e.garantie)<0),installateur:e.installateur,piece:nomPiece(e.piece)}:null,
+    contrats,pieces};
+  let res=null,raison="";
+  try{const {data,error}=await supa.functions.invoke("declarer-sinistre",{body:corps});if(error||!data||!data.estimation){raison=await raisonEchec(error)}else res=data}catch(err){console.error("réestimation",err)}
+  closeModal();
+  if(!res){toast(raison||"La réestimation n'a pas abouti. Réessayez dans un instant.");return}
+  s.res=s.res||{};s.res.estimation=res.estimation;s.estimeLe=now();
+  if(res.contrat_trouve){s.res.contrat_trouve=true;if(res.garantie&&res.garantie.nom)s.res.garantie=res.garantie;if((res.documents_lus||[]).length)s.res.documents_lus=res.documents_lus;if((res.exclusions||[]).length)s.res.exclusions=res.exclusions;s.res.a_verifier=!!res.a_verifier;s.res.pourquoi_a_verifier=res.pourquoi_a_verifier;s.res.pages_manquantes=!!res.pages_manquantes}
+  filAjouter({type:"info",t:`Estimation refaite pour le sinistre du ${dateFr(s.quand)}${res.estimation.indemnite_min!=null?" : "+(res.estimation.indemnite_min===res.estimation.indemnite_max?euros(res.estimation.indemnite_min):euros(res.estimation.indemnite_min)+" à "+euros(res.estimation.indemnite_max)):""}.`,ico:"check",fait:true});
+  save();render();toast("Estimation mise à jour");
+}
+function copierSinistre(id,quoi){const s=sinistreParId(id);if(!s)return;copier(quoi==="voisin"?messageVoisin(s).texte:(s.declaration.texte||""))}
 
 function vDocuments(){
   const vue=S.reglages.docsPar||"type";
@@ -1938,7 +2143,7 @@ function vDocuments(){
 V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();assurerImage(d);const t=S.travaux.find(t=>t.docs.includes(d.id));const eqLie=d.lie?equipParLie(d.lie):null;
   return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:${d.pdf?"420px":"160px"}">${vignette(d)}</div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">${h(d.titre)}</h1><p class="muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</p></div>
-    <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd>${d.langueOriginale?`<dt>Langue d'origine</dt><dd>${h(d.langueOriginale)} · titre traduit automatiquement pour le classement</dd>`:(d.etranger?`<dt>Langue d'origine</dt><dd class="muted">Traduction en cours…</dd>`:"")}</dl></div>
+    <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.sinistre&&sinistreParId(d.sinistre)?`<dt>Sinistre</dt><dd><a href="#/sinistre/${d.sinistre}">${h(nomCause(sinistreParId(d.sinistre).cause))} du ${dateFr(sinistreParId(d.sinistre).quand)}</a> · ${d.sinRole==="recu"?"réponse de l'assureur":"pièce transmise"} · <button class="btn sm ghost" style="padding:2px 6px" onclick="retirerDuSinistre('${d.id}')">Retirer</button></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd>${d.langueOriginale?`<dt>Langue d'origine</dt><dd>${h(d.langueOriginale)} · titre traduit automatiquement pour le classement</dd>`:(d.etranger?`<dt>Langue d'origine</dt><dd class="muted">Traduction en cours…</dd>`:"")}</dl></div>
     ${carteNotes(d,"Par exemple : ce qu'il faut retenir de ce document, ou à qui l'on s'est adressé.")}
     <div class="row wrap">${d.img?`<button class="btn" onclick="voirDocument('${d.id}')">Voir</button>`:""}${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Changer de pièce</button><button class="btn" onclick="relierDocA('${d.id}')">${d.lie?"Relier à un autre appareil":"Relier à un appareil"}</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
   </div>`};
@@ -2519,7 +2724,7 @@ const AIDE=[
     {q:"Voir ce que les travaux ont coûté",c:"Le total connu, chantier par chantier.",k:"travaux coût total dépenses prix",go:"#/carte/travaux"},
   ]},
   {t:"Assurance et sinistre",l:[
-    {q:"Déclarer un sinistre",c:"VIDOM relit votre contrat — garantie, franchise, exclusions —, dit le délai légal et prépare la déclaration. Vous relisez, vous envoyez.",k:"sinistre dégât des eaux fuite incendie tempête effraction déclarer assureur assurance",go:()=>declarerSinistre()},
+    {q:"Déclarer un sinistre",c:"VIDOM relit votre contrat — garantie, franchise, exclusions —, dit le délai légal, prépare la déclaration et ouvre le dossier : pièces transmises, réponses de l'assureur, jusqu'à la clôture.",k:"sinistre dégât des eaux fuite incendie tempête effraction déclarer assureur assurance",go:()=>declarerSinistre()},
     {q:"Donner accès à mon assureur",c:"Il voit la fiche du logement, les équipements et le dossier sinistre, pour un temps.",k:"assureur accès assurance",go:()=>ouvrirAcces("assureur")},
     {q:"Vérifier mon contrat et son échéance",c:"Photographiez le dernier avis d'échéance : VIDOM compare le tarif et programme le rappel.",k:"échéance contrat assurance tarif renouvellement avis",go:()=>aideFichier("image/*,.pdf")},
   ]},
@@ -2647,8 +2852,8 @@ function aideAutreAppareil(){const url=location.href.split("#")[0];modal(`<h2>Su
 </script>
 <script>
 /* ================= navigation et rendu ================= */
-const TITRES={fil:"Le journal",maison:"Ma maison",reglages:"Réglages",carte:"Ma maison",piece:"Ma maison",equipement:"Équipements",document:"Documents",pro:"Les artisans de la maison",tri:"Le tri","adresse-vidom":"Adresse VIDOM",reconnu:"Photographier"};
-const RETOUR={carte:"#/maison",piece:"#/maison",equipement:"#/carte/equipements",document:"#/carte/documents",pro:"#/carte/artisans",reglages:"#/maison","adresse-vidom":"#/maison",tri:"#/fil",reconnu:"#/fil"};
+const TITRES={fil:"Le journal",maison:"Ma maison",reglages:"Réglages",carte:"Ma maison",piece:"Ma maison",equipement:"Équipements",document:"Documents",pro:"Les artisans de la maison",sinistre:"Sinistres",tri:"Le tri","adresse-vidom":"Adresse VIDOM",reconnu:"Photographier"};
+const RETOUR={carte:"#/maison",piece:"#/maison",equipement:"#/carte/equipements",document:"#/carte/documents",pro:"#/carte/artisans",sinistre:"#/carte/sinistres",reglages:"#/maison","adresse-vidom":"#/maison",tri:"#/fil",reconnu:"#/fil"};
 function parseHash(){const hh=location.hash.replace(/^#\/?/,"");const [name,...rest]=hh.split("/");return {name:name||"fil",arg:rest.join("/")}}
 function vue(name,arg){
   if(name==="carte")return V.carte(arg);
@@ -2656,6 +2861,7 @@ function vue(name,arg){
   if(name==="equipement")return V.equipement(arg);
   if(name==="document")return V.document(arg);
   if(name==="pro")return V.pro(arg);
+  if(name==="sinistre")return V.sinistre(arg); // D-201
   if(V[name])return V[name]();
   return V.fil();
 }
@@ -2664,7 +2870,7 @@ function nav(name){
   const cap=isDesk()?"":'capture="environment"';
   const n=S.fil.filter(e=>(e.type==="rappel"||e.type==="question"||e.type==="recu")&&!e.fait).length; // D-195 : ce qui attend reste visible depuis n'importe quel écran
   return `<nav class="nav">
-    <a href="#/maison" class="${["maison","carte","piece","equipement","document","pro","adresse-vidom","reglages"].includes(name)?"on":""}">${I.maison}<span>Ma maison</span></a>
+    <a href="#/maison" class="${["maison","carte","piece","equipement","document","pro","sinistre","adresse-vidom","reglages"].includes(name)?"on":""}">${I.maison}<span>Ma maison</span></a>
     <label class="cam ${on("reconnu")}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;border-radius:var(--r);color:var(--blanc);background:var(--sauge);font-size:.8em;font-weight:500;cursor:pointer;position:relative;overflow:hidden">${I.camera}<span>Photographier</span><input class="sr" type="file" accept="image/*" ${cap} multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label>
     <a href="#/fil" class="${on("fil")}">${I.bulle}${n?`<span class="pastille">${n>9?"9+":n}</span>`:""}<span>Le journal</span></a>
   </nav>`;
@@ -2710,6 +2916,7 @@ function render(){
   document.body.classList.add("app");
   questionDuJour();
   const {name,arg}=parseHash();
+  if(S.sinistreAttendu&&!["reconnu","tri","sinistre"].includes(name))S.sinistreAttendu=null; // D-201
   const html=vue(name,arg);
   let titre=TITRES[name]||"VIDOM";
   let retour=RETOUR[name];
