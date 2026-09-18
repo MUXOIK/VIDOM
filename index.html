@@ -39,6 +39,9 @@ p{margin:0}
 [hidden]{display:none!important}
 .sr{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 svg.i{width:20px;height:20px;flex:0 0 auto}
+.logo-p{display:inline-flex;align-items:center;flex:0 0 auto;margin-right:6px}.logo-p svg{width:26px;height:26px}
+.logo-grand{display:flex;flex-direction:column;align-items:center;gap:2px}.logo-grand svg{width:132px;height:132px}
+.logo-mot{font-weight:600;font-size:2.4em;letter-spacing:.01em;line-height:1}.logo-mot .v{color:var(--sauge)}.logo-mot .o{color:var(--terra)}
 
 /* ---------- squelette ---------- */
 #app{min-height:100%;display:flex;flex-direction:column}
@@ -178,6 +181,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 <script>
 /* ================= icônes (SVG en ligne) ================= */
 const VS='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
+/* D-199 : le logo VIDOM, dessiné en vectoriel d'après « VIDOM - Logo.png » (maison sauge, document terracotta). */
+const LOGO_ICONE=`<svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="var(--sauge)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 46 50 8l44 38"/><path d="M15 39v51h70V39"/><path d="M69 25v-9h10v18"/></g><g fill="none" stroke="var(--terra)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"><path d="M35 46h20l3 4h3v4h3l1 4v24H35z"/><path d="M42 63h16M42 71h8"/></g><g fill="var(--terra)"><rect x="63" y="38" width="4" height="4"/><rect x="70" y="35" width="3" height="3"/><rect x="65" y="31" width="3" height="3"/><rect x="72" y="41" width="2.5" height="2.5"/></g></svg>`;
+const LOGO_MOT=`<span class="logo-mot"><span class="v">vid</span><span class="o">o</span><span class="v">m</span></span>`;
+function logoPetit(){return `<span class="logo-p" aria-label="VIDOM">${LOGO_ICONE}</span>`}
 const I={
   camera:`<svg class="i" ${VS}><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
   aide:`<svg class="i" ${VS}><circle cx="12" cy="12" r="9"/><path d="M9.6 9.6a2.4 2.4 0 1 1 3.4 2.2c-.7.3-1 .8-1 1.5"/><circle cx="12" cy="16.5" r=".4"/></svg>`,
@@ -575,14 +582,14 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
         date:(r.date_document||(r.created_at||"").slice(0,10)),fournisseur:r.fournisseur||"",montant:r.montant_ttc,
         lie:r.equipement_id||"",travaux:iv?(iv.type_intervention||""):"",garantie:r.date_garantie_fin||"",
         img:r.chemin_stockage?(urlParChemin[r.chemin_stockage]||null):null,pdf:r.mime_type==="application/pdf",chemin:r.chemin_stockage||null,
-        recu:r.source==="adresse_vidom"?"adresse":"photo",dateRecu:(r.created_at||"").slice(0,10)};
+        recu:r.source==="adresse_vidom"?"adresse":"photo",dateRecu:(r.created_at||"").slice(0,10),notes:r.notes||""}; // D-198
     });
     S.equipements=(equipements||[]).map(r=>{
       const photo=photoParEquip[r.id];
       return {id:r.id,piece:r.piece_id||"maison",nom:r.categorie||"Équipement",marque:r.marque||"",modele:r.modele||"",
         ref:r.numero_serie||"",achat:r.date_achat||r.date_installation||"",garantie:r.date_garantie_fin||"",
         installateur:r.installateur||"",notice:!!r.notice,noticeUrl:r.notice_url||"",noticeTitre:r.notice_titre||"",sav:r.service_apres_vente||"",etat:r.etat||"bon",
-        entretien:!!r.entretien_requis,
+        entretien:!!r.entretien_requis,notes:r.notes||"",vocales:(r.memo&&r.memo.vocales)||[], // D-198
         img:photo&&photo.chemin_stockage?(urlParChemin[photo.chemin_stockage]||null):null,
         pdf:photo?photo.mime_type==="application/pdf":false,chemin:photo?(photo.chemin_stockage||null):null,
         date:r.created_at,entretiens:[]};
@@ -663,7 +670,8 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
         categorie:e.nom||"Équipement",marque:e.marque||null,modele:e.modele||null,numero_serie:e.ref||null,
         date_installation:e.achat||null,date_achat:e.achat||null,date_garantie_fin:e.garantie||null,
         installateur:e.installateur||null,notice:!!e.notice,notice_url:e.noticeUrl||null,notice_titre:e.noticeTitre||null,service_apres_vente:e.sav||null,
-        etat:["bon","moyen","a_remplacer","hors_service"].includes(e.etat)?e.etat:"bon",entretien_requis:!!e.entretien
+        etat:["bon","moyen","a_remplacer","hors_service"].includes(e.etat)?e.etat:"bon",entretien_requis:!!e.entretien,
+        notes:e.notes||null,memo:{vocales:(e.vocales||[]).filter(v=>v.chemin).map(v=>({id:v.id,chemin:v.chemin,d:v.d,duree:v.duree||0}))} // D-198
       })),{onConflict:"id"});
       const photosEq=S.equipements.filter(e=>e.chemin).map(e=>({
         id:idPhoto(e.id),logement_id:lig.id,equipement_id:e.id, // D-182 : "ph-"+id n'était pas un identifiant valide, la base refusait toutes les photos d'équipement en silencepiece_id:(e.piece&&e.piece!=="maison")?e.piece:null,
@@ -684,7 +692,8 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
             type_document:d.type||"autre",titre:d.titre||null,nom_fichier:d.chemin.split("/").pop(),chemin_stockage:d.chemin,
             mime_type:d.pdf?"application/pdf":"image/jpeg",
             date_document:d.date?d.date.slice(0,10):null,date_echeance:d.echeance?d.echeance.slice(0,10):null,fournisseur:d.fournisseur||null,montant_ttc:d.montant,
-            date_garantie_fin:d.garantie||null,source:d.recu==="adresse"?"adresse_vidom":"manuel",uploaded_by:session.user.id
+            date_garantie_fin:d.garantie||null,source:d.recu==="adresse"?"adresse_vidom":"manuel",uploaded_by:session.user.id,
+            notes:d.notes||null // D-198
           };
         });
         await supa.from("documents").upsert(lignesDoc,{onConflict:"id"});
@@ -1223,6 +1232,7 @@ function qrSvg(texte){
 /* ================= vues : le premier jour ================= */
 const V={};
 V.bienvenue=()=>`<div class="view center fadein" style="gap:24px">
+  <div class="logo-grand">${LOGO_ICONE}${LOGO_MOT}</div>
   <div class="stack" style="gap:12px">
     <h1 class="h" style="font-size:1.8em">VIDOM construit avec vous la mémoire de votre logement.</h1>
     <p style="font-size:1.1em">Elle se construit avec le temps : à chaque photo, à chaque document reçu, une nouvelle rubrique apparaît.</p>
@@ -1728,6 +1738,15 @@ function vEquipements(){
     <label class="btn file">${I.camera} Photographier un appareil<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label>
   </div>`;
 }
+/* D-198 : une zone de notes libre sur un équipement et sur un document — le code wifi de la clim, les boutons
+   à presser pour réinitialiser le lave-vaisselle. Elle s'enregistre au fil de la frappe, sans redessiner l'écran. */
+function carteNotes(x,exemple){
+  return `<div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Vos notes</p>
+    <textarea class="input" rows="3" placeholder="${h(exemple)}" oninput="noterItem('${x.id}',this.value)">${h(x.notes||"")}</textarea>
+    <p class="small faint">Ce que vous seul savez, et qu'il faudra retrouver un jour.</p></div>`;
+}
+function noterItem(id,texte){const x=S.equipements.find(e=>e.id===id)||S.docs.find(d=>d.id===id);if(!x)return;x.notes=texte;save()}
+function porteurVocal(id){return S.pros.find(x=>x.id===id)||S.equipements.find(x=>x.id===id)||null}
 V.equipement=id=>{
   const e=S.equipements.find(x=>x.id===id);if(!e)return vEquipements();
   assurerImage(e);
@@ -1739,6 +1758,8 @@ V.equipement=id=>{
     <div class="grid2">${e.img?`<button class="btn" onclick="voirEquipement('${e.id}')">Voir la photo</button>`:""}${e.noticeUrl?`<a class="btn" href="${h(e.noticeUrl)}" target="_blank" rel="noopener">${I.doc} Voir la notice</a>`:(e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" onclick="trouverNotice('${e.id}')" ${e.chercheNotice?"disabled":""}>${e.chercheNotice?"Recherche en cours…":"Retrouver la notice"}</button>`)}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
     ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents reliés</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
     ${e.noticeUrl?`<p class="small muted">${h(e.noticeTitre||"Notice")} — VIDOM garde le lien vers la notice. <button class="btn sm ghost" style="padding:2px 6px" onclick="retirerNotice('${e.id}')">Retirer</button></p>`:`<p class="small faint">La notice se retrouve à partir de la marque et du modèle, lus sur la plaque de l'appareil ou sur sa facture.</p>`}
+    ${carteNotes(e,"Par exemple : le code wifi pour relier la clim au téléphone, ou les boutons à presser pour réinitialiser l'appareil.")}
+    ${carteVocales(e)}
     <div class="row wrap"><button class="btn grow" onclick="relierEquipA('${e.id}')">${I.doc} Relier un document</button><button class="btn" onclick="retirerEquip('${e.id}')">Retirer cet équipement</button></div>
   </div>`;
 };
@@ -1798,6 +1819,7 @@ V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();assu
   return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:${d.pdf?"420px":"160px"}">${vignette(d)}</div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">${h(d.titre)}</h1><p class="muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</p></div>
     <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd>${d.langueOriginale?`<dt>Langue d'origine</dt><dd>${h(d.langueOriginale)} · titre traduit automatiquement pour le classement</dd>`:(d.etranger?`<dt>Langue d'origine</dt><dd class="muted">Traduction en cours…</dd>`:"")}</dl></div>
+    ${carteNotes(d,"Par exemple : ce qu'il faut retenir de ce document, ou à qui l'on s'est adressé.")}
     <div class="row wrap">${d.img?`<button class="btn" onclick="voirDocument('${d.id}')">Voir</button>`:""}${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Changer de pièce</button><button class="btn" onclick="relierDocA('${d.id}')">${d.lie?"Relier à un autre appareil":"Relier à un appareil"}</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
   </div>`};
 /* D-180 : retirer, c'est retirer pour de vrai — sur l'appareil, sur le compte et dans les fichiers gardés.
@@ -1966,7 +1988,7 @@ function carteVocales(p){
   liste.forEach(v=>{if(v.chemin&&!v.url&&!v._sig&&supa){v._sig=true;supa.storage.from("logement-files").createSignedUrl(v.chemin,60*60*24*30).then(({data})=>{if(data&&data.signedUrl){v.url=data.signedUrl;if(!enreg)render()}}).catch(()=>{})}});
   const enCours=enreg&&enreg.proId===p.id;
   return `<div class="card" style="gap:10px"><p class="small b" style="color:var(--sauge-f)">Vos notes vocales</p>
-    ${liste.length?"":`<p class="small muted">Dites ce que vous voulez retenir : comment le chantier s'est passé, ce qu'il faudra lui redemander. L'artisan ne l'entend jamais.</p>`}
+    ${liste.length?"":`<p class="small muted">${p.metier!==undefined?"Dites ce que vous voulez retenir : comment le chantier s'est passé, ce qu'il faudra lui redemander. L'artisan ne l'entend jamais.":"Dites ce que vous voulez retenir de cet appareil, si c'est plus simple que de l'écrire."}</p>`}
     ${liste.map(v=>`<div class="stack" style="gap:4px"><div class="split"><span class="small muted">${dateFr(v.d)} · ${dureeFr(v.duree)}</span><button class="btn sm ghost" onclick="retirerVocale('${p.id}','${v.id}')">Retirer</button></div>${v.url?`<audio controls preload="metadata" src="${v.url}" style="width:100%"></audio>`:`<p class="small muted">Un instant…</p>`}</div>`).join("")}
     ${enCours?`<div class="row"><span class="small b" style="color:var(--terra-f);flex:1 1 auto">● Enregistrement… <span id="enreg-t">0 s</span></span><button class="btn primary" onclick="arreterVocale()">Terminer</button><button class="btn" onclick="arreterVocale(true)">Annuler</button></div>`
       :`<div class="row"><button class="btn grow" onclick="enregistrerVocale('${p.id}')">${I.micro} Enregistrer une note</button></div>`}
@@ -1990,7 +2012,7 @@ function arreterVocale(annuler){if(!enreg)return;enreg.annule=!!annuler;clearInt
 async function finirVocale(){
   const e=enreg;if(!e)return;enreg=null;
   try{e.flux.getTracks().forEach(t=>t.stop())}catch(_){}
-  const p=S.pros.find(x=>x.id===e.proId);
+  const p=porteurVocal(e.proId); // D-198 : un professionnel ou un équipement
   if(e.annule||!p||!e.morceaux.length){render();return}
   const mime=(e.rec.mimeType||"audio/webm").split(";")[0];
   const blob=new Blob(e.morceaux,{type:mime});
@@ -2010,7 +2032,7 @@ async function finirVocale(){
 }
 function retirerVocale(proId,vid){modal(`<h2>Retirer cette note vocale ?</h2><p class="muted">Elle disparaît vraiment de la mémoire de la maison.</p><div class="row"><button class="btn terra grow" onclick="retirerVocaleOui('${proId}','${vid}')">Retirer</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
 async function retirerVocaleOui(proId,vid){
-  const p=S.pros.find(x=>x.id===proId);if(!p)return;const v=(p.vocales||[]).find(x=>x.id===vid);
+  const p=porteurVocal(proId);if(!p)return;const v=(p.vocales||[]).find(x=>x.id===vid);
   p.vocales=(p.vocales||[]).filter(x=>x.id!==vid);closeModal();save();render();toast("Retirée");
   if(v&&v.chemin&&supa){try{await supa.storage.from("logement-files").remove([v.chemin])}catch(_){}}
 }
@@ -2529,7 +2551,7 @@ function nav(name){
 }
 function renderReinitialiser(){
   document.body.classList.remove("app");
-  document.getElementById("app").innerHTML=`<div class="col"><div class="top"><span class="t">VIDOM</span></div><div class="view center fadein" style="gap:18px">
+  document.getElementById("app").innerHTML=`<div class="col"><div class="top"><span class="row">${logoPetit()}<span class="t">VIDOM</span></span></div><div class="view center fadein" style="gap:18px">
     <div class="stack"><h1 class="h">Nouveau mot de passe.</h1><p class="muted">Choisissez un nouveau mot de passe pour votre compte VIDOM.</p></div>
     <form class="stack" style="gap:14px" onsubmit="event.preventDefault();reinitialiserOk()">
       <label class="f"><span>Nouveau mot de passe</span><input class="input" id="npw" type="password" autocomplete="new-password" minlength="8" required></label>
@@ -2562,7 +2584,7 @@ function render(){
     const pre=e==="bienvenue"||e==="compte"?"VIDOM":(e==="adresse"?(S.ajout?"Un logement de plus":"Commençons"):h(S.logement.nom||"VIDOM"));
     const right=e==="maison-adresse"||e==="commencons"?`<span class="chip">Premier jour</span>`:"";
     const back=e==="compte"?`<button class="back" onclick="S.etape='bienvenue';save();render()">${I.retour}</button>`:e==="adresse"?`<button class="back" onclick="${S.ajout?"annulerAjout()":"S.etape='compte';save();render()"}">${I.retour}</button>`:e==="maison-adresse"?`<button class="back" onclick="S.etape='adresse';save();render()">${I.retour}</button>`:e==="commencons"?`<button class="back" onclick="S.etape='maison-adresse';save();render()">${I.retour}</button>`:"";
-    app.innerHTML=`<div class="col"><div class="top"><span class="row">${back}<span class="t">${pre}</span></span>${right}</div>${(V[e]||V.bienvenue)()}</div>`;
+    app.innerHTML=`<div class="col"><div class="top"><span class="row">${back}${e==="bienvenue"?"":logoPetit()}<span class="t">${pre}</span></span>${right}</div>${(V[e]||V.bienvenue)()}</div>`;
     return;
   }
   document.body.classList.add("app");
@@ -2578,11 +2600,11 @@ function render(){
     const rt=name==="maison"?"Le journal":titre;
     const rr=name==="maison"?"":retour;
     app.innerHTML=`<div class="desk">
-      <div class="pane left"><div class="topbar">${boutonLogement(S.logement.nom,"")}<span class="small muted">${h(S.logement.ville)}</span></div>${V.maison()}</div>
+      <div class="pane left"><div class="topbar"><span class="row">${logoPetit()}${boutonLogement(S.logement.nom,"")}</span><span class="small muted">${h(S.logement.ville)}</span></div>${V.maison()}</div>
       <div class="pane right"><div class="topbar"><span class="row">${rr&&rr!=="#/fil"&&rightName!=="fil"?`<a class="back" href="${rr}">${I.retour}</a>`:(rightName!=="fil"&&rightName!=="maison"?`<a class="back" href="#/fil">${I.retour}</a>`:"")}<span class="t">${rt}</span></span><span class="actions"><label class="btn primary file">${I.plus} Ajouter<input type="file" accept="image/*,.pdf" multiple onchange="fichiers(this.files,S.pieceCourante||'maison')"></label><button class="btn" onclick="ajouterDesk()" aria-label="Photographier ou continuer sur le téléphone">${I.camera}</button><button class="btn" onclick="ouvrirAide()" aria-label="Aide">${I.aide}</button><a class="btn" href="#/reglages" aria-label="Réglages">${I.reglages}</a></span></div>${rightHtml}</div>
     </div>`;
   }else{
-    app.innerHTML=`<div class="col"><div class="top"><span class="row">${retour?`<a class="back" href="${retour}">${I.retour}</a>`:""}${name==="fil"?boutonLogement(S.logement.nom,""):`<span class="t">${titre}</span>`}</span><span class="row" style="gap:8px">${name==="fil"?`<span class="chip">${h(phraseCourte())}</span>`:""}${boutonAide()}</span></div>${html}${nav(name)}</div>`;
+    app.innerHTML=`<div class="col"><div class="top"><span class="row">${retour?`<a class="back" href="${retour}">${I.retour}</a>`:""}${logoPetit()}${name==="fil"?boutonLogement(S.logement.nom,""):`<span class="t">${titre}</span>`}</span><span class="row" style="gap:8px">${name==="fil"?`<span class="chip">${h(phraseCourte())}</span>`:""}${boutonAide()}</span></div>${html}${nav(name)}</div>`;
   }
   const dv=document.querySelector(".pane.right")||window;
   if(render.lastRoute!==location.hash){window.scrollTo(0,0);render.lastRoute=location.hash}
