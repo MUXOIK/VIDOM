@@ -225,7 +225,7 @@ bascule:`<svg class="i" ${VS} stroke-width="2" style="width:1em;height:1em"><pat
 /* Servie une par une, au fil des photos et des événements. Jamais d'un bloc. */
 const RESERVE={
   /* la reconnaissance des photos, l'adresse, le DPE/cadastre et les réponses de "Demander à la maison"
-     sont désormais réels (extract-document, BAN, ADEME/IGN/RNB/Géorisques, demander-maison) : plus de
+     sont désormais réels (extract-document, BAN, ADEME/IGN/RNB/Géorisques, demander-maison, declarer-sinistre) : plus de
      jeu de données fictif ici. RESERVE.pros et RESERVE.tiers restent, pour d'autres écrans encore hors
      de ce tour (repli de connaitrePro(), démonstration "voir comme" d'un tiers). */
   pros:{
@@ -1574,6 +1574,7 @@ function entreeFil(e){
   if(e.type==="rappel"&&!e.fait)boutons=e.info?`<div class="row"><button class="btn grow" onclick="filDecider('${e.id}','fait')">Compris</button></div>`:`<div class="row wrap">${e.pro?`<button class="btn grow" onclick="filDecider('${e.id}','rappeler')">Rappeler ${h(e.pro)}</button>`:""}<button class="btn" onclick="filDecider('${e.id}','fait')">Déjà fait</button></div>`;
   if(e.type==="question"&&!e.fait)boutons=`<div class="row wrap">${e.boutons.map((b,i)=>`<button class="btn ${i===0?"primary":""} ${i===0?"grow":""}" onclick="filDecider('${e.id}','${b[1]}')">${h(b[0])}</button>`).join("")}</div>`;
   if(e.type==="naissance"||e.type==="acces")boutons=`<div class="row"><a class="btn" href="${e.go}">Voir</a></div>`;
+  if(e.type==="sinistre")boutons=`<div class="row"><button class="btn grow" onclick="montrerSinistre('${e.id}')">Revoir la déclaration</button></div>`; // D-200
   if(e.propose)boutons+=`<div class="card soft" style="gap:8px;padding:12px 14px"><p class="small">Toujours garder ce que ${h(e.propose)} envoie ?</p><div class="row"><button class="btn sm" onclick="toujoursAccepter('${e.id}',true)">Oui</button><button class="btn sm" onclick="toujoursAccepter('${e.id}',false)">Non, me demander</button></div></div>`;
   corps=`<p>${h(e.t)}</p>${e.t2?`<p class="small muted">${h(e.t2)}</p>`:""}${e.t3?`<p class="small muted">${h(e.t3)}</p>`:""}`;
   return `<div class="card fadein ${e.type==="recu"&&!e.fait?"attn":""}"><div class="split">${quand}${ico}</div>${corps}${boutons}</div>`;
@@ -1793,7 +1794,126 @@ function retirerNotice(id){const e=S.equipements.find(x=>x.id===id);if(!e)return
 function voirNotice(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Notice — ${h(e.marque)} ${h(e.modele)}</h2><div class="book"><p class="small muted">Retrouvée sur le site du fabricant à partir de la référence ${h(e.ref)}.</p><p style="margin-top:10px"><b>Mise en service.</b> Raccordez l'appareil, vérifiez le niveau, lancez un premier cycle à vide.</p><p><b>Entretien.</b> Nettoyez le filtre une fois par mois. Détartrez tous les six mois.</p><p><b>En cas de panne.</b> Le code affiché indique la cause : E15, fuite ; E22, filtre obstrué ; E24, évacuation.</p></div><div class="row"><button class="btn primary grow" onclick="closeModal();toast('Notice conservée dans Documents')">Conserver dans Documents</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
 function sav(id){const e=S.equipements.find(x=>x.id===id);modal(`<h2>Service après-vente ${h(e.marque)}</h2><p class="muted">Retrouvé à partir de la référence ${h(e.ref)}. ${e.garantie&&joursDepuis(e.garantie)<0?"L'appareil est encore sous garantie.":"L'appareil n'est plus sous garantie."}</p><a class="btn primary big" href="tel:${e.sav.replace(/\s/g,"")}">${I.telephone} ${h(e.sav)}</a><p class="small faint">Ayez sous la main : la référence ${h(e.ref)}, la date d'achat (${dateFr(e.achat)}) et la facture, qui est dans la mémoire de la maison.</p><button class="btn" onclick="closeModal()">Fermer</button>`)}
 function probleme(id){const e=S.equipements.find(x=>x.id===id);const garanti=e.garantie&&joursDepuis(e.garantie)<0;const pro=S.pros.find(p=>p.nom===e.installateur);modal(`<h2>Un problème avec ${h(lc(e.nom))} ?</h2><p class="muted">${garanti?"Il est sous garantie : le service après-vente d'abord.":(pro?`${h(pro.nom)} connaît cet appareil : la maison le propose en premier.`:"Voici par où commencer.")}</p><div class="stack">${garanti&&e.sav?`<button class="btn primary big" onclick="closeModal();sav('${e.id}')">${I.telephone} Appeler le SAV</button>`:""}${pro?`<button class="btn ${garanti?"":"primary"} big" onclick="closeModal();contacter('${h(pro.nom)}')">${I.gens} Recontacter ${h(pro.nom)}</button>`:""}<button class="btn big" onclick="closeModal();trouverPro('${h(e.nom)}')">Trouver un professionnel</button><button class="btn big" onclick="closeModal();sinistre('${e.id}')">Déclarer un sinistre à l'assureur</button></div><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
-function sinistre(id){const e=id?S.equipements.find(x=>x.id===id):null;const quoi=e?lc(e.nom):"la maison";const ass=S.docs.find(d=>d.type==="contrat");modal(`<h2>Déclaration de sinistre</h2><p class="muted">VIDOM prépare le dossier avec ce que la maison sait. Vous relisez, vous envoyez.</p><div class="book"><p class="b">${h(S.logement.nom)} — ${h(S.logement.adresse)}, ${h(S.logement.cp)} ${h(S.logement.ville)}</p><p class="small muted">${ass?"Contrat : "+h(ass.fournisseur)+", attestation du "+dateFr(ass.date):"Attestation d'assurance : à photographier"}</p>${e?`<p style="margin-top:8px"><b>Équipement concerné :</b> ${h(e.nom)} ${h(e.marque)} ${h(e.modele)}, ${e.achat?"acheté le "+dateFr(e.achat):""}${e.installateur?", installé par "+h(e.installateur):""}.</p>`:""}<p><b>Pièces jointes :</b> ${e?"facture d'achat, photos"+(e.notice?", notice":""):"photos, devis ou factures des réparations"}.</p></div><div class="row"><a class="btn primary grow" href="mailto:?subject=${encodeURIComponent("Déclaration de sinistre — "+S.logement.adresse)}" onclick="closeModal();filAjouter({type:'info',t:'Déclaration de sinistre préparée pour '+'${h(quoi)}'+'. Envoyée depuis votre messagerie.',ico:'envoi',fait:true});render()">${I.envoi} Envoyer</a><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
+/* ================= D-200 (18 septembre 2026) : déclarer un sinistre, pour de vrai — en application de D-152 (A16) =================
+   Le gardien dit ce qui s'est passé. VIDOM relit les documents d'assurance que la maison garde (fonction declarer-sinistre,
+   qui appelle Claude), restitue ce que dit le contrat — garantie, franchise, exclusions — sans conclure à la place de
+   l'assureur sur un cas ambigu, applique elle-même le cadre légal français (délai de déclaration, convention IRSI), puis
+   propose la déclaration pré-remplie. Le gardien relit, copie ou envoie depuis sa messagerie. Tout reste dans le journal. */
+const CAUSES_SINISTRE=[["panne","Panne d'un appareil"],["degat_eaux","Dégât des eaux, fuite"],["electrique","Dommage électrique, surtension"],["incendie","Incendie, fumée"],["tempete","Tempête, grêle, neige"],["vol","Vol, effraction, vandalisme"],["bris","Bris de glace"],["catnat","Catastrophe naturelle"],["autre","Autre"]];
+const TIERS_SINISTRE=[["aucun","Non, personne d'autre"],["voisin","Un voisin ou l'immeuble"],["autre","Un professionnel, une autre personne"],["inconnu","Je ne sais pas"]];
+const PAGES_LUES_SINISTRE=30; // les exclusions sont souvent loin dans les conditions générales : on relit plus large que pour un classement
+let sinistreEnCours=null;
+function docsAssurance(){ // les documents d'assurance que la maison garde, les plus utiles d'abord : le contrat avant l'attestation, le plus récent avant l'ancien
+  const assureurs=S.pros.filter(p=>categorieDe(p)==="assureur").map(p=>p.nom);
+  const poids=d=>(d.type==="assurance"?2:0)+(d.type==="contrat"?2:0)+(d.pdf?1:0)+(/condition|contrat|g[ée]n[ée]rale|particuli/i.test(d.titre||"")?2:0)-(/attestation/i.test(d.titre||"")?1:0);
+  return S.docs.filter(d=>d.chemin&&(d.type==="assurance"||(["contrat","devis","courrier","autre","garantie"].includes(d.type)&&assureurs.includes(d.fournisseur))))
+    .sort((a,b)=>(poids(b)-poids(a))||String(b.date||"").localeCompare(String(a.date||"")));
+}
+function assureurConnu(){return S.pros.find(p=>categorieDe(p)==="assureur")||null}
+function joursOuvresApres(dateIso,n){ // le délai légal se compte en jours ouvrés : on saute samedis et dimanches (pas les jours fériés — approximation dite comme telle)
+  const d=new Date((dateIso||today())+"T12:00:00");let k=0;
+  while(k<n){d.setDate(d.getDate()+1);const j=d.getDay();if(j!==0&&j!==6)k++}
+  return d.toISOString().slice(0,10);
+}
+function delaiSinistre(cause,quand){ // France, code des assurances, article L.113-2 : le délai minimal, que le contrat peut allonger mais pas raccourcir
+  if(cause==="vol")return {jours:2,limite:joursOuvresApres(quand,2),base:"2 jours ouvrés pour un vol (article L.113-2 du code des assurances)"};
+  if(cause==="catnat")return {jours:30,limite:null,base:"30 jours après la publication de l'arrêté de catastrophe naturelle au Journal officiel (article L.125-2 du code des assurances)"};
+  return {jours:5,limite:joursOuvresApres(quand,5),base:"5 jours ouvrés (article L.113-2 du code des assurances)"};
+}
+function sinistre(id){ // point d'entrée : depuis « Un problème avec… », depuis l'aide, ou depuis le journal
+  const e=id?S.equipements.find(x=>x.id===id):null;
+  sinistreEnCours={equip:e?e.id:null,cause:e?"panne":"",quand:today(),quoi:"",tiers:"aucun",tiersQui:"",mesures:""};
+  formSinistre();
+}
+function lireFormSinistre(){const g=k=>{const el=document.getElementById("sin-"+k);return el?el.value:""};const s=sinistreEnCours;s.quand=g("quand")||s.quand;s.quoi=g("quoi");s.tiersQui=g("qui");s.mesures=g("mesures")}
+function choixSinistre(k,v){lireFormSinistre();sinistreEnCours[k]=v;formSinistre()}
+function formSinistre(){
+  const s=sinistreEnCours,e=s.equip?S.equipements.find(x=>x.id===s.equip):null;
+  const docs=docsAssurance(),ass=assureurConnu();
+  const chips=(liste,k)=>`<div class="row wrap" style="gap:6px">${liste.map(([v,t])=>`<button type="button" class="chip btn-chip ${s[k]===v?"on":""}" onclick="choixSinistre('${k}','${v}')">${h(t)}</button>`).join("")}</div>`;
+  modal(`<h2>Déclarer un sinistre</h2><p class="muted">${e?`Sur ${h(lc(e.nom))}${e.marque?" "+h(e.marque):""}. `:""}Dites ce qui s'est passé : VIDOM relit votre contrat et prépare la déclaration. Vous relisez, vous envoyez.</p>
+    <div class="stack" style="gap:14px">
+      <div class="stack" style="gap:6px"><span class="b">Que s'est-il passé ?</span>${chips(CAUSES_SINISTRE,"cause")}</div>
+      <div class="stack" style="gap:6px"><label class="b" for="sin-quand">Quand ?</label><input class="input" type="date" id="sin-quand" value="${h(s.quand)}" max="${today()}"></div>
+      <div class="stack" style="gap:6px"><label class="b" for="sin-quoi">En quelques mots</label><textarea class="input" id="sin-quoi" rows="3" placeholder="${e?`Par exemple : ${h(lc(e.nom))} ne s'allume plus depuis ce matin, aucun code d'erreur.`:"Par exemple : fuite sous l'évier, le parquet de la cuisine est gondolé."}">${h(s.quoi)}</textarea></div>
+      <div class="stack" style="gap:6px"><span class="b">Quelqu'un d'autre est-il en cause ?</span>${chips(TIERS_SINISTRE,"tiers")}${s.tiers==="voisin"||s.tiers==="autre"?`<input class="input" id="sin-qui" placeholder="${s.tiers==="voisin"?"Par exemple : l'appartement du dessus, M. Martin":"Qui ? Par exemple : le plombier venu le 12"}" value="${h(s.tiersQui)}">`:""}</div>
+      <div class="stack" style="gap:6px"><label class="b" for="sin-mesures">Ce que vous avez déjà fait <span class="small muted" style="font-weight:400">(facultatif)</span></label><textarea class="input" id="sin-mesures" rows="2" placeholder="Coupé l'eau, pris des photos, prévenu le voisin…">${h(s.mesures)}</textarea></div>
+      <p class="small faint">${docs.length?`VIDOM relira ${docs.length===1?"le document d'assurance":docs.slice(0,3).length+" documents d'assurance"} que la maison garde${ass?" ("+h(ass.nom)+")":""} : ${docs.slice(0,3).map(d=>h(d.titre)).join(", ")}.`:"La maison n'a encore aucun contrat d'assurance : VIDOM préparera la déclaration, mais ne pourra pas dire ce que couvre votre contrat. Photographiez-le (conditions particulières et générales) pour la prochaine fois."}</p>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="lancerSinistre()">${I.doc} Préparer la déclaration</button><button class="btn" onclick="closeModal()">Annuler</button></div>`);
+}
+async function lancerSinistre(){
+  lireFormSinistre();const s=sinistreEnCours;
+  if(!s.cause){toast("Dites d'abord ce qui s'est passé.");return}
+  if(!s.quoi.trim()&&s.cause==="autre"){toast("Quelques mots suffisent.");return}
+  if(!supa){toast("Indisponible pour l'instant.");return}
+  const e=s.equip?S.equipements.find(x=>x.id===s.equip):null;
+  const docs=docsAssurance().slice(0,3);
+  modal(`<h2>Un instant</h2><p class="muted" id="sin-attente">${docs.length?"VIDOM relit votre contrat d'assurance…":"VIDOM prépare la déclaration…"}</p><p class="small faint">Cela peut prendre une minute quand le contrat est long.</p>`);
+  const contrats=[];
+  for(const d of docs){
+    try{
+      const {data}=await supa.storage.from("logement-files").createSignedUrl(d.chemin,600);
+      const blob=await (await fetch(data.signedUrl)).blob();
+      const mimeType=d.pdf?"application/pdf":(blob.type||"image/jpeg");
+      const lu=await pourLecture(blob,mimeType,PAGES_LUES_SINISTRE);
+      contrats.push({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,mimeType,...lu});
+    }catch(err){console.error("sinistre, document illisible",d.titre,err)}
+  }
+  const factures=e?docsLies(e).map(d=>({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,montant:d.montant,garantie:d.garantie||""})):[];
+  const corps={
+    sinistre:{cause:s.cause,quand:s.quand,quoi:s.quoi,tiers:s.tiers,tiersQui:s.tiersQui,mesures:s.mesures},
+    logement:{nom:S.logement.nom,adresse:S.logement.adresse,cp:S.logement.cp,ville:S.logement.ville,pays:"France",annee:S.logement.annee,surface:S.logement.surface},
+    equipement:e?{nom:e.nom,marque:e.marque,modele:e.modele,ref:e.ref,achat:e.achat,fin_garantie:e.garantie||null,sous_garantie:!!(e.garantie&&joursDepuis(e.garantie)<0),installateur:e.installateur,piece:nomPiece(e.piece),factures}:null,
+    contrats,
+  };
+  let res=null,raison="";
+  try{
+    const {data,error}=await supa.functions.invoke("declarer-sinistre",{body:corps});
+    if(error||!data||!data.declaration){raison=await raisonEchec(error);if(raison)console.error("declarer-sinistre :",raison)}
+    else res=data;
+  }catch(err){console.error("declarer-sinistre",err)}
+  if(!res){
+    modal(`<h2>Cela n'a pas fonctionné</h2><p class="muted">${h(serviceNonConfigure(raison)?"Le service de lecture n'est pas configuré.":(raison||"VIDOM n'a pas pu relire le contrat. Réessayez dans un instant."))}</p><div class="row"><button class="btn primary grow" onclick="formSinistre()">Revenir</button><button class="btn" onclick="closeModal()">Fermer</button></div>`);
+    return;
+  }
+  const delai=delaiSinistre(s.cause,s.quand);
+  const sin={...s,equipNom:e?`${e.nom}${e.marque?" "+e.marque:""}`:"",res,delai,docsLus:docs.map(d=>d.titre),d:now()};
+  const entree=filAjouter({type:"sinistre",t:`Déclaration de sinistre préparée${e?" pour "+lc(e.nom):""} : ${CAUSES_SINISTRE.find(c=>c[0]===s.cause)[1].toLowerCase()}, le ${dateFr(s.quand)}.`,t2:res.contrat_trouve?`Contrat relu${res.assureur?" ("+res.assureur+")":""}.`:"Aucun contrat d'assurance relu : la maison n'en garde pas encore.",sin,ico:"envoi",fait:true});
+  if(delai.limite){const t=`Déclarer le sinistre du ${dateFr(s.quand)} à votre assureur avant le ${dateFr(delai.limite)} (délai légal).`;if(!S.rappels.some(r=>r.t===t))S.rappels.push({id:uid(),t,equip:e?e.id:"",du:today(),fait:false})}
+  save();render();
+  montrerSinistre(entree.id);
+}
+function montrerSinistre(filId){
+  const entree=S.fil.find(x=>x.id===filId);if(!entree||!entree.sin)return;
+  const sin=entree.sin,r=sin.res,g=r.garantie||{},ass=assureurConnu();
+  const etat={oui:["Couvert par votre contrat, d'après ce qu'il écrit","var(--sauge-f)"],non:["Une exclusion écrite vise ce cas","var(--terra-f)"],a_verifier:["À faire confirmer par votre assureur","var(--terra-f)"]}[g.s_applique||"a_verifier"];
+  const bloc=(titre,corps)=>`<div class="card" style="gap:6px"><span class="b">${titre}</span>${corps}</div>`;
+  const li=l=>`<ul style="margin:0;padding-left:18px">${l.map(x=>`<li>${h(x)}</li>`).join("")}</ul>`;
+  const contrat=r.contrat_trouve
+    ?bloc("Ce que dit votre contrat",`<p class="small muted">${r.documents_lus.length?"Relu : "+h(r.documents_lus.join(", ")):"Relu : "+h(sin.docsLus.join(", "))}${r.numero_contrat?" · contrat n° "+h(r.numero_contrat):""}</p>${g.nom?`<p><b>${h(g.nom)}</b> — <span style="color:${etat[1]}">${etat[0]}</span></p>`:`<p>VIDOM n'a pas trouvé, dans les pages relues, de garantie qui corresponde à ce cas.</p>`}${g.explication?`<p>${h(g.explication)}</p>`:""}${g.franchise||g.plafond?`<p class="small">${g.franchise?"Franchise : "+h(g.franchise):""}${g.franchise&&g.plafond?" · ":""}${g.plafond?"Plafond : "+h(g.plafond):""}</p>`:`<p class="small muted">Franchise et plafond : non lisibles dans les pages relues.</p>`}${r.pages_manquantes?`<p class="small muted">Le contrat est long : VIDOM n'en a relu qu'une partie. Les conditions générales complètes diraient plus.</p>`:""}`)
+    :bloc("Votre contrat d'assurance",`<p>La maison ne garde pas encore votre contrat d'assurance habitation : VIDOM ne peut pas dire ce qu'il couvre, ni sa franchise. Photographiez les conditions particulières et les conditions générales, puis refaites la demande.</p><button class="btn sm" onclick="closeModal();aideFichier('image/*,.pdf')">${I.camera} Photographier le contrat</button>`);
+  const exclusions=r.exclusions.length?bloc("Les exclusions à lire",`<p class="small muted">VIDOM les recopie, sans décider si elles s'appliquent : c'est à l'assureur d'apprécier.</p>${r.exclusions.map(x=>`<p><i>« ${h(x.clause)} »</i>${x.pourquoi?`<br><span class="small muted">${h(x.pourquoi)}</span>`:""}</p>`).join("")}`):"";
+  const verif=r.a_verifier&&r.pourquoi_a_verifier?bloc("Ce que VIDOM ne tranche pas",`<p>${h(r.pourquoi_a_verifier)}</p><p class="small muted">Posez la question à votre assureur telle quelle : la réponse dépend de son appréciation, pas d'une lecture du contrat.</p>`):"";
+  const avant=r.avant_assureur.length?bloc("Avant d'écrire à l'assureur",li(r.avant_assureur)):"";
+  const delai=bloc("Le délai",`<p>${sin.delai.limite?`Déclarer <b>avant le ${dateFr(sin.delai.limite)}</b> : `:""}${h(sin.delai.base)}, à compter du jour où vous avez eu connaissance du sinistre. Votre contrat peut prévoir plus long, jamais moins. Un rappel est posé dans le journal.</p><p class="small muted">Les jours fériés ne sont pas déduits : en cas de doute, écrivez plus tôt.</p>`);
+  const tiers=sin.tiers==="voisin"&&["degat_eaux","incendie"].includes(sin.cause)
+    ?bloc("Un voisin ou l'immeuble est en cause",`<p>Écrivez d'abord à <b>votre propre assureur</b>, pas à celui du voisin. En France, pour un dégât des eaux ou un incendie dans un immeuble collectif, la convention IRSI règle le partage entre assureurs sous 5 000 € HT : c'est l'assureur de l'occupant du logement sinistré qui pilote, vous n'avez pas à négocier avec l'assurance du voisin. Un constat amiable de dégât des eaux, rempli avec le voisin, facilite tout.</p>`)
+    :(sin.tiers!=="aucun"?bloc("Quelqu'un d'autre est en cause",`<p>Écrivez d'abord à votre propre assureur : c'est lui qui se retourne, s'il y a lieu, vers l'assurance de l'autre partie. Gardez les coordonnées${sin.tiersQui?" ("+h(sin.tiersQui)+")":""} et tout écrit échangé.</p>`):"");
+  const joindre=r.a_joindre.length?bloc("À joindre",li(r.a_joindre)):"";
+  const manque=r.manque.length?`<p class="small faint">Pour faire mieux la prochaine fois : ${h(r.manque.join(" ; "))}.</p>`:"";
+  const dest=ass&&ass.mail?ass.mail:"";
+  const texte=r.declaration.texte||"";
+  modal(`<h2>Sinistre${sin.equipNom?" — "+h(sin.equipNom):""}</h2><p class="muted">${h(CAUSES_SINISTRE.find(c=>c[0]===sin.cause)[1])}, le ${dateFr(sin.quand)}. VIDOM restitue ce que dit votre contrat et le cadre légal ; il ne décide pas à la place de l'assureur.</p>
+    <div class="stack" style="gap:10px;max-height:60vh;overflow:auto;padding-right:2px">
+      ${contrat}${avant}${exclusions}${verif}${delai}${tiers}
+      <div class="card" style="gap:6px"><span class="b">Votre déclaration, à relire</span><p class="small muted">Objet : ${h(r.declaration.objet)}${dest?" · À : "+h(dest):(ass?" · À : "+h(ass.nom)+" (courriel à retrouver)":"")}</p><div class="book" style="white-space:pre-wrap;font-size:.95em">${h(texte)}</div></div>
+      ${joindre}${manque}
+    </div>
+    <div class="row wrap" style="margin-top:12px"><a class="btn primary grow" href="mailto:${encodeURIComponent(dest)}?subject=${encodeURIComponent(r.declaration.objet)}&body=${encodeURIComponent(texte)}" onclick="toast('Le message part de votre messagerie.')">${I.envoi} Envoyer par courriel</a><button class="btn" onclick="copier(document.getElementById('sin-texte').value)">Copier</button><button class="btn" onclick="closeModal()">Fermer</button></div>
+    <textarea id="sin-texte" class="sr" aria-hidden="true">${h(texte)}</textarea>
+    <p class="small faint" style="margin-top:8px">Le message part de votre messagerie, pas de VIDOM. Joignez vous-même les photos et factures.</p>`);
+}
 
 function vDocuments(){
   const vue=S.reglages.docsPar||"type";
@@ -2399,7 +2519,7 @@ const AIDE=[
     {q:"Voir ce que les travaux ont coûté",c:"Le total connu, chantier par chantier.",k:"travaux coût total dépenses prix",go:"#/carte/travaux"},
   ]},
   {t:"Assurance et sinistre",l:[
-    {q:"Déclarer un sinistre",c:"VIDOM prépare la déclaration avec ce que la maison sait : contrat, appareil, factures. Vous relisez, vous envoyez.",k:"sinistre dégât des eaux fuite incendie tempête effraction déclarer assureur assurance",go:()=>declarerSinistre()},
+    {q:"Déclarer un sinistre",c:"VIDOM relit votre contrat — garantie, franchise, exclusions —, dit le délai légal et prépare la déclaration. Vous relisez, vous envoyez.",k:"sinistre dégât des eaux fuite incendie tempête effraction déclarer assureur assurance",go:()=>declarerSinistre()},
     {q:"Donner accès à mon assureur",c:"Il voit la fiche du logement, les équipements et le dossier sinistre, pour un temps.",k:"assureur accès assurance",go:()=>ouvrirAcces("assureur")},
     {q:"Vérifier mon contrat et son échéance",c:"Photographiez le dernier avis d'échéance : VIDOM compare le tarif et programme le rappel.",k:"échéance contrat assurance tarif renouvellement avis",go:()=>aideFichier("image/*,.pdf")},
   ]},
