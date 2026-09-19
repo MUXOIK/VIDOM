@@ -266,6 +266,7 @@ const etatInitial=()=>({
   fil:[],rappels:[],reserveServie:[],nees:["adresse"],
   questionsPosees:[],dernierJour:"",transmission:null,
   reglages:{texte:"normal"},expediteursOk:[],
+  chiffre:{actif:false,empreinte:"",indice:"",ouvertJusqua:0}, // D-213 : le parcours « chiffrez vos données » (phrase secrète, documents marqués), sans vrai chiffrement pour l'instant
   lot:null,derniereBatch:null,pieceCourante:null,idc:1,
   logements:[],ajout:false,retourVers:null, // les logements du compte (un même compte peut en avoir plusieurs), et l'ajout en cours
   guideInvite:null,sejoursInvites:[], // le mode d'emploi invité (D-157) : configuration durable + liens de séjour
@@ -606,7 +607,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
         date:(r.date_document||(r.created_at||"").slice(0,10)),fournisseur:r.fournisseur||"",montant:r.montant_ttc,
         lie:r.equipement_id||"",travaux:iv?(iv.type_intervention||""):"",garantie:r.date_garantie_fin||"",
         img:r.chemin_stockage?(urlParChemin[r.chemin_stockage]||null):null,pdf:r.mime_type==="application/pdf",chemin:r.chemin_stockage||null,
-        recu:r.source==="adresse_vidom"?"adresse":"photo",dateRecu:(r.created_at||"").slice(0,10),notes:r.notes||"",sinistre:r.sinistre_id||"",sinRole:r.sinistre_role||""}; // D-198, D-201
+        recu:r.source==="adresse_vidom"?"adresse":"photo",dateRecu:(r.created_at||"").slice(0,10),notes:r.notes||"",sinistre:r.sinistre_id||"",sinRole:r.sinistre_role||"",chiffre:!!r.chiffre}; // D-198, D-201, D-213
     });
     S.equipements=(equipements||[]).map(r=>{
       const photo=photoParEquip[r.id];
@@ -719,6 +720,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
             date_document:d.date?d.date.slice(0,10):null,date_echeance:d.echeance?d.echeance.slice(0,10):null,fournisseur:d.fournisseur||null,montant_ttc:d.montant,
             date_garantie_fin:d.garantie||null,source:d.recu==="adresse"?"adresse_vidom":"manuel",uploaded_by:session.user.id,
             notes:d.notes||null, // D-198
+            chiffre:!!d.chiffre, // D-213
             sinistre_id:S.sinistres.some(s=>s.id===d.sinistre)?d.sinistre:null,sinistre_role:d.sinistre&&["transmis","recu"].includes(d.sinRole)?d.sinRole:null // D-201
           };
         });
@@ -1075,8 +1077,10 @@ async function reglerCourrielMensuel(oui){
 }
 async function lireCourrielMensuel(){ // au retour sur le compte : le choix fait sur un autre appareil
   try{const {data}=await supa.auth.getSession();const u=data&&data.session&&data.session.user;if(!u)return;
-    const {data:p}=await supa.from("preferences_compte").select("courriel_mensuel").eq("user_id",u.id).maybeSingle();
-    if(p&&S.reglages.courrielMensuel!==p.courriel_mensuel){S.reglages.courrielMensuel=p.courriel_mensuel;save()}}catch(e){}
+    const {data:p}=await supa.from("preferences_compte").select("courriel_mensuel,chiffre_empreinte,chiffre_indice").eq("user_id",u.id).maybeSingle();
+    if(p&&S.reglages.courrielMensuel!==p.courriel_mensuel){S.reglages.courrielMensuel=p.courriel_mensuel;save()}
+    if(p&&p.chiffre_empreinte){const c=chiffreEtat();if(c.empreinte!==p.chiffre_empreinte){c.actif=true;c.empreinte=p.chiffre_empreinte;c.indice=p.chiffre_indice||"";c.ouvertJusqua=0;save()}} // D-213 : la phrase choisie sur un autre appareil vaut ici aussi
+  }catch(e){}
 }
 async function apercuCourrielMensuel(){
   modal(`<h2>Le courriel du mois</h2><p class="muted">Un instant…</p>`);
@@ -1145,7 +1149,7 @@ function memoireLogement(){ // résumé compact des vraies données du logement,
   return {
     logement:{nom:S.logement.nom,adresse:S.logement.adresse,ville:S.logement.ville,annee:S.logement.annee,
       surface:S.logement.surface,dpe:S.logement.dpe,dpeDate:S.logement.dpeDate,depot:S.logement.depot},
-    docs:S.docs.map(d=>({id:d.id,titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,montant:d.montant,garantie:d.garantie,travaux:d.travaux})),
+    docs:docsPartageables().map(d=>({id:d.id,titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,montant:d.montant,garantie:d.garantie,travaux:d.travaux})), // D-213 : un document chiffré ne part jamais vers Claude
     equipements:S.equipements.map(e=>({id:e.id,nom:e.nom,marque:e.marque,modele:e.modele,achat:e.achat,garantie:e.garantie,installateur:e.installateur,etat:e.etat,notice:e.notice,entretien:e.entretien})),
     pros:S.pros.map(p=>({id:p.id,nom:p.nom,metier:p.metier,interventions:p.interventions})),
     travaux:S.travaux.map(t=>({id:t.id,titre:t.titre,par:t.par,date:t.date,montant:t.montant})),
@@ -1656,7 +1660,160 @@ V.fil=()=>{
   </div>`;
 };
 async function poserQuestion(q){filtreFil="tout";await demander(q);render();setTimeout(()=>{const el=document.querySelector(".pane.right .view, .col .view");if(el)el.scrollIntoView({block:"start"})},50)}
-function carteDoc(d){return `<a class="line" href="#/document/${d.id}" style="border:1px solid var(--bois-c);border-radius:12px;padding:10px 12px">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${d.montant?euros(d.montant)+" · ":""}${dateFr(d.date)}</span></span>${I.fleche}</a>`}
+/* ================= D-213 : chiffrez vos données — le parcours complet, sans le vrai chiffrement pour l'instant =================
+   Le gardien choisit une phrase secrète, coche « Chiffrer ce document » sur ce qui est sensible (un bijou, une montre, une œuvre, une expertise),
+   et ces documents deviennent invisibles sans la phrase : dans les listes, dans la recherche, dans ce qu'un tiers voit, et pour VIDOM.
+   Aujourd'hui la maquette vérifie la phrase (empreinte SHA-256) et masque ; le vrai chiffrement de bout en bout viendra avec l'option payante (A22). */
+const CHIFFRE_DUREE=10*60*1000; // dix minutes, puis les documents se referment
+function chiffreEtat(){if(!S.chiffre)S.chiffre={actif:false,empreinte:"",indice:"",ouvertJusqua:0};return S.chiffre}
+function chiffreOuvert(){const c=chiffreEtat();return !!(c.actif&&c.ouvertJusqua&&c.ouvertJusqua>Date.now())}
+function estVerrouille(d){return !!(d&&d.chiffre&&!chiffreOuvert())}
+function titreDoc(d){return estVerrouille(d)?`${I.cadenas} Document chiffré`:h(d.titre)}
+function docsPartageables(){return S.docs.filter(d=>!d.chiffre)} // ce qu'un tiers, la recherche ou VIDOM peuvent voir : jamais un document chiffré
+async function empreintePhrase(txt){
+  try{const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("vidom:"+txt));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}
+  catch(e){let x=7;for(const ch of txt)x=(x*31+ch.charCodeAt(0))>>>0;return "x"+x}
+}
+async function garderChiffrePrefs(){ // l'empreinte et l'indice suivent le compte, jamais la phrase elle-même
+  try{const {data}=await supa.auth.getSession();const u=data&&data.session&&data.session.user;if(!u)return;const c=chiffreEtat();
+    await supa.from("preferences_compte").upsert({user_id:u.id,chiffre_empreinte:c.actif?c.empreinte:null,chiffre_indice:c.actif?(c.indice||null):null,maj_le:new Date().toISOString()},{onConflict:"user_id"})}catch(e){}
+}
+function limitesChiffrement(){return `<div class="card soft" style="gap:6px">
+    <p class="small b" style="color:var(--terra)">Ce qu'il faut savoir avant de choisir</p>
+    <p class="small">• <b>Si vous perdez votre phrase secrète, personne ne pourra vous rendre ces documents</b> — ni VIDOM, ni un technicien, ni le service client. Il n'existe pas de « mot de passe oublié » pour un document chiffré : c'est justement ce qui le protège.</p>
+    <p class="small">• <b>VIDOM ne pourra plus les lire.</b> Un document chiffré n'est pas relu, pas cherché, pas résumé, pas rappelé : pas de garantie détectée, pas de réponse quand vous demandez à la maison.</p>
+    <p class="small">• <b>Il ne sort pas de chez vous sans vous.</b> Un tiers à qui vous ouvrez un accès, un dossier préparé pour l'assureur ou le notaire ne le contiennent pas ; vous le transmettez vous-même, à la main, le jour où vous le décidez.</p>
+    <p class="small">• <b>Il se referme tout seul</b> dix minutes après que vous l'avez ouvert, sur cet appareil.</p>
+    <p class="small">• <b>Sur votre téléphone, l'empreinte ou le visage peuvent l'ouvrir</b>, comme une application bancaire — mais ils ne remplacent pas la phrase : c'est elle qui protège vraiment, et on vous la redemandera sur un nouvel appareil.</p>
+    <p class="small muted">Pendant l'essai, ce parcours est une répétition : la phrase secrète et le cadenas fonctionnent, mais le vrai chiffrement de bout en bout n'est pas encore branché. Il viendra avec l'espace protégé, en option et jamais obligatoire : 19 € pour trois ans, offert la première année.</p>
+  </div>`}
+let chiffreSuite=null; // le geste à reprendre une fois la phrase choisie ou saisie
+function expliquerChiffrement(puis){
+  chiffreSuite=puis||null;const c=chiffreEtat();
+  modal(`<div class="split"><h2 style="margin:0">${I.cadenas} Chiffrez vos données</h2><button class="btn ghost sm" onclick="closeModal()" aria-label="Fermer">${I.croix}</button></div>
+    <p class="muted">Un bijou, une montre, un tableau, une expertise, une preuve d'achat : certains documents ne regardent que vous. Chiffrés, ils deviennent illisibles pour tout le monde — même si VIDOM était piraté, même pour un technicien de VIDOM. Vous seul les ouvrez, avec une phrase secrète que vous seul connaissez.</p>
+    ${limitesChiffrement()}
+    ${c.actif?`<div class="card" style="gap:8px"><p class="b" style="color:var(--sauge-f)">Votre phrase secrète est choisie.</p><p class="small muted">Sur chaque document, cochez « Chiffrer ce document ». ${S.docs.filter(d=>d.chiffre).length} document${S.docs.filter(d=>d.chiffre).length>1?"s sont chiffrés":" est chiffré"} pour l'instant.</p><div class="row wrap"><button class="btn primary grow" onclick="closeModal();if(chiffreSuite){const f=chiffreSuite;chiffreSuite=null;f()}">Continuer</button><button class="btn ghost" onclick="phraseOubliee()">J'ai perdu ma phrase</button></div></div>`
+    :`<div class="card" style="gap:8px"><p class="b" style="color:var(--sauge-f)">Choisir ma phrase secrète</p>
+      <label class="f"><span>Une phrase que vous seul connaissez (12 caractères au moins)</span><input class="input" id="ch-p1" type="password" autocomplete="new-password" minlength="12" placeholder="Par exemple : une phrase que vous n'oublierez jamais"></label>
+      <label class="f"><span>La même, une seconde fois</span><input class="input" id="ch-p2" type="password" autocomplete="new-password"></label>
+      <label class="f"><span>Un indice pour vous, que VIDOM vous montrera (facultatif — jamais la phrase elle-même)</span><input class="input" id="ch-ind" placeholder="Par exemple : le titre du livre de la table de nuit"></label>
+      <label class="line" style="gap:10px;cursor:pointer"><input type="checkbox" id="ch-ok" style="width:20px;height:20px"><span class="small">J'ai compris que si je perds cette phrase, mes documents chiffrés seront perdus, et que VIDOM ne pourra pas me les rendre.</span></label>
+      <div class="row"><button class="btn primary grow" onclick="activerChiffrement()">Choisir cette phrase</button><button class="btn ghost" onclick="closeModal()">Pas maintenant</button></div></div>`}`);
+}
+async function activerChiffrement(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value:""};const p1=g("ch-p1"),p2=g("ch-p2"),ind=g("ch-ind").trim();const ok=document.getElementById("ch-ok");
+  if(p1.length<12){toast("Douze caractères au moins : une phrase, pas un mot.");return}
+  if(p1!==p2){toast("Les deux phrases ne sont pas identiques.");return}
+  if(!ok||!ok.checked){toast("Cochez d'abord la case : c'est important.");return}
+  const c=chiffreEtat();c.actif=true;c.empreinte=await empreintePhrase(p1);c.indice=ind;c.ouvertJusqua=Date.now()+CHIFFRE_DUREE;save();garderChiffrePrefs();
+  filAjouter({type:"info",t:"Vous avez choisi une phrase secrète : vous pouvez maintenant chiffrer les documents qui ne regardent que vous."});
+  closeModal();toast("Phrase secrète choisie. Gardez-la précieusement.");render();
+  const suite=chiffreSuite;chiffreSuite=null;
+  if(empreinteDispo()&&!empreinteEnregistree()&&!isDesk()){ // D-214 : sur le téléphone, proposer tout de suite l'empreinte
+    chiffreSuite=suite;
+    modal(`<h2>${I.check} Ouvrir avec l'empreinte ?</h2><p class="muted">Sur ce téléphone, vos documents chiffrés peuvent s'ouvrir avec votre empreinte ou votre visage, comme votre application bancaire. Votre phrase secrète reste votre clé : on vous la demandera sur un autre appareil, ou si l'empreinte n'est pas reconnue.</p><div class="row wrap"><button class="btn primary grow" onclick="closeModal();enregistrerEmpreinte().then(()=>{if(chiffreSuite){const f=chiffreSuite;chiffreSuite=null;f()}})">Oui, sur cet appareil</button><button class="btn ghost" onclick="closeModal();if(chiffreSuite){const f=chiffreSuite;chiffreSuite=null;f()}">Plus tard</button></div>`);
+    return;
+  }
+  if(suite)suite();
+}
+function ouvrirChiffre(puis){
+  chiffreSuite=puis||null;const c=chiffreEtat();if(!c.actif){expliquerChiffrement(puis);return}
+  if(!ouvrirChiffre.sansEmpreinte&&empreinteEnregistree()&&empreinteDispo()){ouvrirParEmpreinte(puis);return} // D-214 : l'empreinte d'abord, la phrase en secours
+  ouvrirChiffre.sansEmpreinte=false;
+  modal(`<h2>${I.cadenas} Votre phrase secrète</h2><p class="muted">Pour ouvrir vos documents chiffrés pendant dix minutes, sur cet appareil.</p>
+    ${c.indice?`<p class="small muted">Votre indice : <b>${h(c.indice)}</b></p>`:""}
+    <label class="f"><span>Phrase secrète</span><input class="input" id="ch-s" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')verifierChiffre()"></label>
+    <div class="row wrap"><button class="btn primary grow" onclick="verifierChiffre()">Ouvrir</button><button class="btn ghost" onclick="closeModal()">Annuler</button></div>
+    ${empreinteEnregistree()&&empreinteDispo()?`<button class="btn grow" onclick="ouvrirParEmpreinte()">${I.check} Ouvrir avec l'empreinte</button>`:""}
+    <button class="btn ghost sm" style="align-self:flex-start" onclick="phraseOubliee()">J'ai perdu ma phrase</button>`);
+  setTimeout(()=>{const i=document.getElementById("ch-s");if(i&&!(empreinteEnregistree()&&empreinteDispo()))i.focus()},50);
+}
+async function verifierChiffre(){
+  const i=document.getElementById("ch-s");const p=i?i.value:"";const c=chiffreEtat();
+  if(!p){toast("Saisissez votre phrase.");return}
+  if(await empreintePhrase(p)!==c.empreinte){toast("Ce n'est pas la bonne phrase.");if(i){i.value="";i.focus()}return}
+  c.ouvertJusqua=Date.now()+CHIFFRE_DUREE;save();closeModal();toast("Vos documents chiffrés sont ouverts pour dix minutes.");render();
+  if(chiffreSuite){const f=chiffreSuite;chiffreSuite=null;f()}
+}
+function verrouillerChiffre(){const c=chiffreEtat();c.ouvertJusqua=0;save();render();toast("Vos documents chiffrés sont refermés.")}
+setInterval(()=>{if(S&&S.chiffre&&S.chiffre.ouvertJusqua&&S.chiffre.ouvertJusqua<=Date.now()){S.chiffre.ouvertJusqua=0;save();render()}},15000); // refermer tout seul
+function basculerChiffreDoc(id){
+  const d=S.docs.find(x=>x.id===id);if(!d)return;const c=chiffreEtat();
+  if(!c.actif){render();expliquerChiffrement(()=>basculerChiffreDoc(id));return}
+  if(d.chiffre){ if(!chiffreOuvert()){render();ouvrirChiffre(()=>basculerChiffreDoc(id));return} d.chiffre=false;save();render();toast("Ce document n'est plus chiffré."); return }
+  if(!chiffreOuvert()){render();ouvrirChiffre(()=>basculerChiffreDoc(id));return} // on prouve qu'on connaît la phrase avant de fermer quoi que ce soit
+  d.chiffre=true;save();render();toast("Chiffré : invisible sans votre phrase secrète.");
+}
+function phraseOubliee(){
+  const n=S.docs.filter(d=>d.chiffre).length;
+  modal(`<h2>Phrase secrète perdue</h2>
+    <p class="muted"><b>VIDOM ne peut pas vous la rendre, ni la remplacer.</b> Elle n'est enregistrée nulle part — c'est ce qui rend vos documents chiffrés illisibles pour tout le monde, vous compris si vous l'oubliez.</p>
+    ${chiffreEtat().indice?`<p class="small muted">Votre indice : <b>${h(chiffreEtat().indice)}</b>. Prenez le temps d'essayer encore.</p>`:""}
+    <p class="small">Si elle est vraiment perdue, il ne reste qu'une chose à faire : retirer ${n?`vos ${n} document${n>1?"s":""} chiffré${n>1?"s":""}`:"les documents chiffrés"} de la mémoire de la maison, choisir une nouvelle phrase, et les photographier à nouveau. ${n?"Ces documents seront retirés pour de bon.":""}</p>
+    <div class="row wrap"><button class="btn ghost grow" onclick="closeModal();ouvrirChiffre()">Réessayer</button>${n?`<button class="btn terra" onclick="retirerChiffresEtRepartir()">Retirer ${n>1?"les "+n+" documents":"le document"} et repartir</button>`:`<button class="btn terra" onclick="retirerChiffresEtRepartir()">Choisir une nouvelle phrase</button>`}</div>`);
+}
+async function retirerChiffresEtRepartir(){
+  const docs=S.docs.filter(d=>d.chiffre);const ids=docs.map(d=>d.id),chemins=docs.map(d=>d.chemin).filter(Boolean);
+  S.docs=S.docs.filter(d=>!d.chiffre);S.chiffre={actif:false,empreinte:"",indice:"",ouvertJusqua:0};try{localStorage.removeItem(CLE_EMPREINTE)}catch(e){}save();render();closeModal();
+  if(ids.length){filAjouter({type:"info",t:`${ids.length} document${ids.length>1?"s chiffrés retirés":" chiffré retiré"} : la phrase secrète était perdue.`});try{await effacerEnLigne({docs:ids,chemins})}catch(e){}}
+  garderChiffrePrefs();toast(ids.length?"Documents retirés. Vous pouvez choisir une nouvelle phrase.":"Vous pouvez choisir une nouvelle phrase.");
+}
+/* D-214 : l'empreinte digitale (ou le visage) sur le téléphone, comme une application bancaire.
+   Elle ne remplace pas la phrase secrète : elle évite de la retaper sur un appareil déjà reconnu. Techniquement : WebAuthn, authentificateur de l'appareil,
+   vérification de l'utilisateur exigée ; l'identifiant de la clé est gardé sur cet appareil seulement (localStorage), jamais sur le compte. */
+const CLE_EMPREINTE="vidom-empreinte-"+KEY;
+function empreinteDispo(){return !!(window.PublicKeyCredential&&navigator.credentials&&window.isSecureContext)}
+function empreinteEnregistree(){try{return !!localStorage.getItem(CLE_EMPREINTE)}catch(e){return false}}
+function b64u(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function deB64u(str){const b=atob(str.replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
+async function enregistrerEmpreinte(){
+  if(!empreinteDispo()){toast("Cet appareil ou ce navigateur ne propose pas l'empreinte.");return false}
+  if(!chiffreOuvert()){ouvrirChiffre.sansEmpreinte=true;ouvrirChiffre(()=>enregistrerEmpreinte());return false} // on prouve d'abord qu'on connaît la phrase
+  try{
+    const defi=crypto.getRandomValues(new Uint8Array(32));const uid=crypto.getRandomValues(new Uint8Array(16));
+    const cred=await navigator.credentials.create({publicKey:{
+      challenge:defi,rp:{name:"VIDOM",id:location.hostname},user:{id:uid,name:S.compte.email||"gardien",displayName:nomGardien()},
+      pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"preferred"},timeout:60000,attestation:"none"}});
+    if(!cred)return false;
+    try{localStorage.setItem(CLE_EMPREINTE,b64u(cred.rawId))}catch(e){}
+    toast("L'empreinte ouvre maintenant vos documents chiffrés sur cet appareil.");render();return true;
+  }catch(e){toast(e&&e.name==="NotAllowedError"?"Empreinte non reconnue, ou annulée.":"L'empreinte n'a pas pu être enregistrée ici.");return false}
+}
+function oublierEmpreinte(){try{localStorage.removeItem(CLE_EMPREINTE)}catch(e){}toast("L'empreinte n'ouvre plus VIDOM sur cet appareil.");render()}
+async function ouvrirParEmpreinte(puis){
+  if(puis)chiffreSuite=puis;const id=(()=>{try{return localStorage.getItem(CLE_EMPREINTE)}catch(e){return null}})();
+  if(!id||!empreinteDispo()){ouvrirChiffre.sansEmpreinte=true;ouvrirChiffre(chiffreSuite);return}
+  try{
+    const defi=crypto.getRandomValues(new Uint8Array(32));
+    const a=await navigator.credentials.get({publicKey:{challenge:defi,rpId:location.hostname,allowCredentials:[{type:"public-key",id:deB64u(id),transports:["internal"]}],userVerification:"required",timeout:60000}});
+    if(!a)throw new Error("annulé");
+    const c=chiffreEtat();c.ouvertJusqua=Date.now()+CHIFFRE_DUREE;save();closeModal();toast("Ouvert par votre empreinte, pour dix minutes.");render();
+    if(chiffreSuite){const f=chiffreSuite;chiffreSuite=null;f()}
+  }catch(e){toast("Empreinte non reconnue. Saisissez votre phrase.");ouvrirChiffre.sansEmpreinte=true;ouvrirChiffre(chiffreSuite)}
+}
+function carteEmpreinte(){ // dans les Réglages, sous la carte du chiffrement, quand la phrase est choisie
+  if(!chiffreEtat().actif)return "";
+  if(!empreinteDispo())return `<p class="small faint">L'ouverture par empreinte n'est pas proposée dans ce navigateur.</p>`;
+  return empreinteEnregistree()
+    ?`<p class="small muted">${I.check} Sur cet appareil, votre empreinte (ou votre visage) ouvre vos documents chiffrés. Votre phrase secrète reste nécessaire sur un autre appareil, et si l'empreinte n'est pas reconnue.</p><button class="btn ghost sm" style="align-self:flex-start" onclick="oublierEmpreinte()">Ne plus ouvrir avec l'empreinte ici</button>`
+    :`<p class="small muted">Sur ce téléphone, ouvrez vos documents chiffrés avec votre empreinte ou votre visage, comme votre application bancaire — sans retaper la phrase. Elle reste votre clé : on vous la demandera sur un nouvel appareil.</p><button class="btn" style="align-self:flex-start" onclick="enregistrerEmpreinte()">Ouvrir avec l'empreinte sur cet appareil</button>`;
+}
+function carteChiffre(d){ // sur la fiche d'un document : la case à cocher, ou le cadenas fermé
+  if(estVerrouille(d))return `<div class="card soft" style="gap:8px"><p class="b" style="color:var(--sauge-f)">${I.cadenas} Ce document est chiffré</p><p class="small muted">Son contenu, son titre et son montant restent invisibles tant que vous n'avez pas saisi votre phrase secrète. Personne d'autre ne peut l'ouvrir — pas même VIDOM.</p><div class="row wrap">${empreinteEnregistree()&&empreinteDispo()?`<button class="btn primary grow" onclick="ouvrirParEmpreinte()">${I.check} Ouvrir avec l'empreinte</button><button class="btn" onclick="ouvrirChiffre()">Ma phrase secrète</button>`:`<button class="btn primary" onclick="ouvrirChiffre()">Saisir ma phrase secrète</button>`}</div></div>`;
+  return `<label class="card" style="gap:10px;flex-direction:row;align-items:flex-start;cursor:pointer"><input type="checkbox" ${d.chiffre?"checked":""} onchange="basculerChiffreDoc('${d.id}')" style="width:22px;height:22px;margin-top:2px;flex:0 0 auto"><span class="stack" style="gap:2px;flex:1 1 auto"><span class="b">${I.cadenas} Chiffrer ce document</span><span class="small muted">${d.chiffre?"Chiffré : invisible sans votre phrase secrète, y compris pour VIDOM. Il se referme tout seul après dix minutes.":"Pour un objet de valeur, une expertise, une preuve d'achat : vous seul pourrez le lire. <a href='#' onclick='event.preventDefault();expliquerChiffrement()'>Ce que cela implique</a>"}</span></span></label>`;
+}
+function carteReglagesChiffre(){
+  const c=chiffreEtat(),n=S.docs.filter(d=>d.chiffre).length;
+  return `<div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">${I.cadenas} Chiffrez vos données</p>
+    <p class="small muted">${c.actif?`Votre phrase secrète est choisie${c.indice?" (indice : "+h(c.indice)+")":""}. ${n?`${n} document${n>1?"s chiffrés":" chiffré"}, ${chiffreOuvert()?"ouverts pour l'instant sur cet appareil":"refermés"}.`:"Aucun document chiffré pour l'instant : cochez « Chiffrer ce document » sur ceux qui ne regardent que vous."}`:"Bijoux, montres, œuvres d'art, expertises : rendez illisibles pour tout le monde les documents qui ne regardent que vous — même pour VIDOM."}</p>
+    <div class="row wrap">${c.actif?`${chiffreOuvert()?`<button class="btn grow" onclick="verrouillerChiffre()">Refermer maintenant</button>`:`<button class="btn grow" onclick="ouvrirChiffre()">Ouvrir mes documents chiffrés</button>`}<button class="btn ghost" onclick="expliquerChiffrement()">Ce que cela implique</button>`:`<button class="btn grow" onclick="expliquerChiffrement()">${I.cadenas} Chiffrer mes données sensibles</button>`}</div>
+    ${carteEmpreinte()}
+  </div>`;
+}
+
+function carteDoc(d){return `<a class="line" href="#/document/${d.id}" style="border:1px solid var(--bois-c);border-radius:12px;padding:10px 12px">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${titreDoc(d)}</span><span class="small muted">${estVerrouille(d)?"":(d.montant?euros(d.montant)+" · ":"")}${dateFr(d.date)}</span></span>${I.fleche}</a>`}
 
 /* ================= ma maison ================= */
 V.maison=()=>{
@@ -1713,7 +1870,7 @@ V.piece=id=>{
     ${photos.length?`<div class="grid2">${photos.slice(0,4).map(s=>`<div class="photo" style="min-height:110px;padding:0"><img src="${s}" alt=""></div>`).join("")}</div>`:""}
     ${!eqs.length&&!docs.length?`<div class="card soft"><p class="muted">Rien encore dans ${h(lc(p.nom))}. Photographiez un appareil, son étiquette, une facture.</p></div>`:""}
     ${eqs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Équipements</p>${eqs.map(e=>`<a class="line" href="#/equipement/${e.id}">${I.outil}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(e.nom)}</span><span class="small muted">${h(e.marque)} ${h(e.modele)}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
-    ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
+    ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${titreDoc(d)}</span><span class="small muted">${dateFr(d.date)}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
     <label class="btn primary big file">${I.camera} Photographier ici<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'${id}')"></label>
     <button class="btn ghost" onclick="retirerPiece('${id}')">Retirer cette pièce</button>
   </div>`;
@@ -1811,7 +1968,7 @@ V.equipement=id=>{
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(e.nom)}</h1><p class="muted">${h(e.marque)} ${h(e.modele)} · ${h(nomPiece(e.piece))} <button class="btn ghost sm" style="padding:0;min-height:0" onclick="corrigerItem('${e.id}')">Changer de pièce</button></p></div>
     <div class="card"><dl class="kv">${e.ref?`<dt>Référence</dt><dd class="num">${h(e.ref)}</dd>`:""}${e.achat?`<dt>Acheté</dt><dd>${dateFr(e.achat)}</dd>`:""}${e.garantie?`<dt>Garantie</dt><dd>${joursDepuis(e.garantie)<0?"jusqu'au "+dateFr(e.garantie):"terminée le "+dateFr(e.garantie)}</dd>`:""}${e.installateur?`<dt>Installé par</dt><dd>${h(e.installateur)}</dd>`:""}${e.entretiens&&e.entretiens.length?`<dt>Entretiens</dt><dd>${e.entretiens.map(x=>dateFr(x.d)+(x.par?" · "+h(x.par):"")).join("<br>")}</dd>`:""}<dt>État</dt><dd>${e.etat==="bon"?"Bon":h(e.etat)}</dd></dl></div>
     <div class="grid2">${e.img?`<button class="btn" onclick="voirEquipement('${e.id}')">Voir la photo</button>`:""}${e.noticeUrl?`<a class="btn" href="${h(e.noticeUrl)}" target="_blank" rel="noopener">${I.doc} Voir la notice</a>`:(e.notice?`<button class="btn" onclick="voirNotice('${e.id}')">${I.doc} Voir la notice</button>`:`<button class="btn" onclick="trouverNotice('${e.id}')" ${e.chercheNotice?"disabled":""}>${e.chercheNotice?"Recherche en cours…":"Retrouver la notice"}</button>`)}${e.sav?`<button class="btn" onclick="sav('${e.id}')">${I.telephone} Contacter le SAV</button>`:`<button class="btn" disabled>Pas de SAV connu</button>`}${e.installateur?`<button class="btn" onclick="contacter('${h(e.installateur)}')">${I.gens} Recontacter l'installateur</button>`:""}<button class="btn terra" onclick="probleme('${e.id}')">J'ai un problème</button></div>
-    ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents reliés</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
+    ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Documents reliés</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${titreDoc(d)}</span><span class="small muted">${dateFr(d.date)}${d.montant&&!estVerrouille(d)?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
     ${e.noticeUrl?`<p class="small muted">${h(e.noticeTitre||"Notice")} — VIDOM garde le lien vers la notice. <button class="btn sm ghost" style="padding:2px 6px" onclick="retirerNotice('${e.id}')">Retirer</button></p>`:`<p class="small faint">La notice se retrouve à partir de la marque et du modèle, lus sur la plaque de l'appareil ou sur sa facture.</p>`}
     ${carteNotes(e,"Par exemple : le code wifi pour relier la clim au téléphone, ou les boutons à presser pour réinitialiser l'appareil.")}
     ${carteVocales(e)}
@@ -2078,7 +2235,7 @@ V.sinistre=id=>{
   const b=blocsSinistre(s),ass=s.assureurId?S.pros.find(p=>p.id===s.assureurId):assureurConnu();
   const dest=ass&&ass.mail?ass.mail:"",texte=s.declaration.texte||"",objet=s.declaration.objet||"Déclaration de sinistre";
   const transmis=docsDuSinistre(id,"transmis"),recus=docsDuSinistre(id,"recu");
-  const ligneDoc=d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</span></span>${I.fleche}</a>`;
+  const ligneDoc=d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${titreDoc(d)}</span><span class="small muted">${dateFr(d.date)}${d.fournisseur&&!estVerrouille(d)?" · "+h(d.fournisseur):""}</span></span>${I.fleche}</a>`;
   const etapes=[["ouvert","Ouvert"],["attente","Déclaration envoyée"],["clos","Clos"]];
   return `<div class="view" style="gap:12px">
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(nomCause(s.cause))}${s.equipNom?" — "+h(s.equipNom):""}</h1><p class="muted">Le ${dateFr(s.quand)}${s.quoi?" · "+h(s.quoi):""}</p></div>
@@ -2170,10 +2327,10 @@ function copierSinistre(id,quoi){const s=sinistreParId(id);if(!s)return;copier(q
 
 function vDocuments(){
   const vue=S.reglages.docsPar||"type";
-  const ligne=d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""} · ${d.piece==="maison"?"la maison":h(nomPiece(d.piece))}</span></span>${I.fleche}</a>`;
+  const ligne=d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${titreDoc(d)}</span><span class="small muted">${dateFr(d.date)}${d.montant&&!estVerrouille(d)?" · "+euros(d.montant):""} · ${d.piece==="maison"?"la maison":h(nomPiece(d.piece))}</span></span>${I.fleche}</a>`;
   let corps;
   if(vue==="enseigne"){
-    const par={};S.docs.forEach(d=>{const k=d.fournisseur||"Sans enseigne connue";(par[k]=par[k]||[]).push(d)});
+    const par={};S.docs.forEach(d=>{const k=estVerrouille(d)?"Documents chiffrés":(d.fournisseur||"Sans enseigne connue");(par[k]=par[k]||[]).push(d)});
     const noms=Object.keys(par).sort((a,b)=>a==="Sans enseigne connue"?1:b==="Sans enseigne connue"?-1:a.localeCompare(b));
     corps=noms.map(n=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(n)}</p>${par[n].sort((a,b)=>b.date.localeCompare(a.date)).map(ligne).join("")}</div>`).join("");
   }else{
@@ -2189,10 +2346,16 @@ function vDocuments(){
   </div>`;
 }
 V.document=id=>{const d=S.docs.find(x=>x.id===id);if(!d)return vDocuments();assurerImage(d);const t=S.travaux.find(t=>t.docs.includes(d.id));const eqLie=d.lie?equipParLie(d.lie):null;
+  if(estVerrouille(d))return `<div class="view" style="gap:12px"><div class="photo" style="min-height:160px"><span class="chip">${I.cadenas} Chiffré</span></div>
+    <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">Document chiffré</h1><p class="muted">${dateFr(d.date)} · rangé dans ${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</p></div>
+    ${carteChiffre(d)}
+    <div class="row wrap"><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
+  </div>`; // D-213 : sans la phrase secrète, rien d'autre ne se voit
   return `<div class="view" style="gap:12px">${d.img?`<div class="photo" style="min-height:${d.pdf?"420px":"160px"}">${vignette(d)}</div>`:`<div class="photo" style="min-height:120px"><span class="chip">${d.recu==="adresse"?"Reçu par l'adresse VIDOM":"Photographié"}</span></div>`}
     <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.4em">${h(d.titre)}</h1><p class="muted">${dateFr(d.date)}${d.fournisseur?" · "+h(d.fournisseur):""}</p></div>
     <div class="card"><dl class="kv">${d.montant?`<dt>Montant</dt><dd class="num">${euros(d.montant)}</dd>`:""}<dt>Rangé dans</dt><dd>${d.piece==="maison"?"la maison entière":h(nomPiece(d.piece))}</dd>${d.lie?`<dt>Relié à</dt><dd>${eqLie?`<a href="#/equipement/${eqLie.id}">${h(eqLie.nom)}</a>`:h(d.lie)}</dd>`:""}${t?`<dt>Travaux</dt><dd><a href="#/carte/travaux">${h(t.titre)}</a></dd>`:""}${d.sinistre&&sinistreParId(d.sinistre)?`<dt>Sinistre</dt><dd><a href="#/sinistre/${d.sinistre}">${h(nomCause(sinistreParId(d.sinistre).cause))} du ${dateFr(sinistreParId(d.sinistre).quand)}</a> · ${d.sinRole==="recu"?"réponse de l'assureur":"pièce transmise"} · <button class="btn sm ghost" style="padding:2px 6px" onclick="retirerDuSinistre('${d.id}')">Retirer</button></dd>`:""}${d.garantie?`<dt>Garantie</dt><dd>jusqu'au ${dateFr(d.garantie)}</dd>`:""}<dt>Arrivé</dt><dd>${d.recu==="adresse"?"par l'adresse VIDOM":"par votre photo"}, le ${dateFr(d.dateRecu||d.date)}</dd>${d.langueOriginale?`<dt>Langue d'origine</dt><dd>${h(d.langueOriginale)} · titre traduit automatiquement pour le classement</dd>`:(d.etranger?`<dt>Langue d'origine</dt><dd class="muted">Traduction en cours…</dd>`:"")}</dl></div>
     ${carteNotes(d,"Par exemple : ce qu'il faut retenir de ce document, ou à qui l'on s'est adressé.")}
+    ${carteChiffre(d)}
     <div class="row wrap">${d.img?`<button class="btn" onclick="voirDocument('${d.id}')">Voir</button>`:""}${d.fournisseur&&S.pros.find(p=>p.nom===d.fournisseur)?`<button class="btn grow" onclick="contacter('${h(d.fournisseur)}')">Recontacter ${h(d.fournisseur)}</button>`:""}<button class="btn" onclick="corrigerItem('${d.id}')">Changer de pièce</button><button class="btn" onclick="relierDocA('${d.id}')">${d.lie?"Relier à un autre appareil":"Relier à un appareil"}</button><button class="btn" onclick="retirerDoc('${d.id}')">Retirer</button></div>
   </div>`};
 /* D-180 : retirer, c'est retirer pour de vrai — sur l'appareil, sur le compte et dans les fichiers gardés.
@@ -2217,10 +2380,12 @@ async function effacerEnLigne({docs=[],equips=[],chemins=[]}){
 /* D-182 : relire un document déjà gardé, pour profiter d'une lecture devenue meilleure (garantie, appareil visé). */
 async function relireDoc(id,silence){
   const d=S.docs.find(x=>x.id===id);if(!d||!d.chemin||!supa)return;
+  if(d.chiffre){if(!silence)toast("Ce document est chiffré : VIDOM ne le relit pas.");return} // D-213
   const toastOrig=toast;if(silence)toast=()=>{};else toast("VIDOM relit le document…");
   try{await relireDocInterne(d)}finally{toast=toastOrig}
 }
 async function relireDocInterne(d){
+  if(d&&d.chiffre)return null; // D-213 : un document chiffré n'est jamais relu par VIDOM
   try{
     const {data}=await supa.storage.from("logement-files").createSignedUrl(d.chemin,600);
     const blob=await (await fetch(data.signedUrl)).blob();
@@ -2311,7 +2476,7 @@ function retirerDoublons(quoi){
   }
   toast(ids.length===1?"Un doublon retiré":ids.length+" doublons retirés");
 }
-function voirDocument(id){const d=S.docs.find(x=>x.id===id);if(!d||!d.img)return;modal(`<h2>${h(d.titre)}</h2>${d.pdf?`<embed src="${d.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${d.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2);display:block">`}<button class="btn" onclick="closeModal()">Fermer</button>`)}
+function voirDocument(id){const d=S.docs.find(x=>x.id===id);if(!d||!d.img)return;if(estVerrouille(d)){ouvrirChiffre(()=>voirDocument(id));return}modal(`<h2>${h(d.titre)}</h2>${d.pdf?`<embed src="${d.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${d.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2);display:block">`}<button class="btn" onclick="closeModal()">Fermer</button>`)}
 function voirEquipement(id){const e=S.equipements.find(x=>x.id===id);if(!e||!e.img)return;modal(`<h2>${h(e.nom)}</h2>${e.pdf?`<embed src="${e.img}" type="application/pdf" style="width:100%;height:75vh;border:0;border-radius:var(--r2)">`:`<img src="${e.img}" alt="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:var(--r2);display:block">`}<button class="btn" onclick="closeModal()">Fermer</button>`)}
 
 function vArtisans(){
@@ -2331,7 +2496,7 @@ V.pro=id=>{const p=S.pros.find(x=>x.id===id);if(!p)return vArtisans();const docs
   return `<div class="view" style="gap:12px"><div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">${h(p.nom)}</h1><p class="muted">${h(p.metier)}${p.ville?" · "+h(p.ville):""}</p>
     <p class="small muted" style="margin-top:4px">Rangé dans « ${h(nomRubrique(categorieDe(p)))} » · <button class="btn sm ghost" style="padding:2px 6px" onclick="changerRubrique('${p.id}')">Changer</button></p></div>
     <div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ce qu'il a fait ici</p>${p.interventions.map(i=>`<div class="line"><span>${h(i.motif)}</span><span class="small muted">${dateFr(i.d)}</span></div>`).join("")}</div>
-    ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ses documents</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${h(d.titre)}</span><span class="small muted">${dateFr(d.date)}${d.montant?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
+    ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ses documents</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${titreDoc(d)}</span><span class="small muted">${dateFr(d.date)}${d.montant&&!estVerrouille(d)?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
     <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre appréciation</p>${p.avis.length?p.avis.map(a=>`<p class="small">${"★".repeat(a.n)}${"☆".repeat(5-a.n)} <span class="muted">${h(a.t)} · ${dateFr(a.d)}</span></p>`).join(""):`<p class="small muted">Elle reste dans la mémoire de la maison et se transmet avec elle. L'artisan ne la voit jamais.</p>`}<div class="row">${[1,2,3,4,5].map(n=>`<button class="btn sm" onclick="noter('${p.id}',${n})">${"★".repeat(n)}</button>`).join("")}</div></div>
     ${carteVocales(p)}
     <div class="row wrap"><button class="btn primary grow" onclick="contacter('${h(p.nom)}')">${I.telephone} Recontacter</button><button class="btn grow" onclick="recommanderArtisan('${p.id}')">${I.envoi} Recommander</button></div>
@@ -2571,7 +2736,7 @@ function accesOk(tid){const t=RESERVE.tiers.find(x=>x.id===tid);const nom=docume
   closeModal();save();render();modal(`<h2>Le lien à lui envoyer</h2><div class="card"><span class="mono">${h(a.lien)}</span></div><p class="small muted">Envoyez-le depuis votre messagerie. Il ouvre une page à part, sans compte, qui montre exactement ce que vous avez choisi, jusqu'au ${dateFr(a.fin)}. Ensuite, la page dit « cet accès est terminé ».</p><div class="row"><button class="btn primary grow" onclick="copier('${h(a.lien)}')">Copier le lien</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
 function fermerAcces(id){const a=S.acces.find(x=>x.id===id);a.ouvert=false;S.journalAcces.unshift({d:now(),t:`Accès de ${a.nom} fermé par vous`});save();render();toast("Accès fermé")}
 function voirComme(tid){const t=RESERVE.tiers.find(x=>x.id===tid);const a=S.acces.find(x=>x.tiers===tid&&x.ouvert);
-  const blocs=t.voit.map(v=>{const l=v.toLowerCase();let items=[];if(l.includes("acte"))items=S.docs.filter(d=>d.type==="acte");else if(l.includes("diagnostic"))items=S.docs.filter(d=>d.type==="diagnostic");else if(l.includes("facture"))items=S.docs.filter(d=>d.type==="facture"&&d.travaux);else if(l.includes("plan"))items=S.docs.filter(d=>d.type==="plan");else if(l.includes("équipement"))items=S.equipements;else if(l.includes("travaux"))items=S.travaux;else if(l.includes("artisan"))items=S.pros;else if(l.includes("document"))items=S.docs.filter(d=>d.type!=="acte"&&d.type!=="impot"&&d.type!=="contrat");else if(l.includes("fiche"))items=[{titre:`${S.logement.nom} · ${S.logement.annee||"?"} · ${S.logement.surface||"?"} m² · DPE ${S.logement.dpe||"?"}`}];else if(l.includes("notice"))items=S.equipements.filter(e=>e.notice);else if(l.includes("intervention"))items=S.pros.flatMap(p=>p.interventions.map(i=>({titre:i.motif+" — "+p.nom})));else if(l.includes("dossier"))items=[{titre:"Le dossier, tel que vous l'aurez validé"}];return `<p class="small b" style="color:var(--sauge-f);margin-top:8px">${h(v)}</p>${items.length?items.map(i=>`<p class="small">· ${h(i.titre||i.nom)}</p>`).join(""):`<p class="small faint">— rien encore</p>`}`}).join("");
+  const blocs=t.voit.map(v=>{const l=v.toLowerCase();let items=[];if(l.includes("acte"))items=docsPartageables().filter(d=>d.type==="acte");else if(l.includes("diagnostic"))items=docsPartageables().filter(d=>d.type==="diagnostic");else if(l.includes("facture"))items=docsPartageables().filter(d=>d.type==="facture"&&d.travaux);else if(l.includes("plan"))items=docsPartageables().filter(d=>d.type==="plan");else if(l.includes("équipement"))items=S.equipements;else if(l.includes("travaux"))items=S.travaux;else if(l.includes("artisan"))items=S.pros;else if(l.includes("document"))items=docsPartageables().filter(d=>d.type!=="acte"&&d.type!=="impot"&&d.type!=="contrat");else if(l.includes("fiche"))items=[{titre:`${S.logement.nom} · ${S.logement.annee||"?"} · ${S.logement.surface||"?"} m² · DPE ${S.logement.dpe||"?"}`}];else if(l.includes("notice"))items=S.equipements.filter(e=>e.notice);else if(l.includes("intervention"))items=S.pros.flatMap(p=>p.interventions.map(i=>({titre:i.motif+" — "+p.nom})));else if(l.includes("dossier"))items=[{titre:"Le dossier, tel que vous l'aurez validé"}];return `<p class="small b" style="color:var(--sauge-f);margin-top:8px">${h(v)}</p>${items.length?items.map(i=>`<p class="small">· ${h(i.titre||i.nom)}</p>`).join(""):`<p class="small faint">— rien encore</p>`}`}).join("");
   if(a){S.journalAcces.unshift({d:now(),t:`${a.nom} a ouvert la page (simulation « voir comme »)`});save()}
   modal(`<div class="book" style="background:#E9E4DA;border-radius:8px 8px 0 0;padding:8px 12px;box-shadow:none"><span class="small mono">${a?h(a.lien):"vidom.fr/p/…"}</span></div><div class="book" style="border-radius:0 0 8px 8px"><p class="small muted">Partagé par ${h(S.compte.email||"le gardien")} avec ${h(a?a.nom:t.nom.toLowerCase())}${a?" · jusqu'au "+dateFr(a.fin):""}</p><p class="b" style="margin-top:6px">${h(S.logement.nom)}</p>${blocs}<p class="small faint" style="margin-top:10px">Ce que vous ne voyez pas n'a pas été transmis.</p></div><button class="btn" onclick="closeModal();render()">Fermer</button>`)}
 
@@ -2708,6 +2873,7 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
     <button class="line" style="width:100%;text-align:left" onclick="ouvrirAide()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Aide</span><span class="small muted">Tout ce que VIDOM sait faire, et par où commencer</span></span>${I.fleche}</button>
   </div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Taille du texte</p><div class="row">${[["normal","Normal"],["grand","Grand"],["tres-grand","Très grand"]].map(([k,n])=>`<button class="chip btn-chip ${S.reglages.texte===k?"on":""}" onclick="S.reglages.texte='${k}';document.documentElement.dataset.texte='${k}';save();render()">${n}</button>`).join("")}</div></div>
+  ${carteReglagesChiffre()}
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Donner accès à un tiers</p><p class="small muted">Notaire, agent, artisan, assureur : chacun ne voit que ce qui le concerne.</p><button class="btn" onclick="choisirTiers()">${I.echanges} Ouvrir un accès</button></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">La maison change de mains</p><p class="small muted">Le jour venu, et seulement ce jour-là, la rubrique Transmission apparaît.</p><div class="row"><button class="btn grow" onclick="changerDeMains('vente')">Je vends</button><button class="btn grow" onclick="changerDeMains('depart')">Je pars</button></div></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre mémoire vous appartient</p><div class="row wrap"><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter ma mémoire</button><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Mon avis sur la maquette VIDOM")}&body=${encodeURIComponent("Écran : "+location.hash+"\n\n")}">${I.mail} Donner mon avis</a></div><p class="small faint">${S.docs.length} documents · ${S.equipements.length} équipements · ${S.fil.length} moments dans le journal.</p></div>
@@ -2795,7 +2961,7 @@ function presentationVidom(){
     <p class="b" style="color:var(--sauge-f)">Ce que cela coûte</p>
     <p class="small"><b>Garder la mémoire de votre logement est gratuit, et le restera.</b> Photographier, ranger, retrouver, poser une question, les rappels, le livre du logement, le carnet d'entretien, emporter votre mémoire : rien de tout cela ne se paie, jamais. Votre mémoire vous appartient.</p>
     <p class="small">Seuls des services rendus se paient, quand vous les demandez :</p>
-    <p class="small">• <b>Les dossiers préparés pour un tiers</b> — le dossier de sinistre pour votre assureur, le dossier de vente pour le notaire, l'agent, l'acquéreur : <b>19 € par dossier</b>, quel qu'il soit, réglés une fois pour toute sa durée.<br>• <b>Un espace protégé</b> pour vos objets de valeur (bijoux, montres, œuvres), chiffré de bout en bout : personne d'autre que vous ne peut le lire, pas même VIDOM. En option, si vous en avez besoin : <b>19 € pour trois ans</b>. <span class="chip neutre">${I.cadenas} Bientôt</span></p>
+    <p class="small">• <b>Les dossiers préparés pour un tiers</b> — le dossier de sinistre pour votre assureur, le dossier de vente pour le notaire, l'agent, l'acquéreur : <b>19 € par dossier</b>, quel qu'il soit, réglés une fois pour toute sa durée.<br>• <b>Un espace protégé</b> pour vos objets de valeur (bijoux, montres, œuvres), chiffré de bout en bout : personne d'autre que vous ne peut le lire, pas même VIDOM. En option, si vous en avez besoin : <b>19 € pour trois ans</b>. Le parcours est déjà dans les Réglages (« Chiffrez vos données ») ; le vrai chiffrement arrive avec l'option.</p>
     <p class="small b">Un seul chiffre à retenir : 19 €. Et pendant la première année, tout est offert, à tous — les services aussi.</p>
   </div>
   <div class="row"><button class="btn primary grow" onclick="ouvrirAide()">${I.aide} Ouvrir l'aide</button><button class="btn ghost" onclick="closeModal()">Fermer</button></div>`);
@@ -2914,7 +3080,7 @@ function chercherMemoire(q){
   const TYPES={facture:"Facture",devis:"Devis",notice:"Notice",garantie:"Garantie",contrat:"Contrat",diagnostic:"Diagnostic",acte:"Acte",assurance:"Assurance",plan:"Plan",impot:"Impôts"};
   const R=[];
   S.equipements.forEach(e=>{const lies=docsLies(e);if(ok([e.nom,e.marque,e.modele,e.ref,nomPiece(e.piece),lies.map(d=>d.titre+" "+d.fournisseur).join(" ")].join(" ")))R.push({ico:"outil",t:`${e.nom}${e.marque?" "+e.marque:""}`,c:["Équipement",e.modele,e.garantie?(joursDepuis(e.garantie)<0?"garanti jusqu'au "+dateFr(e.garantie):"garantie terminée"):"",lies.length?lies.length+" document"+(lies.length>1?"s":""):""].filter(Boolean).join(" · "),go:"#/equipement/"+e.id})});
-  S.docs.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).forEach(d=>{const eq=d.lie?equipParLie(d.lie):null;if(ok([d.titre,d.fournisseur,d.type,TYPES[d.type],d.date,d.travaux,eq?eq.nom+" "+eq.marque+" "+eq.modele:"",d.montant!=null?String(Math.round(d.montant)):""].join(" ")))R.push({ico:"doc",t:d.titre,c:[TYPES[d.type]||"Document",dateFr(d.date),d.fournisseur,d.montant?euros(d.montant):""].filter(Boolean).join(" · "),go:"#/document/"+d.id})});
+  S.docs.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).forEach(d=>{if(d.chiffre)return;const eq=d.lie?equipParLie(d.lie):null;if(ok([d.titre,d.fournisseur,d.type,TYPES[d.type],d.date,d.travaux,eq?eq.nom+" "+eq.marque+" "+eq.modele:"",d.montant!=null?String(Math.round(d.montant)):""].join(" ")))R.push({ico:"doc",t:d.titre,c:[TYPES[d.type]||"Document",dateFr(d.date),d.fournisseur,d.montant?euros(d.montant):""].filter(Boolean).join(" · "),go:"#/document/"+d.id})});
   S.pros.forEach(p=>{if(ok([p.nom,p.metier,p.ville,nomRubrique(categorieDe(p))].join(" ")))R.push({ico:"gens",t:p.nom,c:[p.metier,nomRubrique(categorieDe(p))].filter(Boolean).join(" · "),go:"#/pro/"+p.id})});
   S.pieces.forEach(pc=>{if(ok(pc.nom))R.push({ico:"maison",t:pc.nom,c:"Pièce",go:"#/piece/"+pc.id})});
   return R.slice(0,40);
