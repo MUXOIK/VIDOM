@@ -13,12 +13,12 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%235F7A6A'/%3E%3Cpath d='M14 30l18-14 18 14' fill='none' stroke='%23FFFDF9' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M19 29v18h26V29' fill='none' stroke='%23FFFDF9' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M28 47v-10h8v10' fill='none' stroke='%23FFFDF9' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
 <style>
 :root{
   --sauge:#5F7A6A;--sauge-f:#4A6255;--sauge-c:#E4EBE6;--sauge-cc:#F0F4F1;
   --ivoire:#F6F3ED;--blanc:#FFFDF9;--bois:#D8C8B2;--bois-c:#EFE6D8;--sable:#B5B0A5;
-  --ardoise:#50575E;--encre:#2F3439;--terra:#C9775B;--terra-c:#F4E3DB;--terra-f:#A85F45;
+  --ardoise:#50575E;--encre:#2F3439;--terra:#C9775B;--terra-c:#F4E3DB;--terra-f:#A85F45;--or:#D4AF5A;
   --fs:17px;--r:12px;--r2:16px;
 }
 html[data-texte="grand"]{--fs:19px}
@@ -30,7 +30,7 @@ body{margin:0;background:var(--ivoire);color:var(--encre);font-family:"Source Sa
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0;padding:0}
 a{color:var(--sauge-f)}
-h1,h2,h3{margin:0;font-weight:600;line-height:1.15;text-wrap:balance}
+h1,h2{font-family:"Source Serif 4","Georgia",serif}h1,h2,h3{margin:0;font-weight:600;line-height:1.15;text-wrap:balance}
 h1{font-size:1.65em}h2{font-size:1.3em}h3{font-size:1.1em}
 p{margin:0}
 .muted{color:var(--ardoise)}.faint{color:var(--sable)}.small{font-size:.85em}.b{font-weight:600}
@@ -592,7 +592,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
       risquesNaturels:logement.risques_naturels||null,
     });
     S.pieces=(pieces||[]).map(p=>({id:p.id,type:p.type_piece||"autre",nom:p.nom,photos:[]}));
-    S.pros=(artisans||[]).map(a=>({id:a.id,nom:a.nom,metier:a.metier||"",tel:a.telephone||"",mail:a.email||"",ville:a.ville||"",categorie:a.categorie||"",contrat:a.numero_contrat||"",interventions:[],avis:(a.memo&&a.memo.avis)||[],vocales:(a.memo&&a.memo.vocales)||[]})); // D-201 : numero_contrat
+    S.pros=(artisans||[]).map(a=>({id:a.id,nom:a.nom,metier:a.metier||"",tel:a.telephone||"",mail:a.email||"",ville:a.ville||"",categorie:a.categorie||"",contrat:a.numero_contrat||"",regles:a.regles_contrat||null,contratReluLe:a.contrat_relu_le||null,interventions:[],avis:(a.memo&&a.memo.avis)||[],vocales:(a.memo&&a.memo.vocales)||[]})); // D-201 : numero_contrat
     S.travaux=(interventions||[]).map(iv=>({id:iv.id,titre:iv.type_intervention||"Travaux",par:iv.artisan_nom||"",date:iv.date_intervention||"",montant:iv.cout||0,docs:(documents||[]).filter(r=>r.intervention_id===iv.id).map(r=>r.id)}));
     const photoParEquip={};const docsBruts=[];
     (documents||[]).forEach(r=>{
@@ -626,7 +626,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
     lireCourrielMensuel(); // D-186
     S.fil=(fil||[]).map(f=>({id:f.id,d:f.horodatage,fait:!!f.fait,type:f.type,...(f.donnees||{})}));
     S.guideInvite=guideInviteRow?{equipementIds:guideInviteRow.equipement_ids||[],message:guideInviteRow.message_accueil||""}:null;
-    S.sinistres=(sinistresRows||[]).map(r=>({id:r.id,equip:r.equipement_id||null,equipNom:(r.lecture&&r.lecture.equipNom)||"",cause:r.cause||"autre",quand:r.date_sinistre||"",quoi:r.description||"",tiers:r.tiers||"aucun",tiersQui:r.tiers_qui||"",mesures:r.mesures||"",etat:r.etat||"ouvert",numero:r.numero_assureur||"",assureurId:r.assureur_id||null,assureurNom:r.assureur_nom||"",contrat:r.numero_contrat||"",declaration:r.declaration||{},res:(r.lecture&&r.lecture.res)||{declaration:{},garantie:{}},delai:r.delai||{},docsLus:(r.lecture&&r.lecture.docsLus)||[],estimeLe:(r.lecture&&r.lecture.estimeLe)||null,voisin:(r.voisin&&r.voisin.nom!==undefined)?r.voisin:null,reglement:r.reglement||null,envoyeLe:r.envoye_le||null,closLe:r.clos_le||null,d:r.created_at||now()})); // D-201, D-202
+    S.sinistres=(sinistresRows||[]).map(r=>({id:r.id,equip:r.equipement_id||null,equipNom:(r.lecture&&r.lecture.equipNom)||"",cause:r.cause||"autre",quand:r.date_sinistre||"",quoi:r.description||"",tiers:r.tiers||"aucun",tiersQui:r.tiers_qui||"",mesures:r.mesures||"",etat:r.etat||"ouvert",numero:r.numero_assureur||"",assureurId:r.assureur_id||null,assureurNom:r.assureur_nom||"",contrat:r.numero_contrat||"",declaration:r.declaration||{},res:(r.lecture&&r.lecture.res)||{declaration:{},garantie:{}},delai:r.delai||{},docsLus:(r.lecture&&r.lecture.docsLus)||[],estimeLe:(r.lecture&&r.lecture.estimeLe)||null,simulation:(r.lecture&&r.lecture.simulation)||null,voisin:(r.voisin&&r.voisin.nom!==undefined)?r.voisin:null,reglement:r.reglement||null,envoyeLe:r.envoye_le||null,closLe:r.clos_le||null,d:r.created_at||now()})); // D-201, D-202
     S.sejoursInvites=(sejoursInvitesRows||[]).map(s=>({id:s.id,nom:s.nom_invite||"",code:s.code,debut:s.debut,fin:s.fin,creeLe:s.cree_le,ouvertLe:s.ouvert_le,revoqueLe:s.revoque_le}));
     if(etatRow&&etatRow.etat){
       const et=etatRow.etat;
@@ -688,7 +688,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
       risques_naturels:lig.risquesNaturels||null,canal_acquisition:lig.canalAcquisition||null,
     },{onConflict:"id"});
     if(S.pieces.length)await supa.from("pieces").upsert(S.pieces.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,type_piece:p.type||null})),{onConflict:"id"});
-    if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null,categorie:p.categorie||null,numero_contrat:p.contrat||null,memo:{avis:p.avis||[],vocales:(p.vocales||[]).filter(v=>v.chemin).map(v=>({id:v.id,chemin:v.chemin,d:v.d,duree:v.duree||0}))}})),{onConflict:"id"});
+    if(S.pros.length)await supa.from("artisans").upsert(S.pros.map(p=>({id:p.id,logement_id:lig.id,nom:p.nom,metier:p.metier||null,telephone:p.tel||null,email:p.mail||null,ville:p.ville||null,categorie:p.categorie||null,numero_contrat:p.contrat||null,regles_contrat:p.regles||null,contrat_relu_le:p.contratReluLe||null,memo:{avis:p.avis||[],vocales:(p.vocales||[]).filter(v=>v.chemin).map(v=>({id:v.id,chemin:v.chemin,d:v.d,duree:v.duree||0}))}})),{onConflict:"id"});
     if(S.travaux.length)await supa.from("interventions").upsert(S.travaux.map(t=>({id:t.id,logement_id:lig.id,type_intervention:t.titre||"Travaux",artisan_nom:t.par||null,date_intervention:t.date||null,cout:t.montant||null})),{onConflict:"id"});
     if(S.equipements.length){
       await supa.from("equipements").upsert(S.equipements.map(e=>({
@@ -727,7 +727,7 @@ async function pousserTout(){ // pousse l'état courant vers le compte réel ; �
         await supa.from("documents").upsert(lignesDoc,{onConflict:"id"});
       }
     }
-    if(S.sinistres.length)await supa.from("sinistres").upsert(S.sinistres.map(s=>({id:s.id,logement_id:lig.id,equipement_id:S.equipements.some(e=>e.id===s.equip)?s.equip:null,cause:s.cause||"autre",date_sinistre:s.quand||null,description:s.quoi||null,tiers:s.tiers||"aucun",tiers_qui:s.tiersQui||null,mesures:s.mesures||null,etat:["ouvert","attente","clos"].includes(s.etat)?s.etat:"ouvert",numero_assureur:s.numero||null,assureur_id:S.pros.some(p=>p.id===s.assureurId)?s.assureurId:null,assureur_nom:s.assureurNom||null,numero_contrat:s.contrat||null,declaration:s.declaration||{},lecture:{res:s.res||{},docsLus:s.docsLus||[],equipNom:s.equipNom||"",estimeLe:s.estimeLe||null},delai:s.delai||{},voisin:s.voisin||{},reglement:s.reglement||{},envoye_le:s.envoyeLe||null,clos_le:s.closLe||null,updated_at:new Date().toISOString()})),{onConflict:"id"}); // D-201
+    if(S.sinistres.length)await supa.from("sinistres").upsert(S.sinistres.map(s=>({id:s.id,logement_id:lig.id,equipement_id:S.equipements.some(e=>e.id===s.equip)?s.equip:null,cause:s.cause||"autre",date_sinistre:s.quand||null,description:s.quoi||null,tiers:s.tiers||"aucun",tiers_qui:s.tiersQui||null,mesures:s.mesures||null,etat:["ouvert","attente","clos"].includes(s.etat)?s.etat:"ouvert",numero_assureur:s.numero||null,assureur_id:S.pros.some(p=>p.id===s.assureurId)?s.assureurId:null,assureur_nom:s.assureurNom||null,numero_contrat:s.contrat||null,declaration:s.declaration||{},lecture:{res:s.res||{},docsLus:s.docsLus||[],equipNom:s.equipNom||"",estimeLe:s.estimeLe||null,simulation:s.simulation||null},delai:s.delai||{},voisin:s.voisin||{},reglement:s.reglement||{},envoye_le:s.envoyeLe||null,clos_le:s.closLe||null,updated_at:new Date().toISOString()})),{onConflict:"id"}); // D-201
     if(S.rappels.length)await supa.from("rappels").upsert(S.rappels.map(r=>({id:r.id,logement_id:lig.id,texte:r.t,equipement_id:S.equipements.some(e=>e.id===r.equip)?r.equip:null,date_echeance:r.du||null,fait:!!r.fait,info:!!r.info})),{onConflict:"id"});
     if(S.expediteursOk.length)await supa.from("expediteurs_autorises").upsert(S.expediteursOk.map(exp=>({logement_id:lig.id,expediteur:exp})),{onConflict:"logement_id,expediteur"});
     if(S.fil.length){
@@ -925,7 +925,8 @@ function ranger(rec){ // C'est bien ça
     }
     if(rec.travaux){let t=S.travaux.find(t=>t.titre===rec.travaux);if(!t){t={id:uid(),titre:rec.travaux,par:rec.fournisseur,date:rec.date,montant:0,docs:[]};S.travaux.push(t)}t.docs.push(d.id);if(rec.type==="facture")t.montant=rec.montant;if(rec.date>t.date)t.date=rec.date}
     if(d.type==="assurance")suivreAssurance(d); // D-151, 16 septembre 2026
-    if(rec.numeroContrat&&rec.fournisseur){const pa=S.pros.find(p=>p.nom===rec.fournisseur);if(pa&&!pa.contrat)pa.contrat=rec.numeroContrat} // D-201 : le numéro de contrat lu sur le document va sur la fiche de l'assureur
+    if(rec.numeroContrat&&rec.fournisseur){const pa=S.pros.find(p=>p.nom===rec.fournisseur);if(pa&&!pa.contrat)pa.contrat=rec.numeroContrat} // D-201
+    if(d.type==="assurance"||rec.catFournisseur==="assureur"){const pa=S.pros.find(p=>p.nom===rec.fournisseur&&categorieDe(p)==="assureur")||assureurConnu();if(pa&&supa&&d.chemin&&typeof lireContratPour==="function")setTimeout(()=>lireContratPour(pa,false),1500)} // D-215 : le contrat se lit au dépôt, une fois : le numéro de contrat lu sur le document va sur la fiche de l'assureur
     if(S.sinistreAttendu){d.sinistre=S.sinistreAttendu.id;d.sinRole=S.sinistreAttendu.role;S.sinistreAttendu=null} // D-201 : photographié depuis un dossier de sinistre
   }
   if(rec.pieceId&&rec.pieceId!=="maison"&&rec.img&&!rec.pdf){const p=pieceParId(rec.pieceId);if(p&&p.photos.length<6)p.photos.push(rec.img)}
@@ -1236,18 +1237,19 @@ function dessinMaison(opts={}){
   const per=n>9?4:3,bw=per===4?66:88,bh=50,gx=8,gy=8;const rows=Math.ceil(n/per);
   const W=per*bw+(per-1)*gx,H=rows*bh+(rows-1)*gy;const x0=(320-W)/2,y0=48,top=y0+H+10;
   const F='font-family="Source Sans 3, system-ui, sans-serif"';
-  let s=`<svg class="house" viewBox="0 0 320 ${top+8}" style="max-width:${opts.mw||300}px" role="img" aria-label="${n} pièces">`;
-  s+=`<path d="M${x0-20} ${y0-6} L160 ${y0-40} L${x0+W+20} ${y0-6}" fill="none" stroke="#50575E" stroke-width="2.5" stroke-linejoin="round"/><path d="M${x0-6} ${y0-8} L160 ${y0-34} L${x0+W+6} ${y0-8} Z" fill="#EFE6D8"/>`;
+  let s=`<svg class="house" viewBox="0 0 320 ${top+8}" style="max-width:${opts.mw||300}px" role="img" aria-label="${n} pièces">
+  <defs><radialGradient id="warm-glow" cx="50%" cy="50%" r="60%"><stop offset="0%" style="stop-color:#D4AF5A;stop-opacity:0.3"/><stop offset="100%" style="stop-color:#C9775B;stop-opacity:0"/></radialGradient></defs>`;
+  s+=`<path d="M${x0-20} ${y0-6} L160 ${y0-40} L${x0+W+20} ${y0-6}" fill="none" stroke="#D4AF5A" stroke-width="2" stroke-linejoin="round"/><path d="M${x0-6} ${y0-8} L160 ${y0-34} L${x0+W+6} ${y0-8} Z" fill="#EFE6D8"/>`;
   rooms.forEach((p,i)=>{
     const r=Math.floor(i/per),c=i%per,cnt=Math.min(per,n-r*per),off=(W-(cnt*bw+(cnt-1)*gx))/2;
     const x=x0+off+c*(bw+gx),y=y0+r*(bh+gy);
     const lit=pieceALaLumiere(p),sel=opts.sel===p.id;const nom=p.nom.length>12?p.nom.slice(0,11)+"…":p.nom;const fs=p.nom.length>10?11:12;
     const go=opts.click===false?"":`onclick="location.hash='#/piece/${p.id}'"`;
-    if(sel)s+=`<g ${go}><rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="6" fill="#F4E3DB" stroke="#C9775B" stroke-width="2.5"/><text x="${x+bw/2}" y="${y+bh/2+4}" text-anchor="middle" font-size="${fs}" font-weight="600" fill="#A85F45" ${F}>${h(nom)}</text></g>`;
-    else if(lit)s+=`<g ${go}><rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="6" fill="#E4EBE6" stroke="#5F7A6A" stroke-width="2"/><text x="${x+bw/2}" y="${y+bh/2+4}" text-anchor="middle" font-size="${fs}" font-weight="600" fill="#4A6255" ${F}>${h(nom)}</text></g>`;
+    if(sel)s+=`<g ${go}><circle cx="${x+bw/2}" cy="${y+bh/2}" r="${bw/2+3}" fill="url(#warm-glow)"/><rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="6" fill="#F4E3DB" stroke="#C9775B" stroke-width="2.5"/><text x="${x+bw/2}" y="${y+bh/2+4}" text-anchor="middle" font-size="${fs}" font-weight="600" fill="#A85F45" ${F}>${h(nom)}</text></g>`;
+    else if(lit)s+=`<g ${go}><circle cx="${x+bw/2}" cy="${y+bh/2}" r="${bw/2+2}" fill="url(#warm-glow)"/><rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="6" fill="#E4EBE6" stroke="#D4AF5A" stroke-width="2"/><text x="${x+bw/2}" y="${y+bh/2+4}" text-anchor="middle" font-size="${fs}" font-weight="600" fill="#4A6255" ${F}>${h(nom)}</text></g>`;
     else s+=`<g ${go}><rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="6" fill="#FFFDF9" stroke="#D8C8B2" stroke-width="1.5" stroke-dasharray="4 4"/><text x="${x+bw/2}" y="${y+bh/2+4}" text-anchor="middle" font-size="${fs}" fill="#B5B0A5" ${F}>${h(nom)}</text></g>`;
   });
-  s+=`<line x1="${x0-20}" y1="${top}" x2="${x0+W+20}" y2="${top}" stroke="#50575E" stroke-width="2.5" stroke-linecap="round"/></svg>`;
+  s+=`<line x1="${x0-20}" y1="${top}" x2="${x0+W+20}" y2="${top}" stroke="#D4AF5A" stroke-width="2" stroke-linecap="round"/></svg>`;
   return s;
 }
 function phraseCourte(){const n=S.pieces.length,l=S.pieces.filter(pieceALaLumiere).length;return n?`${l} sur ${n} pièce${n>1?"s":""}`:""}
@@ -1266,7 +1268,7 @@ function qrSvg(texte){
 
 /* ================= vues : le premier jour ================= */
 const V={};
-V.bienvenue=()=>`<div class="view center fadein" style="gap:24px">
+V.bienvenue=()=>`<div class="view center fadein" style="gap:24px;position:relative;background:linear-gradient(135deg,rgba(212,175,90,0.08) 0%,rgba(201,119,91,0.06) 50%,rgba(95,122,106,0.04) 100%);border-radius:16px;padding:20px">
   <div class="logo-grand">${LOGO_ICONE}${LOGO_MOT}</div>
   <div class="stack" style="gap:12px">
     <h1 class="h" style="font-size:1.8em">VIDOM construit avec vous la mémoire de votre logement.</h1>
@@ -1684,7 +1686,6 @@ function limitesChiffrement(){return `<div class="card soft" style="gap:6px">
     <p class="small">• <b>VIDOM ne pourra plus les lire.</b> Un document chiffré n'est pas relu, pas cherché, pas résumé, pas rappelé : pas de garantie détectée, pas de réponse quand vous demandez à la maison.</p>
     <p class="small">• <b>Il ne sort pas de chez vous sans vous.</b> Un tiers à qui vous ouvrez un accès, un dossier préparé pour l'assureur ou le notaire ne le contiennent pas ; vous le transmettez vous-même, à la main, le jour où vous le décidez.</p>
     <p class="small">• <b>Il se referme tout seul</b> dix minutes après que vous l'avez ouvert, sur cet appareil.</p>
-    <p class="small">• <b>Sur votre téléphone, l'empreinte ou le visage peuvent l'ouvrir</b>, comme une application bancaire — mais ils ne remplacent pas la phrase : c'est elle qui protège vraiment, et on vous la redemandera sur un nouvel appareil.</p>
     <p class="small muted">Pendant l'essai, ce parcours est une répétition : la phrase secrète et le cadenas fonctionnent, mais le vrai chiffrement de bout en bout n'est pas encore branché. Il viendra avec l'espace protégé, en option et jamais obligatoire : 19 € pour trois ans, offert la première année.</p>
   </div>`}
 let chiffreSuite=null; // le geste à reprendre une fois la phrase choisie ou saisie
@@ -1709,25 +1710,17 @@ async function activerChiffrement(){
   const c=chiffreEtat();c.actif=true;c.empreinte=await empreintePhrase(p1);c.indice=ind;c.ouvertJusqua=Date.now()+CHIFFRE_DUREE;save();garderChiffrePrefs();
   filAjouter({type:"info",t:"Vous avez choisi une phrase secrète : vous pouvez maintenant chiffrer les documents qui ne regardent que vous."});
   closeModal();toast("Phrase secrète choisie. Gardez-la précieusement.");render();
-  const suite=chiffreSuite;chiffreSuite=null;
-  if(empreinteDispo()&&!empreinteEnregistree()&&!isDesk()){ // D-214 : sur le téléphone, proposer tout de suite l'empreinte
-    chiffreSuite=suite;
-    modal(`<h2>${I.check} Ouvrir avec l'empreinte ?</h2><p class="muted">Sur ce téléphone, vos documents chiffrés peuvent s'ouvrir avec votre empreinte ou votre visage, comme votre application bancaire. Votre phrase secrète reste votre clé : on vous la demandera sur un autre appareil, ou si l'empreinte n'est pas reconnue.</p><div class="row wrap"><button class="btn primary grow" onclick="closeModal();enregistrerEmpreinte().then(()=>{if(chiffreSuite){const f=chiffreSuite;chiffreSuite=null;f()}})">Oui, sur cet appareil</button><button class="btn ghost" onclick="closeModal();if(chiffreSuite){const f=chiffreSuite;chiffreSuite=null;f()}">Plus tard</button></div>`);
-    return;
-  }
-  if(suite)suite();
+  const suite=chiffreSuite;chiffreSuite=null;proposerEmpreinte(suite); // D-214
 }
 function ouvrirChiffre(puis){
   chiffreSuite=puis||null;const c=chiffreEtat();if(!c.actif){expliquerChiffrement(puis);return}
-  if(!ouvrirChiffre.sansEmpreinte&&empreinteEnregistree()&&empreinteDispo()){ouvrirParEmpreinte(puis);return} // D-214 : l'empreinte d'abord, la phrase en secours
-  ouvrirChiffre.sansEmpreinte=false;
   modal(`<h2>${I.cadenas} Votre phrase secrète</h2><p class="muted">Pour ouvrir vos documents chiffrés pendant dix minutes, sur cet appareil.</p>
     ${c.indice?`<p class="small muted">Votre indice : <b>${h(c.indice)}</b></p>`:""}
+    ${empreinteEnregistree()?`<button class="btn primary big" onclick="ouvrirParEmpreinte()">Ouvrir avec l'empreinte</button><p class="small muted" style="text-align:center">ou saisissez votre phrase</p>`:""}
     <label class="f"><span>Phrase secrète</span><input class="input" id="ch-s" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')verifierChiffre()"></label>
-    <div class="row wrap"><button class="btn primary grow" onclick="verifierChiffre()">Ouvrir</button><button class="btn ghost" onclick="closeModal()">Annuler</button></div>
-    ${empreinteEnregistree()&&empreinteDispo()?`<button class="btn grow" onclick="ouvrirParEmpreinte()">${I.check} Ouvrir avec l'empreinte</button>`:""}
+    <div class="row wrap"><button class="btn ${empreinteEnregistree()?"":"primary"} grow" onclick="verifierChiffre()">Ouvrir</button><button class="btn ghost" onclick="closeModal()">Annuler</button></div>
     <button class="btn ghost sm" style="align-self:flex-start" onclick="phraseOubliee()">J'ai perdu ma phrase</button>`);
-  setTimeout(()=>{const i=document.getElementById("ch-s");if(i&&!(empreinteEnregistree()&&empreinteDispo()))i.focus()},50);
+  setTimeout(()=>{const i=document.getElementById("ch-s");if(i)i.focus()},50);
 }
 async function verifierChiffre(){
   const i=document.getElementById("ch-s");const p=i?i.value:"";const c=chiffreEtat();
@@ -1755,53 +1748,12 @@ function phraseOubliee(){
 }
 async function retirerChiffresEtRepartir(){
   const docs=S.docs.filter(d=>d.chiffre);const ids=docs.map(d=>d.id),chemins=docs.map(d=>d.chemin).filter(Boolean);
-  S.docs=S.docs.filter(d=>!d.chiffre);S.chiffre={actif:false,empreinte:"",indice:"",ouvertJusqua:0};try{localStorage.removeItem(CLE_EMPREINTE)}catch(e){}save();render();closeModal();
+  S.docs=S.docs.filter(d=>!d.chiffre);S.chiffre={actif:false,empreinte:"",indice:"",ouvertJusqua:0};oublierEmpreinte(true);save();render();closeModal();
   if(ids.length){filAjouter({type:"info",t:`${ids.length} document${ids.length>1?"s chiffrés retirés":" chiffré retiré"} : la phrase secrète était perdue.`});try{await effacerEnLigne({docs:ids,chemins})}catch(e){}}
   garderChiffrePrefs();toast(ids.length?"Documents retirés. Vous pouvez choisir une nouvelle phrase.":"Vous pouvez choisir une nouvelle phrase.");
 }
-/* D-214 : l'empreinte digitale (ou le visage) sur le téléphone, comme une application bancaire.
-   Elle ne remplace pas la phrase secrète : elle évite de la retaper sur un appareil déjà reconnu. Techniquement : WebAuthn, authentificateur de l'appareil,
-   vérification de l'utilisateur exigée ; l'identifiant de la clé est gardé sur cet appareil seulement (localStorage), jamais sur le compte. */
-const CLE_EMPREINTE="vidom-empreinte-"+KEY;
-function empreinteDispo(){return !!(window.PublicKeyCredential&&navigator.credentials&&window.isSecureContext)}
-function empreinteEnregistree(){try{return !!localStorage.getItem(CLE_EMPREINTE)}catch(e){return false}}
-function b64u(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
-function deB64u(str){const b=atob(str.replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
-async function enregistrerEmpreinte(){
-  if(!empreinteDispo()){toast("Cet appareil ou ce navigateur ne propose pas l'empreinte.");return false}
-  if(!chiffreOuvert()){ouvrirChiffre.sansEmpreinte=true;ouvrirChiffre(()=>enregistrerEmpreinte());return false} // on prouve d'abord qu'on connaît la phrase
-  try{
-    const defi=crypto.getRandomValues(new Uint8Array(32));const uid=crypto.getRandomValues(new Uint8Array(16));
-    const cred=await navigator.credentials.create({publicKey:{
-      challenge:defi,rp:{name:"VIDOM",id:location.hostname},user:{id:uid,name:S.compte.email||"gardien",displayName:nomGardien()},
-      pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
-      authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"preferred"},timeout:60000,attestation:"none"}});
-    if(!cred)return false;
-    try{localStorage.setItem(CLE_EMPREINTE,b64u(cred.rawId))}catch(e){}
-    toast("L'empreinte ouvre maintenant vos documents chiffrés sur cet appareil.");render();return true;
-  }catch(e){toast(e&&e.name==="NotAllowedError"?"Empreinte non reconnue, ou annulée.":"L'empreinte n'a pas pu être enregistrée ici.");return false}
-}
-function oublierEmpreinte(){try{localStorage.removeItem(CLE_EMPREINTE)}catch(e){}toast("L'empreinte n'ouvre plus VIDOM sur cet appareil.");render()}
-async function ouvrirParEmpreinte(puis){
-  if(puis)chiffreSuite=puis;const id=(()=>{try{return localStorage.getItem(CLE_EMPREINTE)}catch(e){return null}})();
-  if(!id||!empreinteDispo()){ouvrirChiffre.sansEmpreinte=true;ouvrirChiffre(chiffreSuite);return}
-  try{
-    const defi=crypto.getRandomValues(new Uint8Array(32));
-    const a=await navigator.credentials.get({publicKey:{challenge:defi,rpId:location.hostname,allowCredentials:[{type:"public-key",id:deB64u(id),transports:["internal"]}],userVerification:"required",timeout:60000}});
-    if(!a)throw new Error("annulé");
-    const c=chiffreEtat();c.ouvertJusqua=Date.now()+CHIFFRE_DUREE;save();closeModal();toast("Ouvert par votre empreinte, pour dix minutes.");render();
-    if(chiffreSuite){const f=chiffreSuite;chiffreSuite=null;f()}
-  }catch(e){toast("Empreinte non reconnue. Saisissez votre phrase.");ouvrirChiffre.sansEmpreinte=true;ouvrirChiffre(chiffreSuite)}
-}
-function carteEmpreinte(){ // dans les Réglages, sous la carte du chiffrement, quand la phrase est choisie
-  if(!chiffreEtat().actif)return "";
-  if(!empreinteDispo())return `<p class="small faint">L'ouverture par empreinte n'est pas proposée dans ce navigateur.</p>`;
-  return empreinteEnregistree()
-    ?`<p class="small muted">${I.check} Sur cet appareil, votre empreinte (ou votre visage) ouvre vos documents chiffrés. Votre phrase secrète reste nécessaire sur un autre appareil, et si l'empreinte n'est pas reconnue.</p><button class="btn ghost sm" style="align-self:flex-start" onclick="oublierEmpreinte()">Ne plus ouvrir avec l'empreinte ici</button>`
-    :`<p class="small muted">Sur ce téléphone, ouvrez vos documents chiffrés avec votre empreinte ou votre visage, comme votre application bancaire — sans retaper la phrase. Elle reste votre clé : on vous la demandera sur un nouvel appareil.</p><button class="btn" style="align-self:flex-start" onclick="enregistrerEmpreinte()">Ouvrir avec l'empreinte sur cet appareil</button>`;
-}
 function carteChiffre(d){ // sur la fiche d'un document : la case à cocher, ou le cadenas fermé
-  if(estVerrouille(d))return `<div class="card soft" style="gap:8px"><p class="b" style="color:var(--sauge-f)">${I.cadenas} Ce document est chiffré</p><p class="small muted">Son contenu, son titre et son montant restent invisibles tant que vous n'avez pas saisi votre phrase secrète. Personne d'autre ne peut l'ouvrir — pas même VIDOM.</p><div class="row wrap">${empreinteEnregistree()&&empreinteDispo()?`<button class="btn primary grow" onclick="ouvrirParEmpreinte()">${I.check} Ouvrir avec l'empreinte</button><button class="btn" onclick="ouvrirChiffre()">Ma phrase secrète</button>`:`<button class="btn primary" onclick="ouvrirChiffre()">Saisir ma phrase secrète</button>`}</div></div>`;
+  if(estVerrouille(d))return `<div class="card soft" style="gap:8px"><p class="b" style="color:var(--sauge-f)">${I.cadenas} Ce document est chiffré</p><p class="small muted">Son contenu, son titre et son montant restent invisibles tant que vous n'avez pas saisi votre phrase secrète. Personne d'autre ne peut l'ouvrir — pas même VIDOM.</p><div class="row wrap">${empreinteEnregistree()?`<button class="btn primary grow" onclick="ouvrirParEmpreinte()">Ouvrir avec l'empreinte</button><button class="btn" onclick="ouvrirChiffre()">Ma phrase secrète</button>`:`<button class="btn primary" onclick="ouvrirChiffre()">Saisir ma phrase secrète</button>`}</div></div>`;
   return `<label class="card" style="gap:10px;flex-direction:row;align-items:flex-start;cursor:pointer"><input type="checkbox" ${d.chiffre?"checked":""} onchange="basculerChiffreDoc('${d.id}')" style="width:22px;height:22px;margin-top:2px;flex:0 0 auto"><span class="stack" style="gap:2px;flex:1 1 auto"><span class="b">${I.cadenas} Chiffrer ce document</span><span class="small muted">${d.chiffre?"Chiffré : invisible sans votre phrase secrète, y compris pour VIDOM. Il se referme tout seul après dix minutes.":"Pour un objet de valeur, une expertise, une preuve d'achat : vous seul pourrez le lire. <a href='#' onclick='event.preventDefault();expliquerChiffrement()'>Ce que cela implique</a>"}</span></span></label>`;
 }
 function carteReglagesChiffre(){
@@ -1809,8 +1761,62 @@ function carteReglagesChiffre(){
   return `<div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">${I.cadenas} Chiffrez vos données</p>
     <p class="small muted">${c.actif?`Votre phrase secrète est choisie${c.indice?" (indice : "+h(c.indice)+")":""}. ${n?`${n} document${n>1?"s chiffrés":" chiffré"}, ${chiffreOuvert()?"ouverts pour l'instant sur cet appareil":"refermés"}.`:"Aucun document chiffré pour l'instant : cochez « Chiffrer ce document » sur ceux qui ne regardent que vous."}`:"Bijoux, montres, œuvres d'art, expertises : rendez illisibles pour tout le monde les documents qui ne regardent que vous — même pour VIDOM."}</p>
     <div class="row wrap">${c.actif?`${chiffreOuvert()?`<button class="btn grow" onclick="verrouillerChiffre()">Refermer maintenant</button>`:`<button class="btn grow" onclick="ouvrirChiffre()">Ouvrir mes documents chiffrés</button>`}<button class="btn ghost" onclick="expliquerChiffrement()">Ce que cela implique</button>`:`<button class="btn grow" onclick="expliquerChiffrement()">${I.cadenas} Chiffrer mes données sensibles</button>`}</div>
-    ${carteEmpreinte()}
   </div>`;
+}
+
+/* ================= D-214 : sur le téléphone, l'empreinte ou le visage ouvrent les documents chiffrés, comme une application bancaire =================
+   La phrase secrète reste la clé : elle est demandée sur un nouvel appareil, quand l'empreinte n'est pas reconnue, et pour enregistrer l'empreinte
+   elle-même (on prouve qu'on la connaît avant). L'identifiant de la clé est gardé sur l'appareil seulement (localStorage), jamais sur le compte.
+   Techniquement : WebAuthn avec l'authentificateur de l'appareil (platform, vérification de l'utilisateur exigée) ; HTTPS seulement.
+   Comme pour D-213, l'empreinte ouvre un cadenas de maquette : le jour du vrai chiffrement (A22), elle devra déverrouiller une clé gardée sur l'appareil. */
+const EMPREINTE_CLE="vidom_empreinte";
+function empreinteDispo(){try{return !!(window.PublicKeyCredential&&navigator.credentials&&navigator.credentials.create&&window.isSecureContext&&!isDesk())}catch(e){return false}}
+function empreinteEnregistree(){ // la clé de cet appareil, si elle va avec la phrase secrète actuelle
+  try{const raw=localStorage.getItem(EMPREINTE_CLE);if(!raw)return null;const o=JSON.parse(raw);const c=chiffreEtat();return (o&&o.id&&o.phrase===c.empreinte)?o:null}catch(e){return null}
+}
+function oublierEmpreinte(silence){try{localStorage.removeItem(EMPREINTE_CLE)}catch(e){}if(!silence){toast("L'empreinte n'ouvre plus vos documents sur cet appareil.");render()}}
+const b64u={enc:buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""),dec:s=>{const b=atob(s.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(s.length/4)*4,"="));return Uint8Array.from(b,ch=>ch.charCodeAt(0))}};
+function aleatoire(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return a}
+async function enregistrerEmpreinte(){ // on prouve qu'on connaît la phrase avant d'y associer l'empreinte
+  const c=chiffreEtat();if(!c.actif){expliquerChiffrement(()=>enregistrerEmpreinte());return}
+  if(!empreinteDispo()){toast("L'empreinte n'est pas disponible sur cet appareil ou dans ce navigateur.");return}
+  if(!chiffreOuvert()){ouvrirChiffre(()=>enregistrerEmpreinte());return}
+  try{
+    const cred=await navigator.credentials.create({publicKey:{
+      challenge:aleatoire(32),rp:{name:"VIDOM",id:location.hostname},
+      user:{id:aleatoire(16),name:"gardien@vidom",displayName:"Gardien VIDOM"},
+      pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"preferred"},
+      timeout:60000,attestation:"none"}});
+    if(!cred||!cred.rawId)throw new Error("pas de clé");
+    localStorage.setItem(EMPREINTE_CLE,JSON.stringify({id:b64u.enc(cred.rawId),phrase:c.empreinte,d:now()}));
+    closeModal();toast("Vos documents chiffrés s'ouvriront avec votre empreinte, sur cet appareil.");render();
+  }catch(e){console.error("empreinte",e);toast(e&&e.name==="NotAllowedError"?"Empreinte non enregistrée : vous avez annulé, ou l'appareil a refusé.":"L'empreinte n'a pas pu être enregistrée sur cet appareil.")}
+}
+async function ouvrirParEmpreinte(puis){
+  if(puis)chiffreSuite=puis;const o=empreinteEnregistree();const c=chiffreEtat();
+  if(!o||!c.actif){ouvrirChiffre(chiffreSuite);return}
+  try{
+    const a=await navigator.credentials.get({publicKey:{challenge:aleatoire(32),rpId:location.hostname,allowCredentials:[{type:"public-key",id:b64u.dec(o.id),transports:["internal"]}],userVerification:"required",timeout:60000}});
+    if(!a)throw new Error("refus");
+    c.ouvertJusqua=Date.now()+CHIFFRE_DUREE;save();closeModal();toast("Vos documents chiffrés sont ouverts pour dix minutes.");render();
+    if(chiffreSuite){const f=chiffreSuite;chiffreSuite=null;f()}
+  }catch(e){console.error("empreinte",e);toast("Empreinte non reconnue : saisissez votre phrase secrète.");ouvrirChiffre(chiffreSuite)}
+}
+function proposerEmpreinte(puis){ // juste après le choix de la phrase, sur le téléphone seulement
+  if(!empreinteDispo()||empreinteEnregistree()){if(puis)puis();return}
+  chiffreSuite=puis||null;
+  modal(`<h2>Ouvrir avec l'empreinte ?</h2><p class="muted">Sur ce téléphone, votre empreinte digitale ou votre visage pourront ouvrir vos documents chiffrés, sans retaper la phrase — comme dans une application bancaire.</p>
+    <p class="small muted">${limiteEmpreinte()}</p>
+    <div class="row wrap"><button class="btn primary grow" onclick="enregistrerEmpreinte()">Oui, sur cet appareil</button><button class="btn ghost" onclick="closeModal();if(chiffreSuite){const f=chiffreSuite;chiffreSuite=null;f()}">Plus tard</button></div>`);
+}
+function limiteEmpreinte(){return "L'empreinte ne remplace pas la phrase : elle sera redemandée sur un autre appareil, si l'empreinte n'est pas reconnue, ou si vous changez de phrase. L'empreinte reste dans le téléphone, jamais sur le compte."}
+function carteEmpreinte(){ // dans les Réglages, sous « Chiffrez vos données »
+  const c=chiffreEtat();if(!c.actif||!empreinteDispo())return "";
+  const o=empreinteEnregistree();
+  return `<div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Empreinte ou visage, sur cet appareil</p>
+    <p class="small muted">${o?`Vos documents chiffrés s'ouvrent avec l'empreinte sur cet appareil depuis le ${dateFr(String(o.d||"").slice(0,10))}. ${limiteEmpreinte()}`:`Ouvrez vos documents chiffrés avec votre empreinte digitale ou votre visage, comme dans une application bancaire. ${limiteEmpreinte()}`}</p>
+    <div class="row wrap">${o?`<button class="btn grow" onclick="oublierEmpreinte()">Ne plus ouvrir avec l'empreinte ici</button>`:`<button class="btn grow" onclick="enregistrerEmpreinte()">Ouvrir avec l'empreinte sur cet appareil</button>`}</div></div>`;
 }
 
 function carteDoc(d){return `<a class="line" href="#/document/${d.id}" style="border:1px solid var(--bois-c);border-radius:12px;padding:10px 12px">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${titreDoc(d)}</span><span class="small muted">${estVerrouille(d)?"":(d.montant?euros(d.montant)+" · ":"")}${dateFr(d.date)}</span></span>${I.fleche}</a>`}
@@ -2072,14 +2078,14 @@ function formSinistre(){
       <div class="stack" style="gap:6px"><label class="b" for="sin-mesures">Ce que vous avez déjà fait <span class="small muted" style="font-weight:400">(facultatif)</span></label><textarea class="input" id="sin-mesures" rows="2" placeholder="Coupé l'eau, pris des photos, prévenu le voisin…">${h(s.mesures)}</textarea></div>
       <p class="small faint">${docs.length?`VIDOM relira ${docs.length===1?"le document d'assurance":docs.slice(0,3).length+" documents d'assurance"} que la maison garde : ${docs.slice(0,3).map(d=>h(d.titre)).join(", ")}.`:"La maison n'a encore aucun contrat d'assurance : VIDOM préparera la déclaration sans attendre, mais ne pourra pas dire ce que couvre votre contrat. Photographiez-le (conditions particulières et générales) pour la prochaine fois."}</p>
     </div>
-    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="formAssureur()">Continuer ${I.fleche}</button><button class="btn" onclick="closeModal()">Annuler</button></div>`);
+    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="formService()">Continuer ${I.fleche}</button><button class="btn" onclick="closeModal()">Annuler</button></div>`);
 }
 /* D-201 : l'assureur, avant d'écrire. Pré-rempli quand la maison le connaît ; sinon c'est le moment de le garder. */
 function formAssureur(){
   lireFormSinistre();const s=sinistreEnCours,a=s.assureur;
   if(!s.cause){toast("Dites d'abord ce qui s'est passé.");formSinistre();return}
   if(!s.quoi.trim()&&s.cause==="autre"){toast("Quelques mots suffisent.");formSinistre();return}
-  modal(`<h2>Votre assureur</h2><p class="muted">${a.id?"C'est ce que la maison sait de lui. Complétez ce qui manque.":"La maison ne connaît pas encore votre assureur : ce que vous écrivez ici reste dans sa mémoire, pour cette fois et les suivantes."}</p>
+  modal(`<h2>Votre assureur</h2><p class="muted">Dernière étape avant le dossier. ${a.id?"C'est ce que la maison sait de lui. Complétez ce qui manque.":"La maison ne connaît pas encore votre assureur : ce que vous écrivez ici reste dans sa mémoire, pour cette fois et les suivantes."}</p>
     <div class="stack" style="gap:10px">
       <label class="f"><span>Compagnie ou courtier</span><input class="input" id="sin-anom" placeholder="AXA, MAIF, Allianz…" value="${h(a.nom)}"></label>
       <label class="f"><span>Courriel pour les sinistres</span><input class="input" id="sin-amail" type="email" placeholder="sinistres@…" value="${h(a.mail)}"></label>
@@ -2087,15 +2093,7 @@ function formAssureur(){
       <label class="f"><span>Numéro de contrat</span><input class="input" id="sin-acontrat" placeholder="Sur les conditions particulières ou l'attestation" value="${h(a.contrat)}"></label>
       <p class="small faint">Tout est facultatif. Sans courriel, VIDOM préparera la déclaration et vous l'enverrez par le moyen que vous voulez.</p>
     </div>
-    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="formReglement()">Continuer ${I.fleche}</button><button class="btn" onclick="lireFormSinistre();formSinistre()">Retour</button></div>`);
-}
-/* D-202 : constituer et gérer un dossier de sinistre est un service de VIDOM. On le règle — 0 € la première année — pour que le geste existe dès les tests. */
-function formReglement(){
-  lireFormSinistre();
-  modal(`<h2>Le dossier de sinistre</h2><p class="muted">VIDOM constitue le dossier, relit le contrat, dit la franchise et estime ce que vous pouvez récupérer d'après les pièces fournies, prépare la déclaration, garde les pièces et les réponses jusqu'à la clôture.</p>
-    <div class="book" style="text-align:center"><p class="small muted">Constitution et gestion du dossier</p><p style="font-size:2em;font-weight:600;margin:6px 0">Vous devez régler ${PRIX_DOSSIER_SINISTRE} €</p><p class="small muted">${PRIX_DOSSIER_SINISTRE===0?`Offert la première année, à tous. Ensuite ${PRIX_DOSSIER_SINISTRE_REFERENCE} € par dossier, réglés une fois, pour toute sa durée.`:"Réglé une fois, pour toute la durée du dossier."}</p></div>
-    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="lancerSinistre()">Régler ${PRIX_DOSSIER_SINISTRE} € et préparer la déclaration</button><button class="btn" onclick="formAssureur()">Retour</button></div>
-    <p class="small faint" style="margin-top:8px">Aucun paiement n'est demandé aujourd'hui : la mémoire du logement reste gratuite, seuls les dossiers qui la transforment en service seront payants, plus tard.</p>`);
+    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="lancerSinistre()">${I.doc} Ouvrir le dossier</button><button class="btn" onclick="lireFormSinistre();formSimulateur()">Retour</button></div>`);
 }
 function garderAssureur(a){ // la fiche de l'assureur se complète au passage, sans écraser ce qu'on savait
   const nom=(a.nom||"").trim();if(!nom)return null;
@@ -2126,63 +2124,42 @@ function declarationLocale(s,e,ass){ // sans contrat à relire, VIDOM écrit ell
   return {contrat_trouve:false,assureur:ass?ass.nom:null,numero_contrat:ass&&ass.contrat?ass.contrat:null,documents_lus:[],garantie:{nom:null,s_applique:"a_verifier",explication:null,franchise:null,plafond:null},exclusions:[],a_verifier:false,pourquoi_a_verifier:null,avant_assureur:avant,pages_manquantes:false,declaration:{objet:`Déclaration de sinistre — ${nomCause(s.cause).toLowerCase()} du ${quand} — ${L.adresse}, ${L.ville}`,texte:lignes.join("\n")},a_joindre:pj.map(x=>x.charAt(0).toUpperCase()+x.slice(1)),manque:["Le contrat d'assurance habitation (conditions particulières et générales), pour que VIDOM dise ce qu'il couvre"],local:true,
     estimation:{base_pieces:factures.reduce((a,d)=>a+(Number(d.montant)||0),0)||null,franchise_montant:null,plafond_montant:null,vetuste:null,indemnite_min:null,indemnite_max:null,explication:"Sans le contrat, VIDOM ne connaît ni la franchise ni la règle de vétusté : elle ne peut pas estimer ce que vous récupérerez. Les pièces chiffrées sont comptées ; le calcul viendra avec le contrat.",confiance:"faible",regles_appliquees:[],pieces_retenues:factures.filter(d=>d.montant).map(d=>`${d.titre} (${euros(d.montant)})`),pieces_manquantes:["Le contrat d'assurance habitation"]}};
 }
-async function lancerSinistre(){
+function restitutionLocale(s,e,ass,regles,sim){ // D-215 : tout se dit à partir des règles gardées — plus d'appel au moment de déclarer
+  const res=declarationLocale(s,e,ass);
+  if(!regles)return res;
+  const g=garantiePourCause(regles,s.cause);
+  const mt=x=>x&&(x.montant!=null?euros(x.montant):(x.texte||null));
+  Object.assign(res,{contrat_trouve:true,documents_lus:regles.documents_lus||[],numero_contrat:ass&&ass.contrat?ass.contrat:(regles.numero_contrat||null),pages_manquantes:!!regles.pages_manquantes,manque:regles.pages_manquantes?["Les conditions générales complètes du contrat"]:[]});
+  if(g){
+    res.garantie={nom:g.nom,s_applique:g.souscrite===false?"non":"a_verifier",explication:[g.souscrite===true?"Garantie souscrite d'après vos conditions particulières.":g.souscrite===false?"D'après le contrat, cette garantie n'est pas souscrite.":"Le contrat ne dit pas clairement si cette garantie est souscrite.",g.mode?"Indemnisation : "+g.mode+".":"",g.article?"("+g.article+")":""].filter(Boolean).join(" "),franchise:mt(g.franchise)||mt(regles.franchise_generale),plafond:mt(g.plafond)};
+    res.exclusions=(g.exclusions||[]).map(c=>({clause:c,pourquoi:null}));
+    res.a_verifier=true;res.pourquoi_a_verifier=g.souscrite===false?"Le contrat écrit cette garantie comme non souscrite : demandez confirmation à votre assureur avant d'aller plus loin.":"Que la garantie joue dépend de la cause exacte, de l'entretien et de la vétusté, que l'assureur apprécie : VIDOM restitue le contrat, elle ne conclut pas.";
+    // la déclaration nomme la garantie
+    res.declaration.texte=res.declaration.texte.replace(/\n\nAppareil concerné|\n\nMesures prises|\n\nUn logement voisin|\n\nUne autre personne|\n\nLa cause exacte|\n\nVous trouverez/,m=>`\n\nGarantie concernée, d'après mon contrat : ${g.nom}.`+m);
+  }else{res.garantie={nom:null,s_applique:"a_verifier",explication:null,franchise:mt(regles.franchise_generale),plafond:null};res.exclusions=(regles.exclusions_generales||[]).map(c=>({clause:c,pourquoi:null}))}
+  if(sim&&sim.biens&&sim.biens.length){const pj=sim.biens.map(b=>b.type==="reparation"?"le devis : "+b.nom:"la facture : "+b.nom);res.a_joindre=[...new Set([...pj.map(x=>x.charAt(0).toUpperCase()+x.slice(1)),"Des photos des dégâts"])]}
+  delete res.estimation;
+  return res;
+}
+function lancerSinistre(){
   lireFormSinistre();const s=sinistreEnCours;
   const e=s.equip?S.equipements.find(x=>x.id===s.equip):null;
   const ass=garderAssureur(s.assureur);
-  const docs=docsAssurance().slice(0,3);
-  let res=null,raison="";
-  if(!docs.length||!supa){
-    res=declarationLocale(s,e,ass); // rien à relire : pas d'attente, pas d'appel
-  }else{
-    modal(`<h2>Un instant</h2><p class="muted">VIDOM relit votre contrat d'assurance…</p><p class="small faint">Cela peut prendre une minute quand le contrat est long.</p>`);
-    const contrats=[];
-    for(const d of docs){
-      try{
-        const {data}=await supa.storage.from("logement-files").createSignedUrl(d.chemin,600);
-        const blob=await (await fetch(data.signedUrl)).blob();
-        const mimeType=d.pdf?"application/pdf":(blob.type||"image/jpeg");
-        const lu=await pourLecture(blob,mimeType,PAGES_LUES_SINISTRE);
-        contrats.push({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,mimeType,...lu});
-      }catch(err){console.error("sinistre, document illisible",d.titre,err)}
-    }
-    const factures=e?docsLies(e).map(d=>({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,montant:d.montant,garantie:d.garantie||""})):[];
-    const corps={
-      sinistre:{cause:s.cause,quand:s.quand,quoi:s.quoi,tiers:s.tiers,tiersQui:s.tiers==="voisin"?s.voisin.nom:s.tiersQui,mesures:s.mesures},
-      logement:{nom:S.logement.nom,adresse:S.logement.adresse,cp:S.logement.cp,ville:S.logement.ville,pays:"France",annee:S.logement.annee,surface:S.logement.surface,assureur:ass?{nom:ass.nom,numero_contrat:ass.contrat||null}:null},
-      equipement:e?{nom:e.nom,marque:e.marque,modele:e.modele,ref:e.ref,achat:e.achat,fin_garantie:e.garantie||null,sous_garantie:!!(e.garantie&&joursDepuis(e.garantie)<0),installateur:e.installateur,piece:nomPiece(e.piece),factures}:null,
-      contrats,
-      pieces:piecesPourEstimation(null,e), // D-204
-    };
-    try{
-      const {data,error}=await supa.functions.invoke("declarer-sinistre",{body:corps});
-      if(error||!data||!data.declaration){raison=await raisonEchec(error);if(raison)console.error("declarer-sinistre :",raison)}
-      else res=data;
-    }catch(err){console.error("declarer-sinistre",err)}
-    if(!res){
-      modal(`<h2>Cela n'a pas fonctionné</h2><p class="muted">${h(serviceNonConfigure(raison)?"Le service de lecture n'est pas configuré.":(raison||"VIDOM n'a pas pu relire le contrat. Réessayez dans un instant."))}</p><div class="row"><button class="btn primary grow" onclick="lancerSinistreSansContrat()">Préparer sans relire le contrat</button><button class="btn" onclick="closeModal()">Fermer</button></div>`);
-      return;
-    }
-    if(ass&&!ass.contrat&&res.numero_contrat)ass.contrat=res.numero_contrat; // lu sur le contrat : la fiche le garde
-  }
+  const regles=ass?reglesAssureur(ass):null;
+  const sim=(simEnCours&&!simEnCours.sinistreId&&simEnCours.resultat)?simEnCours.resultat:null;
+  const res=restitutionLocale(s,e,ass,regles,sim);
   const delai=delaiSinistre(s.cause,s.quand);
   const sin={id:uid(),equip:e?e.id:null,equipNom:e?`${e.nom}${e.marque?" "+e.marque:""}`:"",cause:s.cause,quand:s.quand,quoi:s.quoi,tiers:s.tiers,tiersQui:s.tiersQui,mesures:s.mesures,
     etat:"ouvert",numero:"",assureurId:ass?ass.id:null,assureurNom:ass?ass.nom:"",contrat:ass&&ass.contrat?ass.contrat:"",
-    declaration:{objet:res.declaration.objet,texte:res.declaration.texte},res,delai,docsLus:docs.map(d=>d.titre),
+    declaration:{objet:res.declaration.objet,texte:res.declaration.texte},res,delai,docsLus:regles?(regles.documents_lus||[]):[],simulation:sim,
     voisin:s.tiers==="voisin"?{nom:s.voisin.nom,mail:s.voisin.mail,aVidom:s.voisin.aVidom,ecrit:false}:null,
     reglement:{montant:PRIX_DOSSIER_SINISTRE,prix_reference:PRIX_DOSSIER_SINISTRE_REFERENCE,offert:PRIX_DOSSIER_SINISTRE===0,le:now()}, // D-202
     envoyeLe:null,closLe:null,d:now()};
-  S.sinistres.unshift(sin);
-  filAjouter({type:"sinistre",t:`Dossier de sinistre ouvert${e?" pour "+lc(e.nom):""} : ${nomCause(s.cause).toLowerCase()}, le ${dateFr(s.quand)}.`,t2:res.contrat_trouve?`Contrat relu${res.assureur?" ("+res.assureur+")":""}.`:"Aucun contrat d'assurance relu : la maison n'en garde pas encore.",sinistreId:sin.id,ico:"envoi",fait:true});
+  S.sinistres.unshift(sin);simEnCours=null;
+  filAjouter({type:"sinistre",t:`Dossier de sinistre ouvert${e?" pour "+lc(e.nom):""} : ${nomCause(s.cause).toLowerCase()}, le ${dateFr(s.quand)}.`,t2:regles?`D'après le contrat${ass?" ("+ass.nom+")":""}${sim&&(sim.basse||sim.haute)?" : de "+euros(sim.basse)+" à "+euros(sim.haute)+" à récupérer, selon la vétusté":""}.`:"Sans contrat dans la maison : ni couverture ni franchise connues.",sinistreId:sin.id,ico:"envoi",fait:true});
   if(delai.limite){const t=`Déclarer le sinistre du ${dateFr(s.quand)} à votre assureur avant le ${dateFr(delai.limite)} (délai légal).`;if(!S.rappels.some(r=>r.t===t))S.rappels.push({id:uid(),t,equip:e?e.id:"",du:today(),fait:false})}
   naissances();save();closeModal();
   route("#/sinistre/"+sin.id);
-}
-function lancerSinistreSansContrat(){const s=sinistreEnCours;const e=s.equip?S.equipements.find(x=>x.id===s.equip):null;const ass=garderAssureur(s.assureur);
-  const res=declarationLocale(s,e,ass);const delai=delaiSinistre(s.cause,s.quand);
-  const sin={id:uid(),equip:e?e.id:null,equipNom:e?`${e.nom}${e.marque?" "+e.marque:""}`:"",cause:s.cause,quand:s.quand,quoi:s.quoi,tiers:s.tiers,tiersQui:s.tiersQui,mesures:s.mesures,etat:"ouvert",numero:"",assureurId:ass?ass.id:null,assureurNom:ass?ass.nom:"",contrat:ass&&ass.contrat?ass.contrat:"",declaration:{objet:res.declaration.objet,texte:res.declaration.texte},res,delai,docsLus:[],voisin:s.tiers==="voisin"?{nom:s.voisin.nom,mail:s.voisin.mail,aVidom:s.voisin.aVidom,ecrit:false}:null,reglement:{montant:PRIX_DOSSIER_SINISTRE,prix_reference:PRIX_DOSSIER_SINISTRE_REFERENCE,offert:PRIX_DOSSIER_SINISTRE===0,le:now()},envoyeLe:null,closLe:null,d:now()};
-  S.sinistres.unshift(sin);filAjouter({type:"sinistre",t:`Dossier de sinistre ouvert${e?" pour "+lc(e.nom):""} : ${nomCause(s.cause).toLowerCase()}, le ${dateFr(s.quand)}.`,t2:"Le contrat n'a pas pu être relu.",sinistreId:sin.id,ico:"envoi",fait:true});
-  naissances();save();closeModal();route("#/sinistre/"+sin.id);
 }
 /* ce que VIDOM restitue — les mêmes blocs sur la page du dossier et dans l'ancienne fenêtre du journal */
 function blocsSinistre(sin){
@@ -2202,13 +2179,15 @@ function blocsSinistre(sin){
     :(sin.tiers!=="aucun"?bloc("Quelqu'un d'autre est en cause",`<p>Écrivez d'abord à votre propre assureur : c'est lui qui se retourne, s'il y a lieu, vers l'assurance de l'autre partie. Gardez les coordonnées${sin.tiersQui?" ("+h(sin.tiersQui)+")":""} et tout écrit échangé.</p>`):"");
   const joindre=(r.a_joindre||[]).length?bloc("À joindre",li(r.a_joindre)):"";
   const manque=(r.manque||[]).length?`<p class="small faint">Pour faire mieux la prochaine fois : ${h(r.manque.join(" ; "))}.</p>`:"";
-  // D-204 : le service rendu — ce que le gardien peut récupérer, d'après les pièces fournies et ce que le contrat écrit
-  const es=r.estimation||{};const conf={bonne:["Estimation solide","var(--sauge-f)"],moyenne:["Estimation à affiner","var(--terra-f)"],faible:["Estimation fragile","var(--terra-f)"]}[es.confiance||"faible"];
-  const fourchette=es.indemnite_min!=null&&es.indemnite_max!=null?(es.indemnite_min===es.indemnite_max?euros(es.indemnite_min):`${euros(es.indemnite_min)} à ${euros(es.indemnite_max)}`):null;
-  const estimation=bloc("Ce que vous pouvez récupérer",`${fourchette?`<p style="font-size:1.5em;font-weight:600;margin:2px 0">${fourchette}</p><p class="small" style="color:${conf[1]}">${conf[0]} — si l'assureur retient la garantie.</p>`:`<p class="muted">Pas encore de montant${r.contrat_trouve?" : il manque de quoi chiffrer":" : il manque le contrat"}.</p>`}
-      <dl class="kv" style="margin-top:6px">${es.base_pieces!=null?`<dt>Pièces fournies</dt><dd class="num">${euros(es.base_pieces)}</dd>`:""}${es.franchise_montant!=null?`<dt>Franchise</dt><dd class="num">− ${euros(es.franchise_montant)}</dd>`:(r.contrat_trouve?`<dt>Franchise</dt><dd class="muted">non lisible</dd>`:"")}${es.plafond_montant!=null?`<dt>Plafond</dt><dd class="num">${euros(es.plafond_montant)}</dd>`:""}${es.vetuste?`<dt>Vétusté</dt><dd>${h(es.vetuste)}</dd>`:""}</dl>
-      ${es.explication?`<p class="small">${h(es.explication)}</p>`:""}${(es.regles_appliquees||[]).length?`<p class="small muted">Règles du contrat appliquées : ${h(es.regles_appliquees.join(" ; "))}.</p>`:""}${(es.pieces_retenues||[]).length?`<p class="small muted">Pièces retenues : ${h(es.pieces_retenues.join(" ; "))}.</p>`:""}${(es.pieces_manquantes||[]).length?`<p class="small" style="color:var(--terra-f)">Pour affiner : ${h(es.pieces_manquantes.join(" ; "))}.</p>`:""}
-      ${sin.estimeLe?`<p class="small faint">Estimation du ${dateFr(String(sin.estimeLe).slice(0,10))}.</p>`:""}<p class="small faint">Une estimation d'après votre contrat et vos pièces, pas un engagement : l'assureur décide.</p>`);
+  // D-204, D-215 : le service rendu — ce que le gardien peut récupérer, calculé ici d'après les règles du contrat et les biens touchés
+  let estimation="";
+  if(sin.simulation&&sin.simulation.biens){const q=sin.simulation;
+    estimation=bloc("Ce que vous pouvez récupérer",`${htmlTotalSim(q)}<div class="stack" style="gap:0;margin-top:6px">${q.biens.map(l=>`<div class="line"><span class="stack" style="gap:0;flex:1 1 auto"><span>${h(l.nom||"Bien")}</span><span class="small muted">${euros(l.valeur)}${l.age!=null?" · "+l.age+" an"+(l.age>=2?"s":""):""} · vétusté ${l.vetuste.pct} %</span></span><span class="num b">${euros(l.retenu)}</span></div>`).join("")}</div>${q.regleVetuste&&q.regleVetuste.texte?`<p class="small muted">Vétusté selon le contrat : ${h(q.regleVetuste.texte)}.</p>`:""}${q.garantie&&(q.garantie.exclusions||[]).length?`<p class="small muted">Exclusions écrites de cette garantie : ${h(q.garantie.exclusions.join(" ; "))}.</p>`:""}<p class="small faint">Simulation du ${dateFr(String(q.le||sin.d).slice(0,10))}.</p>`);
+  }else{
+    const es=r.estimation||{};const conf={bonne:["Estimation solide","var(--sauge-f)"],moyenne:["Estimation à affiner","var(--terra-f)"],faible:["Estimation fragile","var(--terra-f)"]}[es.confiance||"faible"];
+    const fourchette=es.indemnite_min!=null&&es.indemnite_max!=null?(es.indemnite_min===es.indemnite_max?euros(es.indemnite_min):`${euros(es.indemnite_min)} à ${euros(es.indemnite_max)}`):null;
+    estimation=r.estimation?bloc("Ce que vous pouvez récupérer",`${fourchette?`<p style="font-size:1.5em;font-weight:600;margin:2px 0">${fourchette}</p><p class="small" style="color:${conf[1]}">${conf[0]} — si l'assureur retient la garantie.</p>`:`<p class="muted">Pas encore de montant.</p>`}${es.explication?`<p class="small">${h(es.explication)}</p>`:""}<p class="small" style="color:var(--terra-f)">Ceci est une estimation, d'après votre contrat et vos pièces : le montant final dépendra de la vétusté de vos appareils, telle que l'assureur l'appréciera, et de sa décision.</p>`):bloc("Ce que vous pouvez récupérer",`<p class="muted">Pas encore de simulation.</p>`);
+  }
   return {contrat,avant,exclusions,verif,delai,tiers,joindre,manque,estimation};
 }
 function montrerSinistre(filId){ // les entrées du journal : les nouvelles ouvrent le dossier, celles d'avant D-201 gardent leur fenêtre
@@ -2243,7 +2222,7 @@ V.sinistre=id=>{
       <p class="small muted">${s.etat==="ouvert"?"Dossier ouvert le "+dateFr(s.d.slice(0,10))+". "+(s.delai.limite?"À déclarer avant le "+dateFr(s.delai.limite)+".":""):s.etat==="attente"?"Déclaration envoyée"+(s.envoyeLe?" le "+dateFr(s.envoyeLe.slice(0,10)):"")+". En attente de la réponse de l'assureur.":"Dossier clos"+(s.closLe?" le "+dateFr(s.closLe.slice(0,10)):"")+". Tout reste dans la mémoire de la maison."}</p>
       ${s.reglement&&s.reglement.le?`<p class="small muted">Constitution et gestion du dossier : <b>${s.reglement.montant} €</b> réglés le ${dateFr(String(s.reglement.le).slice(0,10))}${s.reglement.offert?" — offert la première année":""}.</p>`:""}<label class="f"><span>Numéro de sinistre donné par l'assureur</span><input class="input" value="${h(s.numero)}" placeholder="Dès que l'assureur vous l'a communiqué" onchange="numeroSinistre('${s.id}',this.value)"></label></div>
     <div class="card" style="gap:6px"><div class="split"><span class="b">L'assureur</span><button class="btn sm ghost" onclick="modifierAssureurSinistre('${s.id}')">Modifier</button></div>${ass?`<p>${h(ass.nom)}${ass.contrat?` · contrat n° ${h(ass.contrat)}`:""}</p><p class="small muted">${ass.mail?h(ass.mail):"courriel à compléter"}${ass.tel?" · "+h(ass.tel):""}</p>`:`<p class="small muted">Pas encore d'assureur dans la mémoire de la maison.</p>`}</div>
-    ${b.contrat}${b.estimation}${s.etat!=="clos"?`<button class="btn" onclick="reestimerSinistre('${s.id}')">Réestimer avec les pièces du dossier</button>`:""}${b.avant}${b.exclusions}${b.verif}${b.delai}${b.tiers}
+    ${b.contrat}${b.estimation}${s.etat!=="clos"?`<button class="btn" onclick="formSimulateur('${s.id}')">${s.simulation?"Modifier la simulation":"Simuler ce que je récupère"}</button>`:""}${b.avant}${b.exclusions}${b.verif}${b.delai}${b.tiers}
     <div class="card" style="gap:8px"><div class="split"><span class="b">La déclaration</span><button class="btn sm ghost" onclick="modifierDeclaration('${s.id}')">Modifier</button></div><p class="small muted">Objet : ${h(objet)}${dest?" · À : "+h(dest):""}</p><div class="book" style="white-space:pre-wrap;font-size:.95em">${h(texte)}</div>
       <div class="row wrap"><a class="btn primary grow" href="mailto:${encodeURIComponent(dest)}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(texte)}" onclick="declarationEnvoyee('${s.id}')">${I.envoi} Envoyer par courriel</a><button class="btn" onclick="copierSinistre('${s.id}','declaration')">Copier</button></div>
       <p class="small faint">Le message part de votre messagerie, pas de VIDOM. Joignez vous-même les photos et factures — puis rangez-les ci-dessous, pour que le dossier soit complet.</p></div>
@@ -2290,38 +2269,174 @@ function carteVoisin(s){const v=s.voisin,m=messageVoisin(s);
 function modifierVoisin(id){const s=sinistreParId(id);if(!s)return;const v=s.voisin||{nom:"",mail:"",aVidom:"inconnu"};
   modal(`<h2>Le voisin</h2><div class="stack" style="gap:10px"><label class="f"><span>Nom, appartement</span><input class="input" id="sv-nom" value="${h(v.nom)}"></label><label class="f"><span>Courriel</span><input class="input" id="sv-mail" type="email" value="${h(v.mail)}"></label><label class="f"><span>A-t-il VIDOM ?</span><select class="input" id="sv-vidom">${[["oui","Oui"],["non","Non"],["inconnu","Je ne sais pas"]].map(([k,t])=>`<option value="${k}" ${v.aVidom===k?"selected":""}>${t}</option>`).join("")}</select></label></div>
     <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="const s=sinistreParId('${s.id}');s.voisin={...(s.voisin||{}),nom:document.getElementById('sv-nom').value.trim(),mail:document.getElementById('sv-mail').value.trim(),aVidom:document.getElementById('sv-vidom').value};save();closeModal();render()">Garder</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
-/* D-204 : les pièces qui servent à chiffrer — les factures de l'appareil touché, et tout ce que le dossier a reçu (devis, factures de réparation) */
-function piecesPourEstimation(sinistreId,e){
-  const vues=new Set();const out=[];
-  const ajouter=(d,role)=>{if(!d||vues.has(d.id))return;vues.add(d.id);out.push({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,montant:d.montant,role})};
-  if(sinistreId)S.docs.filter(d=>d.sinistre===sinistreId).forEach(d=>ajouter(d,d.sinRole||"transmis"));
-  if(e)docsLies(e).forEach(d=>ajouter(d,"appareil"));
-  return out;
+/* ================= D-215 (19 septembre 2026) : le contrat lu une fois, le simulateur qui calcule en local =================
+   Le contrat d'assurance (conditions particulières et générales) se lit UNE fois par la fonction lire-contrat ; ses règles
+   restent sur la fiche de l'assureur (pro.regles) : garanties et sinistres couverts, franchise, plafond, vétusté, exclusions.
+   Le simulateur — la promesse du dossier à 19 € (D-203, D-204) — calcule ensuite ici même, instantanément, gratuitement :
+   les biens touchés, leur âge, la vétusté d'après le contrat (ou une grille indicative, dite comme telle, quand le contrat
+   renvoie à l'expert), la franchise, le plafond, une fourchette. Tout avant le moindre envoi. */
+const GRILLE_VETUSTE={ // grille INDICATIVE, appliquée seulement quand le contrat n'écrit pas de barème — le gardien peut la corriger bien par bien
+  electromenager:{nom:"Électroménager, appareils",taux:10,apres:1,max:80},
+  hifi:{nom:"Image, son, informatique",taux:15,apres:1,max:80},
+  mobilier:{nom:"Mobilier",taux:5,apres:1,max:80},
+  revetement:{nom:"Sols, murs, peintures",taux:5,apres:1,max:80},
+  reparation:{nom:"Réparation (devis, facture)",taux:0,apres:0,max:0},
+  autre:{nom:"Autre bien",taux:10,apres:1,max:80},
+};
+const TYPES_BIEN=Object.keys(GRILLE_VETUSTE);
+function typeBienPourEquip(e){const n=(e.nom||"").toLowerCase();if(/t[ée]l[ée]|ordinateur|hifi|enceinte|console|tablette|imprimante/.test(n))return "hifi";if(/canap|table|chaise|lit|armoire|meuble|bureau/.test(n))return "mobilier";return "electromenager"}
+function reglesAssureur(pro){return pro&&pro.regles&&Array.isArray(pro.regles.garanties)?pro.regles:null}
+function garantiePourCause(regles,cause){ // la garantie du contrat qui couvre ce sinistre — souscrite d'abord
+  if(!regles)return null;const l=regles.garanties.filter(g=>(g.causes||[]).includes(cause));
+  return l.find(g=>g.souscrite===true)||l.find(g=>g.souscrite!==false)||l[0]||null;
 }
-async function reestimerSinistre(id){
-  const s=sinistreParId(id);if(!s)return;
-  if(!supa){toast("Indisponible pour l'instant.");return}
+function ageEnAnnees(dateIso,ref){if(!dateIso)return null;const a=new Date(dateIso+"T12:00:00"),b=new Date((ref||today())+"T12:00:00");const y=(b-a)/(365.25*24*3600*1000);return y<0?0:Math.round(y*10)/10}
+function vetusteDuBien(b,regle,quand){ // -> {pct, source:"contrat"|"grille"|"gardien"|"neuf"|"reparation", texte}
+  if(b.type==="reparation")return {pct:0,source:"reparation",texte:"Une réparation ne subit pas de vétusté"};
+  if(b.vetustePct!=null&&b.vetustePct!=="")return {pct:Math.min(100,Math.max(0,Number(b.vetustePct))),source:"gardien",texte:"Taux fixé par vous"};
+  const age=ageEnAnnees(b.date,quand);
+  if(regle&&regle.type==="valeur_a_neuf")return {pct:0,source:"neuf",texte:"Valeur à neuf : votre contrat n'applique pas de vétusté"+(regle.rachat?" (sous condition de remplacement)":"")};
+  if(regle&&regle.type==="taux"&&regle.taux_an!=null){if(age==null)return {pct:0,source:"contrat",texte:"Âge inconnu : indiquez la date d'achat",inconnu:true};const pct=Math.min(regle.max_pct!=null?regle.max_pct:80,Math.max(0,age-(regle.apres_ans||0))*regle.taux_an);return {pct:Math.round(pct),source:"contrat",texte:`Barème du contrat : ${regle.taux_an} % par an${regle.apres_ans?" après "+regle.apres_ans+" an"+(regle.apres_ans>1?"s":""):""}${regle.max_pct!=null?", au plus "+regle.max_pct+" %":""}`}}
+  const g=GRILLE_VETUSTE[b.type]||GRILLE_VETUSTE.autre;
+  if(age==null)return {pct:0,source:"grille",texte:"Âge inconnu : indiquez la date d'achat",inconnu:true};
+  const pct=Math.min(g.max,Math.max(0,age-g.apres)*g.taux);
+  return {pct:Math.round(pct),source:"grille",texte:`Grille indicative : ${g.taux} % par an après ${g.apres} an, au plus ${g.max} %`};
+}
+function calculerSimulation(biens,regles,cause,quand){
+  const g=garantiePourCause(regles,cause);
+  const regleV=(g&&g.vetuste&&g.vetuste.type!=="inconnu")?g.vetuste:(regles&&regles.vetuste_generale&&regles.vetuste_generale.type!=="inconnu"?regles.vetuste_generale:null);
+  const franchise=(g&&g.franchise&&g.franchise.montant!=null)?g.franchise.montant:(regles&&regles.franchise_generale&&regles.franchise_generale.montant!=null?regles.franchise_generale.montant:null);
+  const plafond=g&&g.plafond&&g.plafond.montant!=null?g.plafond.montant:null;
+  const lignes=biens.map(b=>{const v=Number(b.valeur)||0;const vet=vetusteDuBien(b,regleV,quand);return {...b,valeur:v,age:ageEnAnnees(b.date,quand),vetuste:vet,retenu:Math.round(v*(1-vet.pct/100))}});
+  const base=lignes.reduce((a,l)=>a+l.valeur,0),apres=lignes.reduce((a,l)=>a+l.retenu,0);
+  const indicatif=lignes.some(l=>l.vetuste.source==="grille"),ageInconnu=lignes.some(l=>l.vetuste.inconnu);
+  const cap=x=>plafond!=null?Math.min(x,plafond):x;
+  const f=franchise||0;
+  const basse=Math.max(0,cap(apres)-f),haute=indicatif?Math.max(0,cap(base)-f):basse;
+  return {biens:lignes,garantie:g?{nom:g.nom,souscrite:g.souscrite,article:g.article||null,mode:g.mode||null,exclusions:g.exclusions||[]}:null,
+    regleVetuste:regleV?{type:regleV.type,texte:regleV.texte||null,taux_an:regleV.taux_an,apres_ans:regleV.apres_ans,max_pct:regleV.max_pct}:null,
+    franchise,franchiseTexte:g&&g.franchise&&g.franchise.texte?g.franchise.texte:(regles&&regles.franchise_generale?regles.franchise_generale.texte:null),
+    plafond,plafondTexte:g&&g.plafond?g.plafond.texte:null,base,apresVetuste:apres,basse,haute,indicatif,ageInconnu,
+    contrat:!!regles,nonSouscrite:!!(g&&g.souscrite===false),sansGarantie:!!(regles&&!g),le:now()};
+}
+/* la lecture du contrat, une fois — quand il entre dans la maison, à la demande, ou à la première déclaration */
+let lectureContratEnCours=false;
+async function lireContratPour(pro,silence){
+  if(!supa||!pro||lectureContratEnCours)return null;
+  const docs=docsAssurance().filter(d=>!d.fournisseur||d.fournisseur===pro.nom||!S.pros.some(p=>categorieDe(p)==="assureur"&&p.nom===d.fournisseur)).slice(0,3);
+  if(!docs.length){if(!silence)toast("Aucun contrat d'assurance dans la maison.");return null}
+  lectureContratEnCours=true;
+  if(!silence)toast("VIDOM relit votre contrat…");
+  try{
+    const contrats=[];
+    for(const d of docs){try{const {data}=await supa.storage.from("logement-files").createSignedUrl(d.chemin,600);const blob=await (await fetch(data.signedUrl)).blob();const mimeType=d.pdf?"application/pdf":(blob.type||"image/jpeg");const lu=await pourLecture(blob,mimeType,PAGES_LUES_SINISTRE);contrats.push({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,mimeType,...lu})}catch(err){console.error("contrat illisible",d.titre,err)}}
+    if(!contrats.length)return null;
+    const {data,error}=await supa.functions.invoke("lire-contrat",{body:{contrats}});
+    if(error||!data||!Array.isArray(data.garanties)){const r=await raisonEchec(error);if(r)console.error("lire-contrat :",r);if(!silence)toast(r||"La lecture du contrat n'a pas abouti.");return null}
+    pro.regles={assureur:data.assureur,numero_contrat:data.numero_contrat,formule:data.formule,date_echeance:data.date_echeance,franchise_generale:data.franchise_generale,vetuste_generale:data.vetuste_generale,garanties:data.garanties,exclusions_generales:data.exclusions_generales||[],documents_lus:data.documents_lus||[],pages_manquantes:!!data.pages_manquantes,remarque:data.remarque||null,docs:docs.map(d=>d.id)};
+    pro.contratReluLe=now();
+    if(data.numero_contrat&&!pro.contrat)pro.contrat=data.numero_contrat;
+    if(data.assureur&&(pro.nom==="Assureur"||!pro.nom))pro.nom=data.assureur;
+    filAjouter({type:"info",t:`VIDOM a relu votre contrat d'assurance${pro.nom?" ("+pro.nom+")":""} : ${data.garanties.filter(g=>g.souscrite!==false).length} garanties, ${data.franchise_generale&&data.franchise_generale.montant!=null?"franchise "+euros(data.franchise_generale.montant):"franchise selon garantie"}. Le simulateur de sinistre s'en servira sans le relire.`,ico:"check",fait:true,go:"#/pro/"+pro.id});
+    save();render();if(!silence)toast("Contrat relu : ses règles sont gardées.");
+    return pro.regles;
+  }catch(err){console.error("lireContratPour",err);return null}finally{lectureContratEnCours=false}
+}
+function carteReglesContrat(p){ // sur la fiche de l'assureur
+  const r=reglesAssureur(p);
+  return `<div class="card" style="gap:6px"><div class="split"><span class="b">Le contrat, lu par VIDOM</span>${docsAssurance().length?`<button class="btn sm ghost" onclick="lireContratPour(S.pros.find(x=>x.id==='${p.id}'))">${r?"Relire":"Lire le contrat"}</button>`:""}</div>
+    ${r?`<p class="small muted">Relu le ${dateFr(String(p.contratReluLe||"").slice(0,10))}${r.formule?" · formule "+h(r.formule):""}${p.contrat?" · contrat n° "+h(p.contrat):""}${r.pages_manquantes?" · <span style='color:var(--terra-f)'>une partie du contrat n'a pas été lue</span>":""}</p>
+      <dl class="kv">${r.franchise_generale&&(r.franchise_generale.montant!=null||r.franchise_generale.texte)?`<dt>Franchise</dt><dd>${r.franchise_generale.montant!=null?euros(r.franchise_generale.montant):h(r.franchise_generale.texte)}</dd>`:""}${r.vetuste_generale&&r.vetuste_generale.texte?`<dt>Vétusté</dt><dd>${h(r.vetuste_generale.texte)}</dd>`:""}${r.date_echeance?`<dt>Échéance</dt><dd>${dateFr(r.date_echeance)}</dd>`:""}</dl>
+      <div class="stack" style="gap:0">${r.garanties.map(g=>`<div class="line"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(g.nom)}${g.souscrite===false?' <span class="small muted">(non souscrite)</span>':""}</span><span class="small muted">${g.franchise&&(g.franchise.montant!=null||g.franchise.texte)?"Franchise "+(g.franchise.montant!=null?euros(g.franchise.montant):h(g.franchise.texte)):""}${g.plafond&&(g.plafond.montant!=null||g.plafond.texte)?" · plafond "+(g.plafond.montant!=null?euros(g.plafond.montant):h(g.plafond.texte)):""}${g.vetuste&&g.vetuste.type!=="inconnu"&&g.vetuste.texte?" · vétusté : "+h(g.vetuste.texte):""}</span></span></div>`).join("")}</div>
+      ${r.remarque?`<p class="small" style="color:var(--terra-f)">${h(r.remarque)}</p>`:""}`
+    :`<p class="small muted">${docsAssurance().length?"Le contrat est dans la maison mais VIDOM ne l'a pas encore lu. Une lecture suffit : ses règles (garanties, franchise, vétusté) resteront ici, et le simulateur de sinistre calculera sans le relire.":"Déposez les conditions particulières et les conditions générales : VIDOM les lira une fois et gardera leurs règles ici."}</p>`}</div>`;
+}
+/* ================= le parcours : le service, le contrat, le simulateur ================= */
+function formService(){ // D-202, D-203 : ce que VIDOM fait pour ce prix
+  lireFormSinistre();const s=sinistreEnCours;
+  if(!s.cause){toast("Dites d'abord ce qui s'est passé.");formSinistre();return}
+  if(!s.quoi.trim()&&s.cause==="autre"){toast("Quelques mots suffisent.");formSinistre();return}
+  const ligne=(ico,t)=>`<div class="line" style="border:0;padding:6px 0"><span style="color:var(--sauge-f);flex:0 0 auto">${ico}</span><span>${t}</span></div>`;
+  modal(`<h2>Ce que VIDOM fait pour vous</h2><p class="muted">Un dossier de sinistre, du premier mot jusqu'à la clôture.</p>
+    <div class="card" style="gap:0;padding:6px 16px">
+      ${ligne(I.doc,"<b>Je relis votre contrat</b> — conditions particulières et générales — et je vous dis ce qu'il couvre pour ce sinistre, la franchise, le plafond, les exclusions écrites.")}
+      ${ligne(I.check,"<b>Je simule ce que vous récupérerez</b>, bien par bien, selon leur âge et la vétusté que votre contrat prévoit. Vous ajustez, je recalcule.")}
+      ${ligne(I.envoi,"<b>Je rédige la déclaration</b> à votre assureur, et le message à votre voisin s'il est en cause. Vous relisez, vous envoyez.")}
+      ${ligne(I.fichier||I.doc,"<b>Je garde tout</b> — pièces transmises, réponses de l'assureur, numéro de sinistre — et je vous rappelle les délais, jusqu'à la clôture.")}
+    </div>
+    <div class="book" style="text-align:center;margin-top:10px"><p class="small muted">Constitution et gestion du dossier</p><p style="font-size:2em;font-weight:600;margin:6px 0">Vous devez régler ${PRIX_DOSSIER_SINISTRE} €</p><p class="small muted">${PRIX_DOSSIER_SINISTRE===0?`Offert la première année, à tous. Ensuite ${PRIX_DOSSIER_SINISTRE_REFERENCE} € par dossier, réglés une fois, pour toute sa durée.`:"Réglé une fois, pour toute la durée du dossier."}</p></div>
+    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="formContrat()">Régler ${PRIX_DOSSIER_SINISTRE} € et continuer</button><button class="btn" onclick="formSinistre()">Retour</button></div>
+    <p class="small faint" style="margin-top:8px">Aucun paiement n'est demandé aujourd'hui : la mémoire du logement reste gratuite, seuls les dossiers qui la transforment en service seront payants, plus tard.</p>`);
+}
+async function formContrat(){ // le contrat : lu, à lire, ou à donner
+  const s=sinistreEnCours;let ass=s.assureur.id?S.pros.find(p=>p.id===s.assureur.id):assureurConnu();
+  const docs=docsAssurance();
+  if(docs.length&&ass&&!reglesAssureur(ass)&&supa){
+    modal(`<h2>Un instant</h2><p class="muted">VIDOM lit votre contrat d'assurance — une seule fois : ses règles resteront dans la maison.</p><p class="small faint">Cela peut prendre une minute quand le contrat est long.</p>`);
+    await lireContratPour(ass,true);
+  }
+  if(docs.length&&!ass&&supa){ // un contrat sans fiche d'assureur : on la crée à partir du document
+    const d=docs[0];ass=garderAssureur({nom:d.fournisseur||"Assureur"});modal(`<h2>Un instant</h2><p class="muted">VIDOM lit votre contrat d'assurance…</p>`);await lireContratPour(ass,true);s.assureur={id:ass.id,nom:ass.nom,mail:ass.mail||"",tel:ass.tel||"",contrat:ass.contrat||""};
+  }
+  const r=ass?reglesAssureur(ass):null;const g=r?garantiePourCause(r,s.cause):null;
+  if(r){
+    modal(`<h2>Votre contrat</h2><p class="muted">${h(ass.nom)}${ass.contrat?" · contrat n° "+h(ass.contrat):""} · relu le ${dateFr(String(ass.contratReluLe||"").slice(0,10))}.</p>
+      <div class="card" style="gap:6px">${g?`<p><b>${h(g.nom)}</b>${g.souscrite===false?' — <span style="color:var(--terra-f)">non souscrite d\'après le contrat</span>':g.souscrite===true?' — souscrite':' — à confirmer'}</p><dl class="kv">${g.franchise&&(g.franchise.montant!=null||g.franchise.texte)?`<dt>Franchise</dt><dd>${g.franchise.montant!=null?euros(g.franchise.montant):h(g.franchise.texte)}</dd>`:`<dt>Franchise</dt><dd class="muted">non lisible</dd>`}${g.plafond&&(g.plafond.montant!=null||g.plafond.texte)?`<dt>Plafond</dt><dd>${g.plafond.montant!=null?euros(g.plafond.montant):h(g.plafond.texte)}</dd>`:""}${g.vetuste&&g.vetuste.texte?`<dt>Vétusté</dt><dd>${h(g.vetuste.texte)}</dd>`:(r.vetuste_generale&&r.vetuste_generale.texte?`<dt>Vétusté</dt><dd>${h(r.vetuste_generale.texte)}</dd>`:`<dt>Vétusté</dt><dd class="muted">le contrat ne fixe pas de barème : le simulateur appliquera une grille indicative</dd>`)}${g.mode?`<dt>Indemnisation</dt><dd>${h(g.mode)}</dd>`:""}</dl>${(g.exclusions||[]).length?`<p class="small muted">Exclusions écrites : ${h(g.exclusions.join(" ; "))}.</p>`:""}`:`<p>VIDOM n'a pas trouvé, dans votre contrat, de garantie qui corresponde à « ${h(nomCause(s.cause).toLowerCase())} ».${s.cause==="panne"?" C'est normal : une panne relève de la garantie du fabricant, pas de l'assurance habitation, sauf dommage électrique ou dégât causé par l'appareil.":""}</p>`}${r.pages_manquantes?`<p class="small" style="color:var(--terra-f)">Une partie du contrat n'a pas été lue : les conditions générales complètes diraient plus.</p>`:""}</div>
+      <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="formSimulateur()">Simuler ce que je récupère ${I.fleche}</button><button class="btn" onclick="formService()">Retour</button></div>`);
+    return;
+  }
+  modal(`<h2>Il me faut votre contrat</h2><p class="muted">Pour dire ce qui est couvert, la franchise, et simuler ce que vous récupérerez, VIDOM doit lire votre contrat d'assurance habitation : les <b>conditions particulières</b> (votre formule, vos franchises) et les <b>conditions générales</b> (les règles, la vétusté, les exclusions).</p>
+    <div class="stack" style="gap:8px">
+      <button class="btn primary big" onclick="S.sinistreAttendu=null;aideFichier('image/*,.pdf',true,f=>{fichiers(f,'maison');closeModal();toast('Dès que le contrat est rangé, reprenez la déclaration : VIDOM le lira.')})">${I.camera} Photographier ou choisir le PDF</button>
+      <button class="btn big" onclick="closeModal();route('#/carte/adresse')">${I.mail} L'envoyer à l'adresse VIDOM de la maison</button>
+      <p class="small faint">Une lecture suffit : les règles du contrat restent dans la maison pour toutes les déclarations suivantes.</p>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn grow" onclick="formSimulateur()">Continuer sans contrat</button><button class="btn" onclick="formService()">Retour</button></div>`);
+}
+let simEnCours=null;
+function biensProposes(s){ // ce que la maison connaît déjà : l'appareil concerné d'abord, puis les autres équipements
   const e=s.equip?S.equipements.find(x=>x.id===s.equip):null;
-  const pieces=piecesPourEstimation(id,e);
-  if(!pieces.some(p=>p.montant)){toast("Ajoutez d'abord une pièce chiffrée : facture, devis de réparation.");return}
-  const docs=docsAssurance().slice(0,3);
-  if(!docs.length){toast("Sans contrat dans la maison, VIDOM ne peut pas chiffrer. Photographiez-le d'abord.");return}
-  modal(`<h2>Un instant</h2><p class="muted">VIDOM relit le contrat et recompte avec ${pieces.length===1?"la pièce":pieces.length+" pièces"} du dossier…</p>`);
-  const contrats=[];
-  for(const d of docs){try{const {data}=await supa.storage.from("logement-files").createSignedUrl(d.chemin,600);const blob=await (await fetch(data.signedUrl)).blob();const mimeType=d.pdf?"application/pdf":(blob.type||"image/jpeg");const lu=await pourLecture(blob,mimeType,PAGES_LUES_SINISTRE);contrats.push({titre:d.titre,type:d.type,date:d.date,fournisseur:d.fournisseur,mimeType,...lu})}catch(err){console.error("réestimation, document illisible",d.titre,err)}}
-  const ass=s.assureurId?S.pros.find(p=>p.id===s.assureurId):null;
-  const corps={mode:"estimation",sinistre:{cause:s.cause,quand:s.quand,quoi:s.quoi,tiers:s.tiers,tiersQui:s.tiersQui,mesures:s.mesures},
-    logement:{nom:S.logement.nom,adresse:S.logement.adresse,cp:S.logement.cp,ville:S.logement.ville,pays:"France",assureur:ass?{nom:ass.nom,numero_contrat:ass.contrat||null}:null},
-    equipement:e?{nom:e.nom,marque:e.marque,modele:e.modele,ref:e.ref,achat:e.achat,fin_garantie:e.garantie||null,sous_garantie:!!(e.garantie&&joursDepuis(e.garantie)<0),installateur:e.installateur,piece:nomPiece(e.piece)}:null,
-    contrats,pieces};
-  let res=null,raison="";
-  try{const {data,error}=await supa.functions.invoke("declarer-sinistre",{body:corps});if(error||!data||!data.estimation){raison=await raisonEchec(error)}else res=data}catch(err){console.error("réestimation",err)}
-  closeModal();
-  if(!res){toast(raison||"La réestimation n'a pas abouti. Réessayez dans un instant.");return}
-  s.res=s.res||{};s.res.estimation=res.estimation;s.estimeLe=now();
-  if(res.contrat_trouve){s.res.contrat_trouve=true;if(res.garantie&&res.garantie.nom)s.res.garantie=res.garantie;if((res.documents_lus||[]).length)s.res.documents_lus=res.documents_lus;if((res.exclusions||[]).length)s.res.exclusions=res.exclusions;s.res.a_verifier=!!res.a_verifier;s.res.pourquoi_a_verifier=res.pourquoi_a_verifier;s.res.pages_manquantes=!!res.pages_manquantes}
-  filAjouter({type:"info",t:`Estimation refaite pour le sinistre du ${dateFr(s.quand)}${res.estimation.indemnite_min!=null?" : "+(res.estimation.indemnite_min===res.estimation.indemnite_max?euros(res.estimation.indemnite_min):euros(res.estimation.indemnite_min)+" à "+euros(res.estimation.indemnite_max)):""}.`,ico:"check",fait:true});
-  save();render();toast("Estimation mise à jour");
+  const prix=eq=>{const f=docsLies(eq).filter(d=>d.type==="facture"&&d.montant);return f.length?Number(f[0].montant):""};
+  const ligne=(eq,coche)=>({id:uid(),equip:eq.id,nom:`${eq.nom}${eq.marque?" "+eq.marque:""}`,type:typeBienPourEquip(eq),valeur:prix(eq),date:eq.achat||"",vetustePct:"",coche});
+  const l=[];if(e)l.push(ligne(e,true));
+  S.equipements.filter(x=>!e||x.id!==e.id).slice(0,12).forEach(x=>l.push(ligne(x,false)));
+  return l;
+}
+function formSimulateur(sinistreId){
+  const s=sinistreId?sinistreParId(sinistreId):sinistreEnCours;if(!s)return;
+  if(sinistreId){simEnCours={sinistreId,cause:s.cause,quand:s.quand,assureurId:s.assureurId,biens:(s.simulation&&s.simulation.biens||[]).map(b=>({...b,coche:true}))}}
+  else if(!simEnCours||simEnCours.sinistreId){simEnCours={sinistreId:null,cause:s.cause,quand:s.quand,assureurId:s.assureur.id,biens:biensProposes(s)}}
+  rendreSimulateur();
+}
+function lireSim(){const m=simEnCours;m.biens.forEach(b=>{const g=k=>{const el=document.getElementById(`sb-${b.id}-${k}`);return el?el.value:null};const c=document.getElementById(`sb-${b.id}-coche`);if(c)b.coche=c.checked;const n=g("nom");if(n!==null)b.nom=n;const t=g("type");if(t!==null)b.type=t;const v=g("valeur");if(v!==null)b.valeur=v;const d=g("date");if(d!==null)b.date=d;const p=g("vet");if(p!==null)b.vetustePct=p})}
+function simulationCourante(){const m=simEnCours;const ass=m.assureurId?S.pros.find(p=>p.id===m.assureurId):assureurConnu();return calculerSimulation(m.biens.filter(b=>b.coche&&(Number(b.valeur)>0||b.nom)),reglesAssureur(ass),m.cause,m.quand)}
+function ajouterBienSim(type){lireSim();simEnCours.biens.push({id:uid(),equip:null,nom:type==="reparation"?"":"",type:type||"autre",valeur:"",date:type==="reparation"?today():"",vetustePct:"",coche:true});rendreSimulateur();setTimeout(()=>{const l=simEnCours.biens.at(-1);const el=document.getElementById(`sb-${l.id}-nom`);if(el)el.focus()},50)}
+function retirerBienSim(id){lireSim();simEnCours.biens=simEnCours.biens.filter(b=>b.id!==id);rendreSimulateur()}
+function recalculerSim(){lireSim();const r=simulationCourante();const el=document.getElementById("sim-total");if(el)el.innerHTML=htmlTotalSim(r);simEnCours.biens.forEach(b=>{const l=r.biens.find(x=>x.id===b.id);const e=document.getElementById(`sb-${b.id}-res`);if(e)e.innerHTML=l?`${l.vetuste.pct} % de vétusté · retenu <b>${euros(l.retenu)}</b><br><span class="faint">${h(l.vetuste.texte)}</span>`:"<span class='faint'>non compté</span>"})}
+function htmlTotalSim(r){
+  const fourchette=r.basse===r.haute?euros(r.basse):`${euros(r.basse)} à ${euros(r.haute)}`;
+  return `<p class="small muted">Biens retenus : <b class="num">${euros(r.base)}</b>${r.apresVetuste!==r.base?` · après vétusté <b class="num">${euros(r.apresVetuste)}</b>`:""}${r.franchise!=null?` · franchise <b class="num">− ${euros(r.franchise)}</b>`:(r.contrat?" · franchise non lisible":" · franchise inconnue (pas de contrat)")}${r.plafond!=null?` · plafond <b class="num">${euros(r.plafond)}</b>`:""}</p>
+    <p style="font-size:1.6em;font-weight:600;margin:4px 0">${r.contrat||r.base?fourchette:"—"}</p>
+    <p class="small ${r.nonSouscrite?"":"muted"}" ${r.nonSouscrite?'style="color:var(--terra-f)"':""}>${r.nonSouscrite?"D'après le contrat, cette garantie n'est pas souscrite : l'assureur pourrait ne rien verser.":r.sansGarantie?"Aucune garantie du contrat ne correspond à ce sinistre : le calcul est donné à titre indicatif.":!r.contrat?"Sans contrat, ni la franchise ni la vétusté de votre contrat ne sont connues : la grille indicative est appliquée.":r.indicatif?"Votre contrat ne fixe pas de barème de vétusté : la fourchette va de la grille indicative (bas) à la valeur sans vétusté (haut).":"Calcul d'après le barème écrit dans votre contrat."}</p>
+    <p class="small" style="color:var(--terra-f)">Ceci est une estimation, d'après votre contrat et vos pièces : le montant final dépendra de la vétusté de vos appareils, telle que l'assureur l'appréciera, et de sa décision.</p>`;
+}
+function rendreSimulateur(){
+  const m=simEnCours,r=simulationCourante();
+  const ligne=b=>{const l=r.biens.find(x=>x.id===b.id);return `<div class="card soft" style="gap:6px;padding:10px 12px">
+    <div class="row" style="gap:8px;align-items:center"><input type="checkbox" id="sb-${b.id}-coche" ${b.coche?"checked":""} onchange="recalculerSim()" style="width:22px;height:22px;flex:0 0 auto"><input class="input" id="sb-${b.id}-nom" style="min-height:44px;flex:1 1 auto" placeholder="${b.type==="reparation"?"Réparation : parquet de la cuisine…":"Le bien touché"}" value="${h(b.nom||"")}" oninput="recalculerSim()">${b.equip?"":`<button class="btn sm ghost" onclick="retirerBienSim('${b.id}')" aria-label="Retirer">${I.croix||"×"}</button>`}</div>
+    <div class="row wrap" style="gap:6px"><select class="input" id="sb-${b.id}-type" style="min-height:44px;flex:1 1 140px" onchange="recalculerSim()">${TYPES_BIEN.map(t=>`<option value="${t}" ${b.type===t?"selected":""}>${GRILLE_VETUSTE[t].nom}</option>`).join("")}</select><input class="input" id="sb-${b.id}-valeur" type="number" inputmode="decimal" min="0" step="1" style="min-height:44px;flex:1 1 110px" placeholder="${b.type==="reparation"?"Devis €":"Prix d'achat €"}" value="${h(String(b.valeur??""))}" oninput="recalculerSim()"><input class="input" id="sb-${b.id}-date" type="date" style="min-height:44px;flex:1 1 150px" value="${h(b.date||"")}" max="${today()}" onchange="recalculerSim()" title="Date d'achat"><input class="input" id="sb-${b.id}-vet" type="number" inputmode="numeric" min="0" max="100" style="min-height:44px;flex:0 1 96px" placeholder="vét. %" value="${h(String(b.vetustePct??""))}" oninput="recalculerSim()" title="Forcer un taux de vétusté"></div>
+    <p class="small muted" id="sb-${b.id}-res">${l?`${l.vetuste.pct} % de vétusté · retenu <b>${euros(l.retenu)}</b><br><span class="faint">${h(l.vetuste.texte)}</span>`:"<span class='faint'>non compté</span>"}</p></div>`};
+  modal(`<h2>Ce que vous pouvez récupérer</h2><p class="muted">Cochez les biens touchés, complétez les prix et les dates : VIDOM applique la vétusté, la franchise et le plafond de votre contrat${r.contrat?"":" — quand il sera dans la maison"}.</p>
+    <div class="stack" style="gap:8px;max-height:52vh;overflow:auto;padding-right:2px">${m.biens.map(ligne).join("")}
+      <div class="row wrap" style="gap:6px"><button class="btn sm" onclick="ajouterBienSim('autre')">${I.plus} Un bien</button><button class="btn sm" onclick="ajouterBienSim('reparation')">${I.plus} Une réparation (devis)</button></div>
+    </div>
+    <div class="card" style="gap:2px;margin-top:8px" id="sim-total">${htmlTotalSim(r)}</div>
+    <div class="row" style="margin-top:10px"><button class="btn primary grow" onclick="validerSimulateur()">${m.sinistreId?"Garder la simulation":"Continuer "+I.fleche}</button><button class="btn" onclick="${m.sinistreId?"closeModal()":"lireSim();formContrat()"}">${m.sinistreId?"Annuler":"Retour"}</button></div>`);
+}
+function validerSimulateur(){
+  lireSim();const m=simEnCours,r=simulationCourante();
+  if(m.sinistreId){const s=sinistreParId(m.sinistreId);if(s){s.simulation=r;s.res=s.res||{};save();closeModal();render();toast("Simulation gardée")}simEnCours=null;return}
+  m.resultat=r;formAssureur();
 }
 function copierSinistre(id,quoi){const s=sinistreParId(id);if(!s)return;copier(quoi==="voisin"?messageVoisin(s).texte:(s.declaration.texte||""))}
 
@@ -2498,6 +2613,7 @@ V.pro=id=>{const p=S.pros.find(x=>x.id===id);if(!p)return vArtisans();const docs
     <div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ce qu'il a fait ici</p>${p.interventions.map(i=>`<div class="line"><span>${h(i.motif)}</span><span class="small muted">${dateFr(i.d)}</span></div>`).join("")}</div>
     ${docs.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Ses documents</p>${docs.map(d=>`<a class="line" href="#/document/${d.id}">${I.doc}<span class="stack" style="flex:1 1 auto;gap:0"><span class="b">${titreDoc(d)}</span><span class="small muted">${dateFr(d.date)}${d.montant&&!estVerrouille(d)?" · "+euros(d.montant):""}</span></span>${I.fleche}</a>`).join("")}</div>`:""}
     <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre appréciation</p>${p.avis.length?p.avis.map(a=>`<p class="small">${"★".repeat(a.n)}${"☆".repeat(5-a.n)} <span class="muted">${h(a.t)} · ${dateFr(a.d)}</span></p>`).join(""):`<p class="small muted">Elle reste dans la mémoire de la maison et se transmet avec elle. L'artisan ne la voit jamais.</p>`}<div class="row">${[1,2,3,4,5].map(n=>`<button class="btn sm" onclick="noter('${p.id}',${n})">${"★".repeat(n)}</button>`).join("")}</div></div>
+    ${categorieDe(p)==="assureur"?carteReglesContrat(p):""}
     ${carteVocales(p)}
     <div class="row wrap"><button class="btn primary grow" onclick="contacter('${h(p.nom)}')">${I.telephone} Recontacter</button><button class="btn grow" onclick="recommanderArtisan('${p.id}')">${I.envoi} Recommander</button></div>
   </div>`};
@@ -2874,6 +2990,7 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
   </div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Taille du texte</p><div class="row">${[["normal","Normal"],["grand","Grand"],["tres-grand","Très grand"]].map(([k,n])=>`<button class="chip btn-chip ${S.reglages.texte===k?"on":""}" onclick="S.reglages.texte='${k}';document.documentElement.dataset.texte='${k}';save();render()">${n}</button>`).join("")}</div></div>
   ${carteReglagesChiffre()}
+  ${carteEmpreinte()}
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Donner accès à un tiers</p><p class="small muted">Notaire, agent, artisan, assureur : chacun ne voit que ce qui le concerne.</p><button class="btn" onclick="choisirTiers()">${I.echanges} Ouvrir un accès</button></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">La maison change de mains</p><p class="small muted">Le jour venu, et seulement ce jour-là, la rubrique Transmission apparaît.</p><div class="row"><button class="btn grow" onclick="changerDeMains('vente')">Je vends</button><button class="btn grow" onclick="changerDeMains('depart')">Je pars</button></div></div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Votre mémoire vous appartient</p><div class="row wrap"><button class="btn grow" onclick="emporter()">${I.telechargement} Emporter ma mémoire</button><a class="btn grow" href="mailto:contact@vidom.fr?subject=${encodeURIComponent("Mon avis sur la maquette VIDOM")}&body=${encodeURIComponent("Écran : "+location.hash+"\n\n")}">${I.mail} Donner mon avis</a></div><p class="small faint">${S.docs.length} documents · ${S.equipements.length} équipements · ${S.fil.length} moments dans le journal.</p></div>
@@ -2974,7 +3091,7 @@ const AIDE=[
     {q:"Entrer une facture, un devis, un document",c:"Photographiez-le ou importez-le : VIDOM lit la date, le montant, l'artisan, et le range.",k:"facture devis document photo importer scanner papier garder conserver",go:()=>aideFichier("image/*,.pdf")},
     {q:"Photographier un appareil (son étiquette)",c:"Marque, modèle, garantie : VIDOM les lit sur l'étiquette et retrouve la notice.",k:"appareil équipement étiquette lave-vaisselle lave-linge chaudière four frigo réfrigérateur notice garantie électroménager",go:()=>aideFichier("image/*",true)},
     {q:"Envoyer un document par courriel à la maison",c:"Chaque logement a son adresse VIDOM. Ce qui y arrive vous est proposé dans le journal ; rien n'entre sans vous.",k:"courriel email mail adresse vidom envoyer transférer boîte",go:"#/adresse-vidom"},
-    {q:"Garder mon contrat d'assurance",c:"Photographiez l'attestation ou le contrat : VIDOM suit l'échéance, vous prévient deux mois avant, et compare le tarif.",k:"assurance contrat attestation échéance tarif prime habitation",go:()=>aideFichier("image/*,.pdf")},
+    {q:"Garder mon contrat d'assurance",c:"Photographiez les conditions particulières et générales : VIDOM les lit une fois, garde leurs règles (garanties, franchise, vétusté), suit l'échéance et compare le tarif.",k:"assurance contrat attestation échéance tarif prime habitation",go:()=>aideFichier("image/*,.pdf")},
     {q:"Ajouter le plan de la maison",c:"Une photo du plan suffit. Le dessin de la maison s'appuie dessus.",k:"plan dessin croquis",go:()=>aideFichier("image/*",false,f=>planFichier(f))},
     {q:"Ajouter une pièce",c:"Une chambre de plus, un garage, une cave, une annexe.",k:"pièce chambre garage cave annexe parking grenier combles",go:()=>ajouterPiece()},
     {q:"Corriger le nom, l'année, la surface de la maison",c:"Ce que VIDOM a trouvé à l'adresse se corrige à la main.",k:"corriger nom année surface dpe classe énergétique",go:()=>corrigerLogement()},
@@ -3002,7 +3119,7 @@ const AIDE=[
     {q:"Voir ce que les travaux ont coûté",c:"Le total connu, chantier par chantier.",k:"travaux coût total dépenses prix",go:"#/carte/travaux"},
   ]},
   {t:"Assurance et sinistre",l:[
-    {q:"Déclarer un sinistre",c:"VIDOM relit votre contrat — garantie, franchise, exclusions —, dit le délai légal, prépare la déclaration et ouvre le dossier : pièces transmises, réponses de l'assureur, jusqu'à la clôture.",k:"sinistre dégât des eaux fuite incendie tempête effraction déclarer assureur assurance",go:()=>declarerSinistre()},
+    {q:"Déclarer un sinistre",c:"VIDOM lit votre contrat — garantie, franchise, exclusions —, simule ce que vous récupérerez selon la vétusté, dit le délai légal, prépare la déclaration et ouvre le dossier jusqu'à la clôture.",k:"sinistre dégât des eaux fuite incendie tempête effraction déclarer assureur assurance",go:()=>declarerSinistre()},
     {q:"Donner accès à mon assureur",c:"Il voit la fiche du logement, les équipements et le dossier sinistre, pour un temps.",k:"assureur accès assurance",go:()=>ouvrirAcces("assureur")},
     {q:"Vérifier mon contrat et son échéance",c:"Photographiez le dernier avis d'échéance : VIDOM compare le tarif et programme le rappel.",k:"échéance contrat assurance tarif renouvellement avis",go:()=>aideFichier("image/*,.pdf")},
   ]},
