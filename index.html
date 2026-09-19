@@ -258,7 +258,7 @@ const AUTRES_PIECES=[{type:"bureau",nom:"Bureau"},{type:"buanderie",nom:"Buander
 /* ================= état ================= */
 const KEY="vidom-maquette-v1";
 const etatInitial=()=>({
-  v:1,cree:false,etape:"bienvenue",compte:{email:""},
+  v:1,cree:false,etape:"bienvenue",compte:{email:"",prenom:"",nom:"",adresse:""},
   logement:{id:null,nom:"",adresse:"",cp:"",ville:"",annee:null,surface:null,dpe:"",dpeDate:"",depot:"",
     latitude:null,longitude:null,numeroCadastral:"",classeClimat:"",altitude:null,rnbId:"",rnbStatut:"",surfaceEmpriseSol:null,risquesNaturels:null,canalAcquisition:null},
   comptage:{cuisine:1,salon:1,chambre:2,"salle de bain":1},piecesLibres:[],pieces:[],plan:null,
@@ -538,6 +538,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
   try{const {data}=await supa.auth.getSession();session=data&&data.session}catch(e){return}
   if(!session)return;
   S.compte.email=session.user.email||S.compte.email;
+  await lireProfil(session); // D-208
   hydrateEnCours=true;
   try{
     const {data:membres}=await supa.from("logement_membres").select("logement_id,date_debut,logements(id,nom,ville,adresse)").eq("user_id",session.user.id).order("date_debut",{ascending:true});
@@ -1274,6 +1275,9 @@ V.bienvenue=()=>`<div class="view center fadein" style="gap:24px">
 V.compte=()=>`<div class="view center fadein" style="gap:18px">
   <div class="stack"><h1 class="h">Votre compte.</h1><p class="muted">Pour retrouver votre maison sur tous vos appareils, et pour que personne d'autre n'y entre.</p></div>
   <form class="stack" style="gap:14px" onsubmit="event.preventDefault();compteOk()">
+    <div class="grid2"><label class="f"><span>Votre prénom</span><input class="input" id="c-prenom" autocomplete="given-name" value="${h(S.compte.prenom||"")}" required></label><label class="f"><span>Votre nom</span><input class="input" id="c-nom" autocomplete="family-name" value="${h(S.compte.nom||"")}" required></label></div>
+    <label class="f"><span>Votre adresse postale</span><input class="input" id="c-adresse" autocomplete="street-address" placeholder="Numéro, rue, code postal, ville" value="${h(S.compte.adresse||"")}" required></label>
+    <p class="small faint">Ces trois lignes signent les courriers que VIDOM prépare pour vous : à votre assureur, à un voisin, à un artisan. <!-- D-208 --></p>
     <label class="f"><span>Votre adresse de courriel</span><input class="input" id="email" type="email" autocomplete="email" inputmode="email" value="${h(S.compte.email)}" placeholder="vous@exemple.fr" required></label>
     <label class="f"><span>Votre mot de passe</span><div class="row"><input class="input" id="mdp" type="password" autocomplete="new-password" placeholder="Au moins 8 caractères" minlength="8" required><button type="button" class="btn sm" onclick="const m=document.getElementById('mdp');m.type=m.type==='password'?'text':'password';this.textContent=m.type==='password'?'Afficher':'Masquer'">Afficher</button></div></label>
     <button class="btn primary big" type="submit">Créer un compte ${I.fleche}</button>
@@ -1283,6 +1287,7 @@ V.compte=()=>`<div class="view center fadein" style="gap:18px">
 </div>`;
 async function compteOk(){
   const email=document.getElementById("email").value.trim();const mdp=document.getElementById("mdp").value;
+  lireIdentite(); // D-208
   if(!supa){S.compte.email=email;S.etape="adresse";save();render();return}
   toast("Un instant…");
   try{
@@ -1294,16 +1299,34 @@ async function compteOk(){
     if(dejaExistant){
       const r2=await supa.auth.signInWithPassword({email,password:mdp});
       if(r2.error){modal(`<h2>Ce mot de passe ne correspond pas</h2><p class="muted">Un compte existe déjà pour ${h(email)}, mais ce mot de passe-là ne fonctionne pas pour ce compte. Vérifiez-le (touchez « Afficher » pour le voir en clair), ou recevez un lien pour en choisir un nouveau.</p><button class="btn primary big" onclick="closeModal()">Réessayer</button><button class="btn ghost" onclick="closeModal();mdpOublie()">Mot de passe oublié</button>`);return}
-      S.compte.email=email;await hydrate();
+      S.compte.email=email;await hydrate();await pousserProfil();
       if(S.cree)route(accueil());else{S.etape="adresse";save();render()}
       return;
     }
     if(error){toast("Cela n'a pas fonctionné : "+error.message);return}
     S.compte.email=email;
-    if(data&&data.session){S.etape="adresse";save();render()}
+    if(data&&data.session){await pousserProfil();S.etape="adresse";save();render()}
     else modal(`<h2>Vérifiez votre boîte de courriel</h2><p class="muted">VIDOM a envoyé un lien de confirmation à ${h(email)}. Une fois confirmé, revenez ici et retapez votre adresse et votre mot de passe.</p><button class="btn primary big" onclick="closeModal()">Compris</button>`);
   }catch(e){modal(`<h2>VIDOM n'arrive pas à vous connecter</h2><p class="muted">${e&&e.message==="delai"?"Le serveur n'a pas répondu.":"La connexion n'a pas abouti."} Vérifiez que le téléphone a bien du réseau, fermez les autres fenêtres VIDOM ouvertes sur cet appareil, puis réessayez.</p><button class="btn primary big" onclick="closeModal();location.reload()">Recharger et réessayer</button><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
 }
+/* D-208 : le gardien a un prénom, un nom, une adresse postale — sur le compte (table profiles), pour tous ses logements */
+function lireIdentite(){const g=id=>{const e=document.getElementById(id);return e?e.value.trim():""};const p=g("c-prenom"),n=g("c-nom"),a=g("c-adresse");if(p)S.compte.prenom=p;if(n)S.compte.nom=n;if(a)S.compte.adresse=a;save()}
+function nomGardien(){return [S.compte.prenom,S.compte.nom].filter(Boolean).join(" ")||"[Votre nom]"}
+async function pousserProfil(){ // n'écrase jamais par du vide
+  if(!supa)return;let session=null;try{const {data}=await supa.auth.getSession();session=data&&data.session}catch(e){return}
+  if(!session)return;const c=S.compte,row={id:session.user.id,updated_at:new Date().toISOString()};
+  if(c.prenom)row.prenom=c.prenom;if(c.nom)row.nom=c.nom;if(c.adresse)row.adresse=c.adresse;
+  if(Object.keys(row).length<=2)return;
+  try{await supa.from("profiles").upsert(row,{onConflict:"id"})}catch(e){}
+}
+async function lireProfil(session){ // au chargement du compte : ce que le serveur sait ; ce que l'appareil sait complète les blancs
+  try{const {data}=await supa.from("profiles").select("prenom,nom,adresse").eq("id",session.user.id).maybeSingle();
+    if(data){let manque=false;["prenom","nom","adresse"].forEach(k=>{if(data[k])S.compte[k]=data[k];else if(S.compte[k])manque=true});if(manque)await pousserProfil()}
+  }catch(e){}
+}
+function modifierIdentite(){const c=S.compte;
+  modal(`<h2>Vous</h2><div class="stack" style="gap:10px"><label class="f"><span>Prénom</span><input class="input" id="c-prenom" value="${h(c.prenom||"")}"></label><label class="f"><span>Nom</span><input class="input" id="c-nom" value="${h(c.nom||"")}"></label><label class="f"><span>Adresse postale</span><input class="input" id="c-adresse" value="${h(c.adresse||"")}"></label></div>
+    <div class="row" style="margin-top:12px"><button class="btn primary grow" onclick="lireIdentite();pousserProfil();closeModal();toast('Gardé.')">Garder</button><button class="btn" onclick="closeModal()">Annuler</button></div>`)}
 function mdpOublie(){const m=document.getElementById("email")?.value||"";modal(`<h2>Mot de passe oublié</h2><p class="muted">VIDOM vous envoie un courriel avec un lien pour en choisir un nouveau.</p><label class="f"><span>Votre adresse de courriel</span><input class="input" id="em2" type="email" value="${h(m)}"></label><button class="btn primary big" onclick="mdpOublieOk()">Envoyer le lien</button><button class="btn ghost" onclick="closeModal()">Annuler</button>`)}
 async function mdpOublieOk(){
   const email=document.getElementById("em2").value.trim();if(!email){toast("Votre adresse de courriel, d'abord.");return}
@@ -1937,7 +1960,7 @@ function declarationLocale(s,e,ass){ // sans contrat à relire, VIDOM écrit ell
   else if(s.tiers==="autre")lignes.push("",`Une autre personne semble concernée${s.tiersQui?" : "+s.tiersQui:""}. Je vous laisse apprécier les responsabilités.`);
   else if(s.tiers==="inconnu")lignes.push("","La cause exacte n'est pas encore établie.");
   const pj=[];if(factures.length)pj.push("la facture d'achat");pj.push("des photos");if(e&&e.garantie)pj.push("la garantie");
-  lignes.push("",`Vous trouverez en pièces jointes ${pj.join(", ")}.`,"","Je vous remercie de me confirmer l'ouverture du dossier et de m'indiquer les pièces complémentaires que vous souhaitez.","","Cordialement,","[Votre nom]");
+  lignes.push("",`Vous trouverez en pièces jointes ${pj.join(", ")}.`,"","Je vous remercie de me confirmer l'ouverture du dossier et de m'indiquer les pièces complémentaires que vous souhaitez.","","Cordialement,",nomGardien()+(S.compte.adresse?"\n"+S.compte.adresse:""));
   const avant=[];
   if(s.cause==="panne")avant.push("Une panne relève d'abord de la garantie légale de conformité (deux ans après l'achat) ou de la garantie du fabricant, pas de l'assurance habitation — sauf dommage électrique (surtension, foudre) ou dégât causé par l'appareil.");
   if(e&&e.garantie&&joursDepuis(e.garantie)<0)avant.push(`${e.nom} est encore sous garantie jusqu'au ${dateFr(e.garantie)} : le service après-vente d'abord.`);
@@ -2089,13 +2112,16 @@ function joindreAuSinistre(id,role){
 function photographierPourSinistre(id,role){S.sinistreAttendu={id,role};aideFichier("image/*,.pdf",true)}
 function retirerDuSinistre(docId){const d=S.docs.find(x=>x.id===docId);if(!d)return;d.sinistre="";d.sinRole="";save();render();toast("Retiré du dossier")}
 /* le voisin (A17) : ses coordonnées gardées, un message préparé — VIDOM n'écrit jamais à sa place */
-function messageVoisin(s){
+function messageVoisin(s){ // D-207 : le message au voisin, signé « L'équipe VIDOM » pour le compte du gardien ; le lien porte ?canal=voisin
   const L=S.logement,v=s.voisin||{};
-  const lignes=[`Bonjour${v.nom?" "+v.nom:""},`,"",`Je vous écris au sujet du sinistre du ${dateFr(s.quand)} (${nomCause(s.cause).toLowerCase()}) qui concerne mon logement, ${L.adresse}, ${L.ville}, et peut-être le vôtre.`,"",`J'ai déclaré le sinistre à mon assureur${s.assureurNom?" ("+s.assureurNom+")":""}. Pour que nos deux assurances s'accordent vite, il serait utile que vous fassiez de même auprès du vôtre, et que nous remplissions ensemble un constat amiable de dégât des eaux si cela s'applique.`,"",
-    `Je tiens la mémoire de mon logement dans VIDOM. Vous pouvez m'y envoyer directement ce qui concerne ce sinistre (votre attestation d'assurance, des photos, la date de passage de l'expert) à cette adresse : ${L.depot||"(adresse VIDOM du logement)"}.`];
-  if(v.aVidom!=="oui")lignes.push("",`Si vous le souhaitez, VIDOM est gratuit et se crée en deux minutes : ${LIEN_VIDOM} — chaque logement y garde ses documents, et deux logements voisins peuvent se transmettre ce qui les concerne le jour d'un sinistre.`);
-  lignes.push("","Merci d'avance, et à très vite.","","[Votre nom]");
-  return {objet:`Sinistre du ${dateFr(s.quand)} — ${L.adresse}`,texte:lignes.join("\n")};
+  const ou=`${L.adresse}${L.ville?", "+L.ville:""}`,cause=nomCause(s.cause).toLowerCase();
+  const lignes=[`Bonjour${v.nom?" "+v.nom:""},`,"",
+    `Votre voisin du ${ou}, ${nomGardien()}, vient de déclarer un ${cause} qui vous concerne tous les deux. Ce type de sinistre est fréquent et, dans la grande majorité des cas, se règle simplement entre voisins et avec vos assureurs respectifs. Pas d'inquiétude : l'essentiel est de bien s'organiser dès le départ.`,"",
+    `Votre voisin utilise VIDOM, la mémoire vivante des logements, une application qui l'accompagne pas à pas dans la gestion du sinistre : les photos, le constat amiable, la déclaration à l'assurance, le suivi des réparations. Rien ne se perd, et vous disposez tous les deux des mêmes informations.`,"",
+    `Pour que vos échanges restent regroupés au même endroit, vous pouvez lui écrire directement à l'adresse VIDOM de son logement : ${L.depot||"(adresse VIDOM du logement)"}. Tout ce que vous lui enverrez (messages, photos, documents) sera conservé dans le dossier du sinistre.`];
+  if(v.aVidom!=="oui")lignes.push("",`Si vous le souhaitez, vous pouvez aussi installer VIDOM gratuitement : ${LIEN_VIDOM}?canal=voisin — vous aurez alors votre propre dossier, le constat amiable à remplir, et la liste des démarches à faire de votre côté, notamment auprès de votre assureur. C'est facultatif : vous pouvez tout à fait échanger par simple courriel à l'adresse ci-dessus.`);
+  lignes.push("",`Prochaine étape : convenez ensemble d'un moment pour constater les dégâts${["degat_eaux","incendie"].includes(s.cause)?" et remplir le constat amiable":""}, à envoyer chacun à votre assureur sous cinq jours ouvrés. En cas de doute, votre assureur vous confirmera les délais.`,"","Bien cordialement,",`L'équipe VIDOM, pour le compte de ${nomGardien()}`);
+  return {objet:`${nomCause(s.cause)} — ${ou} : mise en relation avec votre voisin`,texte:lignes.join("\n")};
 }
 function carteVoisin(s){const v=s.voisin,m=messageVoisin(s);
   return `<div class="card" style="gap:8px"><div class="split"><span class="b">Le voisin</span><button class="btn sm ghost" onclick="modifierVoisin('${s.id}')">Modifier</button></div><p>${v.nom?h(v.nom):"<span class='muted'>Nom à compléter</span>"}${v.mail?" · "+h(v.mail):""} · ${v.aVidom==="oui"?"a VIDOM":v.aVidom==="non"?"n'a pas VIDOM":"VIDOM : on ne sait pas"}</p>
@@ -2641,7 +2667,7 @@ async function panneauAdmin(){
     const {data,error}=await supa.rpc("mesure_admin");
     if(error||!data){modal(`<h2>Panneau admin</h2><p class="muted">Cela n'a pas fonctionné : ${h(error?error.message:"réponse vide")}</p><button class="btn" onclick="closeModal()">Fermer</button>`);return}
     const canaux=data.par_canal||{};
-    const nomCanal=c=>c==="direct"?"Direct (sans canal connu)":c==="envoi"?"Envoi (bouche-à-oreille)":c==="mode_emploi_invite"?"Mode d'emploi invité":c;
+    const nomCanal=c=>c==="direct"?"Direct (sans canal connu)":c==="envoi"?"Envoi (bouche-à-oreille)":c==="mode_emploi_invite"?"Mode d'emploi invité":c==="voisin"?"Voisin (sinistre)":c;
     const lignes=Object.keys(canaux).sort((a,b)=>canaux[b]-canaux[a]).map(c=>`<div class="line"><span class="small">${h(nomCanal(c))}</span><span class="small b num">${canaux[c]}</span></div>`).join("");
     modal(`<h2>Panneau admin</h2>
       <div class="card"><dl class="kv"><dt>Comptes</dt><dd class="num">${data.total_comptes}</dd><dt>Logements</dt><dd class="num">${data.total_logements}</dd><dt>Envois faits</dt><dd class="num">${data.envois_faits}</dd><dt>Envois gardés</dt><dd class="num">${data.envois_gardes}</dd><dt>Liens de séjour créés</dt><dd class="num">${data.sejours_crees}</dd></dl></div>
@@ -2690,6 +2716,7 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
 </div>`;
 function montrerCompte(){
   modal(`<h2>Votre compte</h2><p class="muted">${h(S.compte.email||"Sans courriel")}</p>
+  <div class="card" style="gap:4px"><div class="split"><span class="b">${h(nomGardien())}</span><button class="btn sm ghost" onclick="closeModal();modifierIdentite()">Modifier</button></div><p class="small muted">${S.compte.adresse?h(S.compte.adresse):"Adresse postale à compléter"}</p></div>
   <p class="small faint">Votre compte et la mémoire de vos logements sont enregistrés pour de vrai, et retrouvés sur chacun de vos appareils quand vous vous connectez.</p>
   <button class="btn" onclick="confirmerDeconnexion()">${I.cle} Se déconnecter</button>
   <button class="btn ghost" onclick="closeModal()">Fermer</button>`);
