@@ -135,6 +135,7 @@ label.f>span{font-size:.85em;color:var(--ardoise)}
 .house rect{cursor:pointer}
 .plan{width:100%;border-radius:var(--r);border:1px solid var(--bois-c);display:block}
 .mono{font-variant-numeric:tabular-nums;word-break:break-all}
+.depot{display:block;text-align:center;font-weight:700;font-size:1.25em;line-height:1.25;word-break:break-all;font-variant-numeric:tabular-nums;color:var(--sauge-f);margin:0} /* D-205 : l'adresse VIDOM ne se perd plus dans le texte */
 .qr{width:96px;height:96px;flex:0 0 auto;border-radius:6px;background:var(--blanc);padding:4px;border:1px solid var(--bois-c)}
 .qr svg{width:100%;height:100%;display:block}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--encre);color:var(--blanc);padding:10px 16px;border-radius:999px;font-size:.9em;z-index:50;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
@@ -400,16 +401,36 @@ const isDesk=()=>window.matchMedia("(min-width:1024px)").matches;
 const accueil=()=>isDesk()?"#/fil":"#/maison";
 const slug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 /* adresse VIDOM réelle : allouée et vérifiée unique en base (vidom.fr, le domaine que Murielle possède) */
-async function allouerDepot(nom){
-  const base=slug(nom).replace(/-/g,"")||"logement"; // D-175 : le nom d'un seul tenant, un seul tiret avant les trois caractères
+// D-205 : l'adresse dit où est le logement, d'un seul tenant : numéro + rue réduite + ville, puis un tiret et trois caractères.
+// 38 rue de Lévis, Paris → 38levisparis-xxx@vidom.fr ; 56 bis route Amfreville sous les Monts, Connelles → 56bisamfrevilleconnelles-xxx@vidom.fr
+const VOIES=/^(rue|avenue|av\.?|boulevard|bd\.?|impasse|chemin|ch\.?|allée|allee|place|pl\.?|route|rte\.?|cours|quai|square|passage|villa|sentier|sente|voie|lieu-dit|hameau|résidence|residence|cité|cite|clos|mail|promenade|esplanade|rond-point|street|st\.?|road|rd\.?|lane|drive)\s+/i;
+const ARTICLES=/^(de\s+la|de\s+l['’]|des|du|de|d['’]|les|la|le|l['’])\s*/i;
+function baseDepot(L){
+  const adr=(L.adresse||"").trim();
+  const m=adr.match(/^(\d+)\s*(bis|ter|quater)?\b/i);
+  const numero=m?m[1]+(m[2]?m[2].toLowerCase():""):"";
+  let rue=adr.replace(/^\d+\s*(bis|ter|quater)?\b\s*,?\s*/i,"").replace(VOIES,"").replace(ARTICLES,"");
+  rue=rue.split(/[\s,]+/)[0]||""; // le nom réduit : le premier mot de la rue (« Amfreville sous les Monts » → amfreville)
+  const base=slug(`${numero} ${rue} ${L.ville||""}`).replace(/-/g,"");
+  return base||slug(L.nom||"").replace(/-/g,"")||"logement";
+}
+async function allouerDepot(L){
+  if(typeof L==="string")L={nom:L};
+  const nom=L.nom||"";
+  const base=baseDepot(L); // D-175 : d'un seul tenant, un seul tiret avant les trois caractères
   const secours=()=>`${base}-${uid().slice(0,4)}@vidom.fr`; // hors ligne, ou en dernier recours
   if(!supa)return secours();
   let session=null;
   try{const {data}=await supa.auth.getSession();session=data&&data.session}catch(e){}
   if(!session)return secours();
-  for(let tentative=0;tentative<8;tentative++){
-    const graine=tentative===0?[...nom].reduce((a,ch)=>a*31+ch.charCodeAt(0)|0,7):Math.floor(Math.random()*46656)+tentative;
+  // D-206 : un compte qui a déjà un logement garde, quand c'est possible, les mêmes trois caractères pour tous ses logements
+  let suffixeCompte=null;
+  try{const {data}=await supa.from("logements").select("adresse_depot").eq("created_by",session.user.id).not("adresse_depot","is",null).order("created_at").limit(1);
+    const m=data&&data[0]&&/-([a-z0-9]{3})@vidom\.fr$/.exec(data[0].adresse_depot||"");if(m)suffixeCompte=m[1]}catch(e){}
+  for(let tentative=0;tentative<9;tentative++){
+    const graine=tentative===0?[...base].reduce((a,ch)=>a*31+ch.charCodeAt(0)|0,7):Math.floor(Math.random()*46656)+tentative;
     const ALPHA="abcdefghjkmnpqrstuvwxyz23456789";let g=Math.abs(graine),c="";for(let i=0;i<3;i++){c+=ALPHA[g%ALPHA.length];g=Math.floor(g/ALPHA.length)+7} // ni 0 ni o, ni 1 ni l ni i : l'adresse se dicte
+    if(suffixeCompte){c=suffixeCompte;suffixeCompte=null} // premier essai : les caractères du compte ; s'ils sont pris pour cette adresse, on tire au sort
     const candidat=`${base}-${c}@vidom.fr`;
     try{
       const {error}=await supa.from("logements").upsert({id:S.logement.id,nom,adresse_depot:candidat,created_by:session.user.id},{onConflict:"id"});
@@ -611,7 +632,7 @@ async function hydrate(voulu){ // relit la vraie mémoire du compte connecté et
       if(et.dernierJour)S.dernierJour=et.dernierJour;if(et.reserveServie)S.reserveServie=et.reserveServie;
     }
     S.cree=true;S.etape="";S.ajout=false;S.retourVers=null;
-    if(!S.logement.depot&&S.logement.nom){try{S.logement.depot=await allouerDepot(S.logement.nom)}catch(e){}} // un logement créé avant l'adresse VIDOM (VIDOM-mobile) en reçoit une
+    if(!S.logement.depot&&S.logement.nom){try{S.logement.depot=await allouerDepot(S.logement)}catch(e){}} // un logement créé avant l'adresse VIDOM (VIDOM-mobile) en reçoit une
     hydrateEnCours=false;save();
     verifierEnvoiEnAttente();
   }catch(e){/* pas grave : on continue avec la dernière version connue, en local */}
@@ -1353,7 +1374,7 @@ async function adresseOk(){
   const rue=S.logement.adresse.replace(/^\d+\s*(bis|ter)?\s*/i,"").replace(/^(rue|avenue|boulevard|impasse|chemin|allée|place|route)\s+(de\s|des\s|du\s|d'|de la\s|de l')?/i,"");
   S.logement.nom=S.logement.nom||`Maison ${/^[aeiouy]/i.test(rue)?"de l'":"des "}${rue.charAt(0).toUpperCase()+rue.slice(1)}`;
   toast("VIDOM vérifie l'adresse…");
-  S.logement.depot=await allouerDepot(S.logement.nom);
+  S.logement.depot=await allouerDepot(S.logement);
   await enrichirAdresse();
   if(!S.logements.some(l=>l.id===S.logement.id))S.logements.push({id:S.logement.id,nom:S.logement.nom,ville:S.logement.ville,adresse:S.logement.adresse});
   creerPieces();S.etape="maison-adresse";save();render();
@@ -1364,7 +1385,7 @@ V["maison-adresse"]=()=>`<div class="view fadein" style="gap:14px;padding-top:8p
   <h1 class="h" style="font-size:1.45em">Voici votre maison, et son adresse.</h1>
   <div class="card" style="padding:14px 16px 10px;gap:6px">${dessinMaison({click:false,mw:290})}<p class="small muted" style="text-align:center">${phrasePieces()}</p></div>
   <div class="card soft" style="gap:10px">
-    <div class="row" style="align-items:flex-start;gap:14px"><div class="qr">${qrSvg("mailto:"+S.logement.depot)}</div><div class="stack" style="gap:4px"><span class="small b" style="color:var(--sauge-f)">L'adresse VIDOM de votre logement</span><span class="mono" style="font-size:.95em">${h(S.logement.depot)}</span></div></div>
+    <div class="stack" style="gap:8px;align-items:center"><span class="small b" style="color:var(--sauge-f)">L'adresse VIDOM de votre logement</span><div class="qr" style="width:120px;height:120px">${qrSvg("mailto:"+S.logement.depot)}</div><span class="depot">${h(S.logement.depot)}</span></div>
     <p class="small muted">À donner à tous ceux qui ont des informations sur votre logement : notaire, agent immobilier, artisans, assureur. Ce qu'ils y envoient arrive ici. Rien n'entre sans vous.</p>
     <div class="row"><button class="btn grow" onclick="partagerAdresse()">Partager</button><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button></div>
   </div>
@@ -1383,7 +1404,7 @@ V.commencons=()=>{
   <button class="btn ghost" style="margin-top:auto" onclick="plusTard()">Ou plus tard. La maison attend.</button>
 </div>`};
 function plusTard(){S.cree=true;S.etape="";S.ajout=false;S.retourVers=null;filAjouter({type:"info",t:`La mémoire de ${lc(S.logement.nom)} commence aujourd'hui. Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière.`,ico:"maison",fait:true});save();route("#/fil")}
-function envoyerAdresse(){modal(`<h2>Envoyer à l'adresse VIDOM</h2><p class="muted">Depuis votre messagerie, envoyez vos documents déjà numérisés à :</p><div class="card"><span class="mono">${h(S.logement.depot)}</span></div><div class="row wrap"><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button><a class="btn grow" href="mailto:${S.logement.depot}?subject=${encodeURIComponent("Documents de la maison")}">${I.mail} Ouvrir ma messagerie</a></div><p class="small faint">Ce qui arrive à cette adresse apparaît ici, dans le journal, en attente de votre accord.</p><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
+function envoyerAdresse(){modal(`<h2>Envoyer à l'adresse VIDOM</h2><p class="muted">Depuis votre messagerie, envoyez vos documents déjà numérisés à :</p><div class="card"><span class="depot">${h(S.logement.depot)}</span></div><div class="row wrap"><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button><a class="btn grow" href="mailto:${S.logement.depot}?subject=${encodeURIComponent("Documents de la maison")}">${I.mail} Ouvrir ma messagerie</a></div><p class="small faint">Ce qui arrive à cette adresse apparaît ici, dans le journal, en attente de votre accord.</p><button class="btn ghost" onclick="closeModal()">Fermer</button>`)}
 
 /* le tri d'une fournée */
 function terminerLot(lot){
@@ -1692,7 +1713,7 @@ function vRecus(){
   attente.forEach(e=>{if(e.rec)assurerImage(e.rec)});
   const carteRecu=e=>entreeFil(e); // D-196 : « Voir » vit dans la carte, ici comme dans le journal
   return `<div class="view" style="gap:12px">
-    <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">Reçu par l'adresse VIDOM</h1><p class="muted">Ce qu'on a envoyé à <b>${h(S.logement.depot||"")}</b>. Rien n'entre dans la mémoire de la maison sans vous.</p></div>
+    <div class="stack" style="gap:2px"><h1 class="h" style="font-size:1.45em">Reçu par l'adresse VIDOM</h1><p class="muted">Ce qu'on a envoyé à cette adresse. Rien n'entre dans la mémoire de la maison sans vous.</p><span class="depot">${h(S.logement.depot||"")}</span></div>
     <p class="small b" style="color:var(--terra-f)">${attente.length?(attente.length===1?"Un envoi attend votre décision":attente.length+" envois attendent votre décision"):"Rien n'attend votre décision."}</p>
     ${attente.map(carteRecu).join("")}
     ${faits.length?`<p class="small b" style="color:var(--sauge-f);margin-top:6px">Déjà décidé</p>${faits.map(entreeFil).join("")}`:""}
@@ -2495,7 +2516,7 @@ function ouvrirChantier(){modal(`<h2>Ouvrir un chantier</h2><label class="f"><sp
 
 /* ================= adresse VIDOM ================= */
 V["adresse-vidom"]=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-size:1.45em">L'adresse VIDOM de votre logement</h1>
-  <div class="card soft" style="gap:12px"><div class="row" style="align-items:flex-start;gap:14px"><div class="qr" style="width:120px;height:120px">${qrSvg("mailto:"+S.logement.depot)}</div><div class="stack" style="gap:4px"><span class="mono" style="font-size:1.05em">${h(S.logement.depot)}</span><span class="small muted">Tout ce qui y est envoyé arrive dans le journal. Rien n'entre sans vous.</span></div></div>
+  <div class="card soft" style="gap:12px"><div class="stack" style="gap:8px;align-items:center"><div class="qr" style="width:140px;height:140px">${qrSvg("mailto:"+S.logement.depot)}</div><span class="depot" style="font-size:1.35em">${h(S.logement.depot)}</span><span class="small muted" style="text-align:center">Tout ce qui y est envoyé arrive dans le journal. Rien n'entre sans vous.</span></div>
   <div class="row"><button class="btn primary grow" onclick="partagerAdresse()">Partager</button><button class="btn grow" onclick="copier('${h(S.logement.depot)}')">Copier</button></div></div>
   <div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Tant que la réception n'est pas branchée</p><p class="small muted">Cette adresse est réelle et déjà enregistrée pour votre logement. Un e-mail envoyé ici n'arrivera dans le journal qu'une fois la réception configurée côté serveur (chez le prestataire choisi pour vidom.fr) — jusque-là, il n'arrivera simplement pas.</p></div>
   ${(S.logement.numeroCadastral||S.logement.altitude!=null||S.logement.rnbId)?`<div class="card" style="gap:4px"><p class="small b" style="color:var(--sauge-f)">Ce que VIDOM a trouvé sur votre parcelle</p>${S.logement.numeroCadastral?`<p class="small">Cadastre : ${h(S.logement.numeroCadastral)}</p>`:""}${S.logement.altitude!=null?`<p class="small">Altitude : ${Math.round(S.logement.altitude)} m</p>`:""}${S.logement.classeClimat?`<p class="small">Classe climat (GES) : ${h(S.logement.classeClimat)}</p>`:""}<p class="small faint">Source : IGN, RNB, ADEME.</p></div>`:""}
@@ -2505,7 +2526,7 @@ V["adresse-vidom"]=()=>`<div class="view" style="gap:12px"><h1 class="h" style="
   <div class="card" style="gap:6px"><p class="small b" style="color:var(--sauge-f)">Expéditeurs acceptés sans vous demander</p>${S.expediteursOk.length?S.expediteursOk.map(x=>`<div class="line"><span>${h(x)}</span><button class="btn sm" onclick="S.expediteursOk=S.expediteursOk.filter(y=>y!=='${h(x)}');save();render()">Me redemander</button></div>`).join(""):`<p class="small muted">Aucun. Chaque envoi vous est proposé.</p>`}</div>
   <button class="btn" onclick="etiquette()">${I.qr} Imprimer l'étiquette</button>
 </div>`;
-function etiquette(){modal(`<h2>L'étiquette de la maison</h2><p class="muted">À coller sur le tableau électrique ou dans le classeur. L'artisan la scanne, sa facture arrive ici.</p><div class="book" style="text-align:center"><div class="qr" style="width:140px;height:140px;margin:0 auto">${qrSvg("mailto:"+S.logement.depot)}</div><p class="b" style="margin-top:10px">${h(S.logement.nom)}</p><p class="mono small">${h(S.logement.depot)}</p><p class="small muted" style="margin-top:6px">Envoyez ici vos factures, devis et notices pour ce logement.</p></div><div class="row"><button class="btn primary grow" onclick="window.print()">Imprimer</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
+function etiquette(){modal(`<h2>L'étiquette de la maison</h2><p class="muted">À coller sur le tableau électrique ou dans le classeur. L'artisan la scanne, sa facture arrive ici.</p><div class="book" style="text-align:center"><div class="qr" style="width:140px;height:140px;margin:0 auto">${qrSvg("mailto:"+S.logement.depot)}</div><p class="b" style="margin-top:10px">${h(S.logement.nom)}</p><p class="depot" style="margin-top:4px">${h(S.logement.depot)}</p><p class="small muted" style="margin-top:6px">Envoyez ici vos factures, devis et notices pour ce logement.</p></div><div class="row"><button class="btn primary grow" onclick="window.print()">Imprimer</button><button class="btn" onclick="closeModal()">Fermer</button></div>`)}
 
 /* ================= échanges et accès ================= */
 function vEchanges(){
