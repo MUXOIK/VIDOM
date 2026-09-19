@@ -1644,7 +1644,8 @@ V.fil=()=>{
   const nAfaire=S.fil.filter(e=>(e.type==="rappel"||e.type==="question"||e.type==="recu")&&!e.fait).length;
   return `<div class="view" style="gap:12px">
     <div class="row wrap" style="gap:6px">${[["tout","Tout"],["afaire",nAfaire?`À faire · ${nAfaire}`:"À faire"],["documents","Documents"],["souvenirs","Souvenirs"]].map(([k,n])=>`<button class="chip btn-chip ${filtreFil===k?"on":""}" style="padding:6px 12px" onclick="filtreFil='${k}';render()">${n}</button>`).join("")}</div>
-    ${vide?`<div class="card soft" style="gap:8px"><p class="b" style="color:var(--sauge-f)">Rien encore.</p><p class="muted">Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière. Ou envoyez un document à l'adresse VIDOM de la maison.</p><label class="btn primary file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label><button class="btn ghost sm" onclick="ouvrirAide()">${I.aide} Tout ce que VIDOM sait faire</button></div>`:""}
+    ${vide?`<div class="card soft" style="gap:8px"><p class="b" style="color:var(--sauge-f)">Rien encore.</p><p class="muted">Photographiez ce qui vous tombe sous la main : une facture, un appareil, une pièce entière. Ou envoyez un document à l'adresse VIDOM de la maison.</p><label class="btn primary file">${I.camera} Photographier<input type="file" accept="image/*" ${isDesk()?"":'capture="environment"'} multiple onchange="fichiers(this.files,'maison')"></label><button class="btn ghost sm" onclick="presentationVidom()">${I.aide} Tout ce que VIDOM sait faire</button></div>`:""}
+    ${blocSaviez()}
     ${!vide&&!entrees.length?`<p class="small faint" style="text-align:center;padding:20px 0">Rien de ce côté pour l'instant.</p>`:""}
     ${groupes.map(g=>`<div class="sep"><span>${h(g.g)}</span><i></i></div>${g.l.map(entreeFil).join("")}`).join("")}
     <div style="flex:1 1 auto"></div>
@@ -2703,6 +2704,7 @@ V.reglages=()=>`<div class="view" style="gap:12px"><h1 class="h" style="font-siz
     <button class="line" style="width:100%;text-align:left" onclick="montrerCompte()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Votre compte</span><span class="small muted">${h(S.compte.email||"—")}</span></span>${I.fleche}</button>
     <button class="line" style="width:100%;text-align:left" onclick="choisirLogement()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Vos logements</span><span class="small muted">${S.logements.length>1?S.logements.length+" logements sur ce compte":"Un seul pour l'instant"} · ajouter un logement</span></span>${I.fleche}</button>
     <a class="line" href="#/adresse-vidom"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Adresse VIDOM et QR</span><span class="small muted mono">${h(S.logement.depot)}</span></span>${I.fleche}</a>
+    <button class="line" style="width:100%;text-align:left" onclick="presentationVidom()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Ce que VIDOM sait faire</span><span class="small muted">Une page pour tout voir, et ce qui est gratuit</span></span>${I.fleche}</button>
     <button class="line" style="width:100%;text-align:left" onclick="ouvrirAide()"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">Aide</span><span class="small muted">Tout ce que VIDOM sait faire, et par où commencer</span></span>${I.fleche}</button>
   </div>
   <div class="card" style="gap:8px"><p class="small b" style="color:var(--sauge-f)">Taille du texte</p><div class="row">${[["normal","Normal"],["grand","Grand"],["tres-grand","Très grand"]].map(([k,n])=>`<button class="chip btn-chip ${S.reglages.texte===k?"on":""}" onclick="S.reglages.texte='${k}';document.documentElement.dataset.texte='${k}';save();render()">${n}</button>`).join("")}</div></div>
@@ -2736,6 +2738,68 @@ function toutEffacer(){try{Object.keys(localStorage).filter(k=>k===KEY||k.starts
 function emporter(){const data=JSON.stringify(S,null,2);const b=new Blob([data],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`vidom-${slug(S.logement.nom||"maison")}-${today()}.json`;document.body.appendChild(a);a.click();a.remove();toast("Votre mémoire est téléchargée")}
 </script>
 <script>
+/* ================= D-211 : « Le saviez-vous ? » — une bulle différente à chaque ouverture (19 septembre 2026) =================
+   Chaque ouverture de VIDOM avance un compteur gardé sur l'appareil ; la bulle du jour est la suivante de la liste, en tête du journal.
+   Chaque phrase renvoie à une entrée de l'aide (par son intitulé) : « Essayer » fait le geste. La même liste sert aux réseaux sociaux
+   (`03_Reseaux_sociaux/Le saviez-vous - serie de posts.md`). */
+const SAVIEZ_VOUS=[
+  {t:"VIDOM lit une facture photographiée : la date, le montant, l'artisan, et la range à sa place.",q:"Entrer une facture, un devis, un document"},
+  {t:"Photographiez l'étiquette d'un appareil : VIDOM lit la marque, le modèle, la garantie, et retrouve la notice.",q:"Photographier un appareil (son étiquette)"},
+  {t:"Votre maison a une adresse courriel. Ce qu'on y envoie vous est proposé ; rien n'entre sans vous.",q:"Envoyer un document par courriel à la maison"},
+  {t:"Vous pouvez poser une question à la maison : « Où est la notice du four ? » Elle répond avec le document.",q:"Poser une question à la maison"},
+  {t:"VIDOM sait quelles garanties expirent bientôt. Demandez-le-lui.",q:"Savoir quelles garanties expirent bientôt"},
+  {t:"Photographiez votre contrat d'assurance : VIDOM suit l'échéance, vous prévient deux mois avant, et compare le tarif.",q:"Garder mon contrat d'assurance"},
+  {t:"Le jour d'un sinistre, VIDOM relit votre contrat, dit le délai, prépare la déclaration et tient le dossier jusqu'à la clôture.",q:"Déclarer un sinistre"},
+  {t:"Un appareil en panne ? Sous garantie, le service après-vente d'abord ; sinon l'artisan qui connaît l'appareil.",q:"Un appareil en panne"},
+  {t:"VIDOM retrouve le service après-vente d'un appareil à partir de la référence lue sur son étiquette.",q:"Contacter le service après-vente"},
+  {t:"Les artisans qui sont venus chez vous restent dans la mémoire de la maison, avec leurs interventions. Un appel suffit.",q:"Recontacter un artisan"},
+  {t:"Vous pouvez envoyer la fiche d'un bon artisan à un ami : il la reçoit sans compte, et peut la garder pour son logement.",q:"Envoyer la fiche d'un artisan à un ami"},
+  {t:"Ouvrez un chantier : devis et factures s'y rangent, et VIDOM sait ce que les travaux ont coûté.",q:"Ouvrir un chantier, suivre des travaux"},
+  {t:"Le notaire, l'agent, un artisan : chacun ne voit que ce qui le concerne, pour un temps, et vous voyez qui a vu quoi.",q:"Donner accès au notaire, à l'agent, à un artisan…"},
+  {t:"Une étiquette à coller sur le tableau électrique : l'artisan la scanne, sa facture arrive dans la maison.",q:"Imprimer l'étiquette de la maison"},
+  {t:"Le jour où vous vendez, le dossier de vente se prépare tout seul : acte, diagnostics, travaux, équipements, garanties.",q:"Préparer le dossier de vente"},
+  {t:"Le livre du logement et le carnet d'entretien sont gratuits, toujours.",q:"Le livre du logement, le carnet d'entretien"},
+  {t:"Votre mémoire vous appartient : vous pouvez l'emporter dans un fichier à vous, quand vous voulez.",q:"Emporter ma mémoire"},
+  {t:"Un document dans une langue étrangère ? VIDOM traduit le titre pour le ranger ; l'original reste intact.",q:"Un document dans une langue étrangère"},
+  {t:"Un même compte peut porter plusieurs logements : chacun garde sa mémoire et sa propre adresse VIDOM.",q:"Ajouter un autre logement"},
+  {t:"Téléphone ou ordinateur : connectez-vous avec le même compte, vous retrouvez la même maison.",q:"Retrouver ma maison sur un autre appareil"},
+  {t:"Remontez le journal : c'est relire l'histoire de la maison, année après année.",q:"Relire l'histoire de la maison"},
+  {t:"VIDOM sait ce que les registres publics disent de votre adresse : cadastre, altitude, bâtiment.",q:"Voir ce que VIDOM sait de la parcelle"},
+];
+let saviezN=0;try{saviezN=(parseInt(localStorage.getItem("vidom_saviez_n")||"0",10)||0)+1;localStorage.setItem("vidom_saviez_n",String(saviezN))}catch(e){saviezN=Math.floor(Math.random()*1000)}
+let saviezFerme=false;
+function saviezDuJour(){const e=SAVIEZ_VOUS[saviezN%SAVIEZ_VOUS.length];const a=AIDE.flatMap(x=>x.l).find(x=>x.q===e.q);return {t:e.t,id:a&&a.go?a.id:null}}
+function blocSaviez(){
+  if(saviezFerme||!S.fil.length||filtreFil!=="tout")return "";
+  const e=saviezDuJour();
+  return `<div class="card soft" style="gap:6px"><div class="split"><p class="small b" style="color:var(--sauge-f)">${I.eclair} Le saviez-vous ?</p><button class="btn ghost sm" onclick="saviezFerme=true;render()" aria-label="Fermer">${I.croix}</button></div><p class="small">${h(e.t)}</p>${e.id?`<div class="row"><button class="btn sm" onclick="aideAller('${e.id}')">Essayer</button><button class="btn ghost sm" onclick="saviezN++;render()">Une autre</button></div>`:""}</div>`;
+}
+/* ================= D-209 : la présentation de VIDOM — tout ce qu'elle sait faire, et ce qui est gratuit (19 septembre 2026) =================
+   Une page, lisible d'un trait, ouverte depuis l'aide (en tête, quand rien n'est cherché), depuis Réglages et depuis la maison vide.
+   Chaque rubrique reprend une section de l'aide ; « Voir dans l'aide » ouvre l'aide filtrée sur elle. */
+const PRESENTATION=[
+  {t:"Garder",q:"garder",c:"Une facture, un devis, une notice, l'étiquette d'un appareil, votre contrat d'assurance, le plan : vous photographiez, VIDOM lit et range. Chaque logement a aussi son adresse VIDOM : ce qu'on y envoie vous est proposé, rien n'entre sans vous."},
+  {t:"Retrouver",q:"retrouver",c:"Posez une question à la maison — « Où est la notice du four ? », « Qui est venu pour la chaudière ? » — elle répond avec le document. Les garanties qui expirent, ce qu'il reste à faire, l'histoire année après année : tout est là."},
+  {t:"Faire faire",q:"artisan",c:"Les artisans que la maison connaît, avec leurs interventions passées ; le service après-vente retrouvé d'après l'étiquette ; les travaux suivis chantier par chantier, avec ce qu'ils ont coûté."},
+  {t:"Assurance et sinistre",q:"sinistre",c:"VIDOM suit l'échéance de votre contrat, compare le tarif et vous prévient. Le jour d'un sinistre, elle relit votre contrat, dit le délai, prépare la déclaration et tient le dossier jusqu'à sa clôture."},
+  {t:"Partager, donner accès",q:"accès",c:"Notaire, agent, artisan, assureur, gestionnaire : chacun ne voit que ce qui le concerne, pour un temps, et vous voyez qui a vu quoi. L'étiquette à coller sur le tableau électrique fait arriver les factures d'elles-mêmes."},
+  {t:"Vendre, partir, transmettre",q:"vendre",c:"Le dossier de vente pour le notaire et l'acquéreur, le livre du logement, le carnet d'entretien. Le jour où vous partez, la mémoire de la maison peut continuer sans vous — et vous emportez la vôtre dans un fichier à vous."},
+  {t:"Vos logements, votre compte",q:"logement",c:"Plusieurs logements sur un même compte, chacun avec sa mémoire et sa propre adresse VIDOM. Téléphone ou ordinateur : la même maison partout."},
+];
+function presentationVidom(){
+  const rub=r=>`<div class="card" style="gap:6px"><div class="split"><p class="b" style="color:var(--sauge-f)">${h(r.t)}</p><button class="btn ghost sm" onclick="ouvrirAide(${JSON.stringify(r.q)})">Voir dans l'aide</button></div><p class="small muted">${h(r.c)}</p></div>`;
+  modal(`<div class="split"><h2 style="margin:0">Ce que VIDOM sait faire</h2><button class="btn ghost sm" onclick="closeModal()" aria-label="Fermer">${I.croix}</button></div>
+  <p class="muted">VIDOM est la mémoire vivante de votre logement. Elle garde ce qui le concerne, le retrouve quand vous en avez besoin, et le transmet le jour venu. Vous photographiez ; elle fait le reste.</p>
+  ${PRESENTATION.map(rub).join("")}
+  <div class="card soft" style="gap:8px">
+    <p class="b" style="color:var(--sauge-f)">Ce que cela coûte</p>
+    <p class="small"><b>Garder la mémoire de votre logement est gratuit, et le restera.</b> Photographier, ranger, retrouver, poser une question, les rappels, le livre du logement, le carnet d'entretien, emporter votre mémoire : rien de tout cela ne se paie, jamais. Votre mémoire vous appartient.</p>
+    <p class="small">Seuls des services rendus se paient, quand vous les demandez :</p>
+    <p class="small">• <b>Les dossiers préparés pour un tiers</b> — le dossier de sinistre pour votre assureur, le dossier de vente pour le notaire, l'agent, l'acquéreur : <b>19 € par dossier</b>, quel qu'il soit, réglés une fois pour toute sa durée.<br>• <b>Un espace protégé</b> pour vos objets de valeur (bijoux, montres, œuvres), chiffré de bout en bout : personne d'autre que vous ne peut le lire, pas même VIDOM. En option, si vous en avez besoin : <b>19 € pour trois ans</b>. <span class="chip neutre">${I.cadenas} Bientôt</span></p>
+    <p class="small b">Un seul chiffre à retenir : 19 €. Et pendant la première année, tout est offert, à tous — les services aussi.</p>
+  </div>
+  <div class="row"><button class="btn primary grow" onclick="ouvrirAide()">${I.aide} Ouvrir l'aide</button><button class="btn ghost" onclick="closeModal()">Fermer</button></div>`);
+}
 /* ================= l'aide : tout ce que VIDOM sait faire (16 septembre 2026) =================
    Chaque entrée : ce que vous voulez faire, en une phrase ; comment VIDOM s'y prend ; et où cela mène.
    go : une page (#/…) ou un geste. Sans go : pas encore construit, cadenas (D-112). */
@@ -2835,8 +2899,9 @@ function aideRendre(){
   const trouves=chercherMemoire(aideQ); // D-187 : ce que la maison garde, avant ce que VIDOM sait faire
   const ligne=e=>`<button class="line" style="width:100%;text-align:left" onclick="aideAller('${e.id}')"><span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(e.q)}</span><span class="small muted">${h(e.c)}</span></span>${e.go?I.fleche:`<span class="chip neutre">${I.cadenas} Bientôt</span>`}</button>`;
   const blocMemoire=trouves.length?`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">Dans la mémoire de la maison · ${trouves.length}${trouves.length>=40?" et plus":""}</p>${trouves.map(r=>`<a class="line" href="${r.go}" onclick="closeModal()">${I[r.ico]||I.doc}<span class="stack" style="gap:0;flex:1 1 auto"><span class="b">${h(r.t)}</span><span class="small muted">${h(r.c)}</span></span>${I.fleche}</a>`).join("")}</div>`:"";
+  const blocPresentation=aideMots(aideQ).length?"":`<button class="card soft" style="text-align:left;cursor:pointer;gap:2px" onclick="presentationVidom()"><span class="b" style="color:var(--sauge-f)">Ce que VIDOM sait faire, et ce qui est gratuit</span><span class="small muted">Une page pour tout voir d'un coup d'œil, avant de chercher.</span></button>`; // D-209
   box.innerHTML=(sections.length||trouves.length)
-    ?blocMemoire+sections.map(s=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(s.t)}</p>${s.l.map(ligne).join("")}</div>`).join("")
+    ?blocPresentation+blocMemoire+sections.map(s=>`<div class="card" style="gap:0;padding:4px 16px"><p class="small b" style="padding:8px 0 4px;color:var(--sauge-f)">${h(s.t)}</p>${s.l.map(ligne).join("")}</div>`).join("")
     :`<div class="card soft" style="gap:8px"><p class="small">Rien de ce nom dans l'aide. La maison, elle, saura peut-être répondre.</p><button class="btn primary" onclick="aideQuestion(aideQ)">${I.bulle} Demander à la maison</button></div>`;
 }
 /* D-187 : chercher un mot simple (« lave-vaisselle », « Darty », « 2023 ») dans tout ce que la maison garde.
